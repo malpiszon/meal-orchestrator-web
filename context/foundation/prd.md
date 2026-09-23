@@ -30,7 +30,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 ## Success Criteria
 
 ### Primary
-- The end-to-end flow works: MO delivers a recommendation to mo-web, the user (after activating via invitation) sees the recommendation with history context on a dashboard, can accept it or swap meals, and saves a final plan that becomes part of history for future weeks.
+- The end-to-end flow works: MO delivers a recommendation to mo-web, the user (after activating via invitation) sees the recommendation with history context on a dashboard, can swap meals and save the plan (as recommended or with swaps) as many times as they like until the plan's first day, and the plan becomes part of history, feeding the annotations on future weeks, once MO delivers the next week's recommendation.
 
 ### Secondary
 - The user can browse their full history of past plans, not just the inline "this was in your plan N days ago" context on the current recommendation.
@@ -45,12 +45,12 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 
 - **Given** a logged-in user whose upcoming week's recommendation has been received from MO
 - **When** they open the dashboard
-- **Then** they see the recommended plan with history annotations (e.g. "this meal was in your plan 6 days ago"), can swap any meal for another available in that week's menu, and save the final plan
+- **Then** they see the recommended plan with history annotations (e.g. "this meal was in your plan 6 days ago"), can swap any meal for another available in that week's menu, and save the plan
 
 #### Acceptance Criteria
 - Each annotation reflects the most recent earlier occurrence of the meal anywhere in the user's history; meals with no earlier occurrence show no annotation.
 - Swapping a meal only offers choices available in the current menu (not arbitrary meals).
-- Saving records the plan (as accepted or modified) as the reference for future weeks.
+- Saving keeps the user's current choices (as recommended or with swaps) and records that the user saved the plan; it does not lock the plan.
 - The user can swap and save as many times as they like until the plan's first day; after that the plan can no longer be changed.
 
 ### US-02: Known MO user is invited on first delivery
@@ -154,12 +154,11 @@ A plan moves through three states, clarified during the FR Socrates round and re
 - FR-009: User can swap a recommended meal in the upcoming plan for another meal available in that week's menu, until the plan's first day. Priority: must-have
   > Socrates: No counter-argument; stands as written. Context surfaced: MO always validates its output before delivering it, so mo-web receives a complete menu or nothing. "Full menu" = the user's subscribed meal-count (2 for breakfast+lunch, up to 5 for the full suite) × per-meal variants (currently 3, since MO supports one provider) — well-defined by MO's payload, not ambiguous.
 - FR-010: User can save the upcoming plan (as-is or with swaps) as many times as they like until the plan's first day; mo-web records whether the user saved the plan. Priority: must-have
-  > Socrates: Counter-argument considered: "overlaps with FR-011 (auto-finalize) — unclear what explicit saving adds." Resolution: kept both, clarified division of labor — FR-010 is user-initiated lock-in (happens whenever the user chooses to save, before or during that week); FR-011 is the automatic fallback that moves a plan into history once the next MO upload arrives, regardless of whether FR-010 happened.
-  > Update (2026-09-23): saving no longer "locks" the plan. What stops changes is the plan's first day arriving; saving only records that the user confirmed the plan. The provider's own meal-change deadlines are per-provider and are not mirrored (see Non-Goals).
+  > Socrates: Counter-argument considered: "overlaps with FR-011 (plan moves to history) — unclear what explicit saving adds." Resolution (revised 2026-09-23): kept both, with separate jobs. FR-010 lets the user keep their swaps and records that they confirmed the plan, which is useful to know later. Saving locks nothing: the user can change and re-save the plan until its first day, and only the date stops changes. FR-011 moves a plan into history when the next MO delivery arrives, whether or not the user saved it. No scheduled processing and no separate "finalized" state exist. The provider's own meal-change deadlines are per-provider and are not mirrored (see Non-Goals).
 
 ### History
 - FR-011: A plan (saved or not) becomes part of history once MO delivers a newer week's recommendation; no user action is needed. Priority: must-have
-  > Update (2026-09-23): "finalized" means only that the plan is now in history. Whether the user saved it stays recorded (FR-010), and its meals can still be rated within the rating window (FR-013).
+  > Update (2026-09-23): being in history is not a separate "finalized" state; it follows from a newer delivery existing. Whether the user saved it stays recorded (FR-010), and its meals can still be rated within the rating window (FR-013).
 - FR-012: User can browse their full history of past plans. Priority: nice-to-have
   > Socrates: Counter-argument considered: "overlaps with the Secondary success criterion — risk of over-building a full browsing UI." Resolution: kept as nice-to-have, explicitly scoped down for MVP purposes to a simple chronological list — no filtering/search required to satisfy this FR.
 - FR-013: User can assign custom ratings to meals from their plans on the meal's own day or within the following 7 days (best-guess starting value, to be tuned), independent of the provider's aggregate ratings. Priority: nice-to-have
