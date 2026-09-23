@@ -97,7 +97,7 @@ npx supabase init
 npx supabase start
 ```
 
-4. Copy the credentials printed by the CLI into your `.env` and `.dev.vars`:
+4. Copy the credentials printed by the CLI into your `.env` (Node) or `.dev.vars` (Cloudflare local dev, gitignored).
 
 ```
 SUPABASE_URL=http://127.0.0.1:54321

@@ -46,6 +46,3 @@ venv/
 .env
 .env.production
 .wrangler/
-dist/
-node_modules/
-
