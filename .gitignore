@@ -7,14 +7,10 @@ Thumbs.db
 .idea/
 *.swp
 
-# Env / secrets
-.env
-.env.*
-!.env.example
-
 # Logs
 *.log
 npm-debug.log*
+pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
@@ -43,3 +39,13 @@ venv/
 # Claude Code local config (skills, settings, etc.) and 10xDevs AI Toolkit CLI state
 .claude/
 .10x-cli.json
+# from 10x-astro-starter
+
+.astro/
+.dev.vars
+.env
+.env.production
+.wrangler/
+dist/
+node_modules/
+
