@@ -8,6 +8,7 @@ import cloudflare from "@astrojs/cloudflare";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://mo-web.malpiszon.workers.dev",
   output: "server",
   // Auth uses Supabase cookies, not Astro sessions; disabling stops the Cloudflare adapter from requiring a SESSION KV binding.
   session: false,
