@@ -9,6 +9,8 @@ import cloudflare from "@astrojs/cloudflare";
 // https://astro.build/config
 export default defineConfig({
   output: "server",
+  // Auth uses Supabase cookies, not Astro sessions; disabling stops the Cloudflare adapter from requiring a SESSION KV binding.
+  session: false,
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],

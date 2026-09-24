@@ -9,6 +9,7 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 - No Next.js directives (`"use client"`, etc.) in React components.
 - New Supabase tables must enable RLS with granular per-operation, per-role policies.
 - API route handlers use uppercase `GET`/`POST` exports and validate input with zod.
+- Deploy target is Cloudflare **Workers** (`npx wrangler deploy`), never Pages (`wrangler pages …`); see `@context/foundation/infrastructure.md`.
 
 ## Commands
 
