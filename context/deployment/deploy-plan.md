@@ -91,3 +91,24 @@ Run `npx wrangler deployments list`, then `npx wrangler rollback <id>`. There's 
 - `astro.config.mjs`: stays unchanged. The env vars are still `optional: true`. That risk is noted in the infra doc; the curl checks in step 7 and the secret list in step 5 cover it for this deploy.
 - `.github/workflows/ci.yml`: add the `deploy` job (Phase 2).
 - `context/foundation/infrastructure.md`: status updates only.
+
+## Outcome (2026-09-24)
+
+All phases done. Production: `https://mo-web.malpiszon.workers.dev`. Repo: `malpiszon/meal-orchestrator-web` (public). Current state is tracked in `context/foundation/infrastructure.md`. How the actual run differed from the plan:
+
+- **workers.dev subdomain.** The account had no subdomain, and wrangler's automatic `mo-web` registration failed because the name is taken. An auto-generated `summer-king-c16b` subdomain was used for the first deploy (version `0804df57-6abd-4549-9cfb-1e21730cfa29`), then the account subdomain was renamed to `malpiszon`. Supabase Auth URLs use `malpiszon`.
+- **Worker secrets.** `SUPABASE_URL` was set from the project URL. The first `SUPABASE_KEY` attempt created a secret named after the key value; it was deleted and re-created as `SUPABASE_KEY` (publishable key). Verified with a bad-credentials sign-in returning `Invalid login credentials`.
+- **GitHub.** `gh` uses a fine-grained token that can't create repos, so the repo was created in the web UI. The token was given Contents, Secrets and Workflows read/write plus Actions read on this repo; git pushes use it through `gh auth git-credential`.
+- **Cloudflare CI token.** Account-scoped custom token with _Workers Scripts Write/Read_ and _Workers CI Write/Read_ (the older _Workers Scripts: Edit_ is labelled legacy).
+- **Deploy job.** Added as planned, plus a post-deploy bad-credentials sign-in probe, which catches missing Worker secrets that a 302 check can't. First CI deploy: version `dfc49e6b-8327-47c6-b2b9-b45d637c0acf`.
+- **Added beyond the plan:**
+  - Resend SMTP in Supabase: sender `meal-orchestrator@notify.malpiszon.net`, rate limit 30/hour, verified with a sign-up to a non-team address; the test user was deleted.
+  - Self sign-up disabled in production to match the PRD's invite-only rule.
+  - An idle-availability NFR added to the PRD.
+  - The custom domain recorded as an MVP non-goal.
+  - CI actions bumped to Node 24 majors (`checkout`/`setup-node` v7, `supabase/setup-cli` v3 using the lockfile CLI version).
+  - `site` set in `astro.config.mjs` so the sitemap is generated.
+- **Left open:**
+  - how to handle Supabase free-tier pausing
+  - an `/auth/callback` route (PKCE code exchange) for FR-003/FR-005
+  - removing `/auth/signup` when FR-003 is built
