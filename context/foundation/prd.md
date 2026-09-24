@@ -30,12 +30,15 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 ## Success Criteria
 
 ### Primary
+
 - The end-to-end flow works: MO delivers a recommendation to mo-web, the user (after activating via invitation) sees the recommendation with history context on a dashboard, can swap meals and save the plan (as recommended or with swaps) as many times as they like until the plan's first day, and the plan becomes part of history, feeding the annotations on future weeks, once MO delivers the next week's recommendation.
 
 ### Secondary
+
 - The user can browse their full history of past plans, not just the inline "this was in your plan N days ago" context on the current recommendation.
 
 ### Guardrails
+
 - mo-web requires zero changes to how MO generates recommendations — only an additional delivery path alongside (not replacing) the existing email.
 - If MO's delivery to mo-web fails, MO's existing email delivery still succeeds — mo-web is additive and must never become a point of failure for MO's core function. (A failed save on mo-web's side is acceptable to require manual retry, per the "no additional infrastructure" constraint.)
 
@@ -48,6 +51,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** they see the recommended plan with history annotations (e.g. "this meal was in your plan 6 days ago"), can swap any meal for another available in that week's menu, and save the plan
 
 #### Acceptance Criteria
+
 - Each annotation reflects the most recent earlier occurrence of the meal anywhere in the user's history; meals with no earlier occurrence show no annotation.
 - Swapping a meal only offers choices available in the current menu (not arbitrary meals).
 - Saving keeps the user's current choices (as recommended or with swaps) and records that the user saved the plan; it does not lock the plan.
@@ -60,6 +64,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** the recommendation is stored under an account for that email, and that email receives an invitation to set a password
 
 #### Acceptance Criteria
+
 - The recommendation is tied to the account matching the submitted email (FR-002).
 - There is no signup path that accepts an arbitrary email — the invitation is the only way to get an account.
 - A later submission for an email mo-web already knows is stored under the existing account; it does not create a second account.
@@ -71,6 +76,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** they reach their dashboard
 
 #### Acceptance Criteria
+
 - An unauthenticated visitor who opens the dashboard or history is redirected to login.
 - A logged-in user sees only their own plans, history, and ratings — never another user's.
 
@@ -81,6 +87,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** they receive an emailed reset link that lets them set a new password
 
 #### Acceptance Criteria
+
 - After resetting, the user can log in with the new password.
 
 ### US-05: User opens the dashboard before the week's recommendation arrives
@@ -90,6 +97,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** they see an explicit "no upcoming plan yet" waiting state
 
 #### Acceptance Criteria
+
 - The dashboard does not show blank content, and does not present an older plan as the upcoming one.
 
 ### US-06: A plan becomes history when the next week arrives
@@ -99,6 +107,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** that plan becomes part of history
 
 #### Acceptance Criteria
+
 - An unmodified plan enters history exactly as MO recommended it.
 - A saved plan enters history with the user's swaps, and whether the user saved it stays recorded.
 - No user action is needed.
@@ -111,6 +120,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** the latest delivery replaces the stored recommendation for that week
 
 #### Acceptance Criteria
+
 - Only that week's recommendation is replaced; other weeks and history are unaffected.
 - (nice-to-have, FR-018) If the user has already saved their plan for that week, their saved choices are kept.
 
@@ -121,6 +131,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - **Then** their own rating is stored for that meal, independent of the provider's aggregate rating
 
 #### Acceptance Criteria
+
 - Meals dated after today cannot be rated yet (e.g. Friday's meals on Wednesday).
 - Meals dated more than 7 days ago can no longer be rated.
 - Rating works regardless of whether the meal's plan is in progress or already in history (e.g. Monday's meals can be rated on Monday before the next plan arrives, and last week's meals after it arrives).
@@ -128,6 +139,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 ## Functional Requirements
 
 ### Ingestion & Accounts
+
 - FR-001: MO can submit a user's weekly recommendation and associated data to mo-web as a structured, machine-readable submission. Priority: must-have
   > Socrates: Counter-argument considered: "the submission format may be too thin — MO's current per-module payload might not carry everything mo-web needs (e.g. a provider-side meal ID)." Resolution: kept; submission-format completeness is already tracked as an Open Question and must be confirmed before/during implementation planning.
 - FR-002: mo-web persists each submitted recommendation as data tied to the correct user account, matched by email. Priority: must-have
@@ -146,6 +158,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 A plan moves through three states, clarified during the FR Socrates round and revised after PRD review (2026-09-23) so that every state follows from dates and MO's deliveries alone — no user action and no time-triggered processing is needed: **upcoming** (MO's newest recommendation; it arrives Tue/Wed before its week starts and stays editable until the plan's first day) → **in-progress** (the plan whose days include today; the user is eating through it and it can no longer be changed) → **history** (every plan older than MO's newest delivery, whether or not the user saved it). A plan can already be in history while its later days are still being eaten (e.g. week N after week N+1 arrives on Wednesday) — that is fine, because rating is governed by each meal's own date, not by the plan's state: a meal can be rated on its day or within the following 7 days (7 is a best-guess starting value, to be tuned with use), so e.g. Monday's meals can be rated on Monday even before the next plan arrives, while Friday's meals cannot be rated on Wednesday. Macro/nutritional summaries can apply to the in-progress plan, past history entries, or the upcoming plan (recalculated live as the upcoming plan is edited).
 
 ### Weekly Plan
+
 - FR-007: User can view the upcoming week's recommended plan on a dashboard. Priority: must-have
   > Socrates: Counter-argument considered: "if MO's delivery hasn't arrived yet, the dashboard has nothing to show — no defined empty state." Resolution: kept; dashboard shows an explicit "no upcoming plan yet" waiting state rather than blank/stale content. (This challenge surfaced the upcoming/in-progress/history terminology split — see "Plan lifecycle" above.)
 - FR-008: mo-web shows contextual history annotations on the upcoming plan (e.g. "this meal was in your plan 6 days ago"). Priority: must-have
@@ -157,6 +170,7 @@ A plan moves through three states, clarified during the FR Socrates round and re
   > Socrates: Counter-argument considered: "overlaps with FR-011 (plan moves to history) — unclear what explicit saving adds." Resolution (revised 2026-09-23): kept both, with separate jobs. FR-010 lets the user keep their swaps and records that they confirmed the plan, which is useful to know later. Saving locks nothing: the user can change and re-save the plan until its first day, and only the date stops changes. FR-011 moves a plan into history when the next MO delivery arrives, whether or not the user saved it. No scheduled processing and no separate "finalized" state exist. The provider's own meal-change deadlines are per-provider and are not mirrored (see Non-Goals).
 
 ### History
+
 - FR-011: A plan (saved or not) becomes part of history once MO delivers a newer week's recommendation; no user action is needed. Priority: must-have
   > Update (2026-09-23): being in history is not a separate "finalized" state; it follows from a newer delivery existing. Whether the user saved it stays recorded (FR-010), and its meals can still be rated within the rating window (FR-013).
 - FR-012: User can browse their full history of past plans. Priority: nice-to-have
@@ -171,6 +185,7 @@ A plan moves through three states, clarified during the FR Socrates round and re
   > Socrates: Counter-argument considered: "MO's debug artifacts aren't a stable data source — parsing them to populate history could be brittle." Resolution: kept as nice-to-have, but flagged as higher-risk/exploratory — feasibility depends on investigating the actual log format, and this may need reprioritizing once that's known.
 
 ### Duplicate submissions (edge case surfaced at cross-check)
+
 - FR-017: When MO submits data for a week it already sent (meals identical, but LLM-generated scoring/comments may differ), the latest submission overwrites the previously stored recommendation for that week. Priority: must-have
   > Update (2026-09-23): confirmed. Until FR-018 is built, this also overwrites a plan the user has already saved or swapped for that week. FR-018 adds the rules for when overwriting is not allowed.
 - FR-018: If the user has already saved/swapped their plan for that week (FR-010) before a later re-submission arrives, the re-submission does not overwrite the user's saved choices. Priority: nice-to-have
@@ -180,6 +195,8 @@ A plan moves through three states, clarified during the FR Socrates round and re
 - A user's data (plans, history, ratings) is visible only to that user — never to other mo-web users, even within the same small trusted group.
 - History and plan data is retained indefinitely; there is no automatic deletion or expiry window.
 - The dashboard is usable on mobile browsers, since users are expected to check their plan from a phone.
+- mo-web accepts MO's weekly submission and serves the dashboard even after a week or more with no user activity; hosting must not become unavailable due to idleness.
+  > Added 2026-09-24 after the first deploy: the free Supabase project pauses after ~7 days idle, and MO's weekly cadence sits right at that threshold. How to prevent it (keep-alive job, paid plan) is decided in `infrastructure.md`.
 
 ## Business Logic
 
