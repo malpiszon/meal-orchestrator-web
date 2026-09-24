@@ -223,6 +223,7 @@ Unauthenticated visitors are redirected to login; the dashboard and history are 
 - No mo-web → Meal Orchestrator integration — mo-web will not send user decisions or ratings back to MO; using history directly in MO's automatic selection is explicitly future work, not MVP scope.
 - No detection of whether a planned meal was actually eaten, or eaten on a different day — history tracks the user's planned choices, not consumption.
 - No mirroring of each provider's own meal-change deadlines — mo-web only stops changes once a plan's first day arrives. Providers have their own, differing rules, and the user still applies their swaps within those rules.
+- No custom domain for the MVP — mo-web stays on `mo-web.malpiszon.workers.dev`. Considered and rejected 2026-09-24 as out of MVP scope: serving it on a `malpiszon.net` subdomain would require moving the whole `malpiszon.net` DNS zone from AWS Route 53 to Cloudflare.
 
 ## Open Questions
 
