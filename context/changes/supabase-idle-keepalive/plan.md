@@ -236,18 +236,18 @@ First migration in the repo. It uses `create or replace function` and grants, so
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Type check passes: `npx astro check`
-- [x] 1.3 Build passes: `npm run build`
-- [x] 1.4 Generated Worker config in `dist/` contains `triggers.crons` `["0 3 * * *"]` and the custom entrypoint
-- [x] 1.5 Smoke test passes against local Supabase + `npm run preview`, including "keepalive cron succeeds"
-- [x] 1.8 Each daily invocation makes three separate keep-alive RPC requests
-- [x] 1.9 CI smoke verifies the scheduled handler reports failure when the RPC rejects
+- [x] 1.1 Lint passes: `npm run lint` — a2fc83c
+- [x] 1.2 Type check passes: `npx astro check` — a2fc83c
+- [x] 1.3 Build passes: `npm run build` — a2fc83c
+- [x] 1.4 Generated Worker config in `dist/` contains `triggers.crons` `["0 3 * * *"]` and the custom entrypoint — a2fc83c
+- [x] 1.5 Smoke test passes against local Supabase + `npm run preview`, including "keepalive cron succeeds" — a2fc83c
+- [x] 1.8 Each daily invocation makes three separate keep-alive RPC requests — a2fc83c
+- [x] 1.9 CI smoke verifies the scheduled handler reports failure when the RPC rejects — a2fc83c
 
 #### Manual
 
-- [ ] 1.6 Firing the scheduled handler locally logs `keepalive ok`; with an unreachable `SUPABASE_URL` it logs `keepalive failed: …` and the invocation reports failure
-- [ ] 1.7 Existing auth flow still works in `npm run dev` (sign in, dashboard, sign out)
+- [x] 1.6 Firing the scheduled handler locally logs `keepalive ok`; with an unreachable `SUPABASE_URL` it logs `keepalive failed: …` and the invocation reports failure — a2fc83c
+- [x] 1.7 Existing auth flow still works in `npm run dev` (sign in, dashboard, sign out) — a2fc83c
 
 ### Phase 2: Production rollout and docs
 
