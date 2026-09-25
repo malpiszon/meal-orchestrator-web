@@ -42,7 +42,7 @@ Verify by: build output's generated wrangler config contains the cron; `npm run 
 
 ## Implementation Approach
 
-A daily cron (`0 3 * * *`, 03:00 UTC) on the Worker is free, lives with the deployed app, reuses its existing secrets, and is unaffected by repository inactivity. Daily gives six missed runs of margin before the ~7-day threshold. The ping calls a `SECURITY INVOKER` SQL function via PostgREST RPC, which guarantees a real Postgres query (the activity Supabase measures) without exposing any data. Failures throw so they are visible as failed cron invocations in the Workers dashboard/logs.
+A daily cron (`0 3 * * *`, 03:00 UTC) on the Worker is free, lives with the deployed app, reuses its existing secrets, and is unaffected by repository inactivity. Each invocation makes three separate lightweight RPC requests; Supabase describes a few daily database requests as typically enough to avoid pausing, while not publishing a guaranteed threshold. Daily scheduling also leaves six missed runs of margin before the ~7-day threshold. The ping calls a `SECURITY INVOKER` SQL function via PostgREST RPC, which guarantees a real Postgres query without exposing data. Failures throw so they are visible as failed cron invocations in the Workers dashboard/logs.
 
 ## Critical Implementation Details
 
@@ -64,7 +64,7 @@ Add the Postgres function, the ping helper and a custom Worker entrypoint with a
 
 **Intent**: Create the repo's first migration, adding a side-effect-free function the cron can call so each ping executes a real query.
 
-**Contract**: `public.keepalive() returns timestamptz` — `language sql`, `stable`, `security invoker`, `set search_path = ''`, body `select now()`. `revoke execute ... from public`; `grant execute ... to anon, authenticated`. Header comment states purpose (F-02, prevents free-tier pause). No tables, so the RLS hard rule does not apply.
+**Contract**: `create or replace function public.keepalive() returns timestamptz` — `language sql`, `stable`, `security invoker`, `set search_path = ''`, body `select now()`. `revoke execute ... from public`; `grant execute ... to anon, authenticated`. Header comment states purpose (F-02, prevents free-tier pause). No tables, so the RLS hard rule does not apply. `create or replace` makes reapplication safe if the function was manually created before migration history was recorded.
 
 #### 2. Ping helper
 
@@ -72,7 +72,7 @@ Add the Postgres function, the ping helper and a custom Worker entrypoint with a
 
 **Intent**: Encapsulate the RPC call so the Worker entrypoint stays thin and the call is reusable.
 
-**Contract**: `export async function pingSupabase(url: string, key: string): Promise<void>` — creates a stateless `@supabase/supabase-js` client (`auth.persistSession: false`, `autoRefreshToken: false`), calls `.rpc("keepalive")`, throws an `Error` including the Supabase error message on failure; throws if `url`/`key` are missing.
+**Contract**: `export async function pingSupabase(url: string, key: string): Promise<void>` — creates a stateless `@supabase/supabase-js` client (`auth.persistSession: false`, `autoRefreshToken: false`), calls `.rpc("keepalive")` three times sequentially (three separate Postgres requests per daily run), throws an `Error` including the Supabase error message on any failure; throws if `url`/`key` are missing.
 
 #### 3. Custom Worker entrypoint
 
@@ -90,15 +90,23 @@ Add the Postgres function, the ping helper and a custom Worker entrypoint with a
 
 **Contract**: `"main": "./src/worker.ts"`; `"triggers": { "crons": ["0 3 * * *"] }`. Everything else unchanged.
 
-#### 5. Smoke step
+#### 5. Smoke steps
 
 **File**: `scripts/smoke.mjs`
 
-**Intent**: Make CI prove the scheduled handler runs end-to-end against local Supabase with the migration applied.
+**Intent**: Make CI prove both success and error propagation for the scheduled handler against local Supabase with the migration applied.
 
-**Contract**: new entry in `steps`: `"keepalive cron succeeds"` → `request("/cdn-cgi/handler/scheduled")`, expect `{ status: 200 }` (see Critical Implementation Details for the fallback).
+**Contract**: Keep the `"keepalive cron succeeds"` check. Add a `KEEPALIVE_EXPECT_FAILURE=1` mode that runs only the cron check and expects a non-2xx status. In CI, run the normal smoke suite with valid local credentials, restart preview with an unreachable `SUPABASE_URL`, then run the failure mode. It must verify that the scheduled handler returns failure when the RPC rejects. Continue to use the Wrangler `--test-scheduled` route described in Critical Implementation Details if the Vite preview route is unavailable.
 
-#### 6. README
+#### 6. CI smoke setup
+
+**File**: `.github/workflows/ci.yml`
+
+**Intent**: Run the keep-alive smoke test once with valid local Supabase credentials and once with an unreachable URL to prove rejection reaches the invocation.
+
+**Contract**: In the existing smoke job, after the normal smoke run, restart the preview with `SUPABASE_URL` set to an unreachable local address and run `KEEPALIVE_EXPECT_FAILURE=1 BASE_URL=http://localhost:4321 npm run smoke`; the failure-mode smoke must pass only when the scheduled request returns non-2xx.
+
+#### 7. README
 
 **File**: `README.md`
 
@@ -114,7 +122,9 @@ Add the Postgres function, the ping helper and a custom Worker entrypoint with a
 - Type check passes: `npx astro check`
 - Build passes: `npm run build`
 - Generated Worker config in `dist/` contains `triggers.crons` `["0 3 * * *"]` and the custom entrypoint
+- The scheduled handler submits three separate keep-alive RPC requests per daily run
 - Smoke test passes against local Supabase + `npm run preview`, including "keepalive cron succeeds": `BASE_URL=http://localhost:4321 npm run smoke`
+- CI failure-mode smoke passes against an unreachable `SUPABASE_URL`, proving the scheduled invocation reports an RPC failure.
 
 #### Manual Verification:
 
@@ -192,6 +202,7 @@ Apply the migration to production, ship the Worker, confirm the cron fires, upda
 ### Integration Tests:
 
 - `scripts/smoke.mjs` "keepalive cron succeeds" fires the real scheduled handler against local Supabase with the migration applied (CI `smoke` job).
+- `KEEPALIVE_EXPECT_FAILURE=1 npm run smoke` checks that the scheduled invocation returns non-2xx when the preview runs with an unreachable `SUPABASE_URL`; CI runs both modes with separate preview processes.
 
 ### Manual Testing Steps:
 
@@ -206,7 +217,7 @@ One trivial `select now()` per day; negligible for both Workers and Supabase fre
 
 ## Migration Notes
 
-First migration in the repo. It is additive and idempotent in intent (create function + grants); rollback is `drop function public.keepalive();` after removing the cron. Keeping the function while rolling back the Worker is harmless.
+First migration in the repo. It uses `create or replace function` and grants, so reapplying it is safe; rollback is `drop function public.keepalive();` after removing the cron. Keeping the function while rolling back the Worker is harmless.
 
 ## References
 
@@ -225,11 +236,13 @@ First migration in the repo. It is additive and idempotent in intent (create fun
 
 #### Automated
 
-- [ ] 1.1 Lint passes: `npm run lint`
-- [ ] 1.2 Type check passes: `npx astro check`
-- [ ] 1.3 Build passes: `npm run build`
-- [ ] 1.4 Generated Worker config in `dist/` contains `triggers.crons` `["0 3 * * *"]` and the custom entrypoint
-- [ ] 1.5 Smoke test passes against local Supabase + `npm run preview`, including "keepalive cron succeeds"
+- [x] 1.1 Lint passes: `npm run lint`
+- [x] 1.2 Type check passes: `npx astro check`
+- [x] 1.3 Build passes: `npm run build`
+- [x] 1.4 Generated Worker config in `dist/` contains `triggers.crons` `["0 3 * * *"]` and the custom entrypoint
+- [x] 1.5 Smoke test passes against local Supabase + `npm run preview`, including "keepalive cron succeeds"
+- [x] 1.8 Each daily invocation makes three separate keep-alive RPC requests
+- [x] 1.9 CI smoke verifies the scheduled handler reports failure when the RPC rejects
 
 #### Manual
 

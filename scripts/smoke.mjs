@@ -35,39 +35,55 @@ async function request(path, { method = "GET", form } = {}) {
   return { status: response.status, location: response.headers.get("location") ?? "" };
 }
 
-const steps = [
-  ["home renders", () => request("/"), { status: 200 }],
-  ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
-  [
-    "signup creates account",
-    () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
-    { status: 302, location: "/auth/confirm-email" },
-  ],
-  [
-    "signin rejects wrong password",
-    () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
-    { status: 302, location: "/auth/signin?error=" },
-  ],
-  [
-    "signin accepts correct password",
-    () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
-    { status: 302, location: "/" },
-  ],
-  ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
-  ["signout clears session", () => request("/api/auth/signout", { method: "POST" }), { status: 302, location: "/" }],
-  ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
-];
+const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
+
+const steps = KEEPALIVE_EXPECT_FAILURE
+  ? [
+      [
+        "keepalive cron reports failure",
+        () => request("/cdn-cgi/handler/scheduled"),
+        { status: (status) => status >= 400 },
+      ],
+    ]
+  : [
+      ["home renders", () => request("/"), { status: 200 }],
+      ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+      [
+        "signup creates account",
+        () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
+        { status: 302, location: "/auth/confirm-email" },
+      ],
+      [
+        "signin rejects wrong password",
+        () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
+        { status: 302, location: "/auth/signin?error=" },
+      ],
+      [
+        "signin accepts correct password",
+        () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
+        { status: 302, location: "/" },
+      ],
+      ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
+      [
+        "signout clears session",
+        () => request("/api/auth/signout", { method: "POST" }),
+        { status: 302, location: "/" },
+      ],
+      ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+      ["keepalive cron succeeds", () => request("/cdn-cgi/handler/scheduled"), { status: 200 }],
+    ];
 
 let failed = 0;
 for (const [name, run, expected] of steps) {
   const actual = await run();
-  const ok =
-    actual.status === expected.status &&
-    (expected.location === undefined || actual.location.startsWith(expected.location));
+  const statusOk =
+    typeof expected.status === "function" ? expected.status(actual.status) : actual.status === expected.status;
+  const ok = statusOk && (expected.location === undefined || actual.location.startsWith(expected.location));
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (!ok) {
     failed++;
-    console.log(`      expected ${expected.status} ${expected.location ?? ""}`);
+    const expectedStatus = typeof expected.status === "function" ? "non-2xx" : expected.status;
+    console.log(`      expected ${expectedStatus} ${expected.location ?? ""}`);
   }
 }
 

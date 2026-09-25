@@ -58,6 +58,15 @@ jobs:
           npm run preview -- --port 4321 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:4321/ && break; sleep 1; done
           BASE_URL=http://localhost:4321 npm run smoke
+      - name: Run keepalive failure-mode smoke
+        run: |
+          npx astro preview stop
+          # Unreachable on purpose: proves the scheduled invocation reports failure when the RPC can't reach Supabase.
+          printf 'SUPABASE_URL=http://127.0.0.1:1\nSUPABASE_KEY=unreachable\n' | tee .env .dev.vars > /dev/null
+          npm run build
+          npm run preview -- --port 4321 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:4321/ && break; sleep 1; done
+          KEEPALIVE_EXPECT_FAILURE=1 BASE_URL=http://localhost:4321 npm run smoke
       - if: always()
         run: supabase stop --no-backup
 
