@@ -10,6 +10,8 @@ top_blocker: time
 milestone_id: weekly-plan-loop-with-memory
 milestone_seq: 1
 milestone_status: open
+tracker: github-issues
+gh_milestone: "M-1: Weekly plan loop with memory"
 ---
 
 # Roadmap: mo-web
@@ -79,6 +81,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** (foundation) links in Supabase auth emails (invitation, password reset) land on a callback that exchanges the link's code for a signed-in session and forwards the user to the right next page.
 - **Change ID:** email-link-callback
+- **Issue:** [#2](https://github.com/malpiszon/meal-orchestrator-web/issues/2)
 - **PRD refs:** FR-003, FR-005, Access Control
 - **Unlocks:** S-04 (invitation acceptance), S-05 (password reset); verification path: a real invitation re-test, as required by the infrastructure risk register.
 - **Prerequisites:** —
@@ -92,6 +95,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** (foundation) the production database stays active through weeks with no user activity, so MO's weekly delivery and the dashboard keep working.
 - **Change ID:** supabase-idle-keepalive
+- **Issue:** [#3](https://github.com/malpiszon/meal-orchestrator-web/issues/3)
 - **PRD refs:** NFR idle availability (added 2026-09-24)
 - **Unlocks:** verification path for S-01 — a weekly delivery after ≥ 7 idle days must still be accepted.
 - **Prerequisites:** —
@@ -108,6 +112,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** user can open the dashboard and see the upcoming plan MO just delivered for their email — or an explicit "no upcoming plan yet" state when nothing has arrived.
 - **Change ID:** mo-weekly-delivery
+- **Issue:** [#4](https://github.com/malpiszon/meal-orchestrator-web/issues/4)
 - **PRD refs:** FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation
 - **Prerequisites:** —
 - **Parallel with:** F-01, F-02, S-05
@@ -123,6 +128,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** user can see last week's plan become history automatically when the next week arrives, and see "was in your plan N days/weeks ago" next to each meal in the upcoming plan that appeared before.
 - **Change ID:** recency-annotated-plan
+- **Issue:** [#6](https://github.com/malpiszon/meal-orchestrator-web/issues/6)
 - **PRD refs:** FR-008, FR-011, US-01, US-06
 - **Prerequisites:** S-01
 - **Parallel with:** F-02, S-03, S-04, S-05, S-06
@@ -136,6 +142,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** user can swap any meal for another option from that week's menu and save the plan as often as they like until its first day, after which it can no longer be changed.
 - **Change ID:** swap-and-save-plan
+- **Issue:** [#7](https://github.com/malpiszon/meal-orchestrator-web/issues/7)
 - **PRD refs:** FR-009, FR-010, US-01
 - **Prerequisites:** S-01
 - **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08
@@ -149,6 +156,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** a user whose email MO sends for the first time gets an account and an invitation email, sets a password, logs in, and sees only their own plan; the public sign-up path is gone.
 - **Change ID:** invite-on-first-delivery
+- **Issue:** [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)
 - **PRD refs:** FR-002, FR-003, FR-004, US-02, US-03
 - **Prerequisites:** S-01, F-01
 - **Parallel with:** F-02, S-02, S-03, S-05, S-06, S-07, S-08
@@ -161,6 +169,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** user can request a reset link by email, set a new password, and log in with it.
 - **Change ID:** password-reset
+- **Issue:** [#5](https://github.com/malpiszon/meal-orchestrator-web/issues/5)
 - **PRD refs:** FR-005, US-04
 - **Prerequisites:** F-01
 - **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08
@@ -173,6 +182,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation (including a saved plan, until FR-018 is built) and leaves other weeks and history untouched.
 - **Change ID:** week-resubmission-replace
+- **Issue:** [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)
 - **PRD refs:** FR-017, US-07
 - **Prerequisites:** S-01, S-03
 - **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08
@@ -185,6 +195,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** user can browse their full history of past plans as a simple chronological list.
 - **Change ID:** plan-history-list
+- **Issue:** [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10)
 - **PRD refs:** FR-012
 - **Prerequisites:** S-02
 - **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08
@@ -197,6 +208,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **Outcome:** user can rate meals dated today or in the previous 7 days, and their own rating appears alongside the recency note on later plans.
 - **Change ID:** rate-recent-meals
+- **Issue:** [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11)
 - **PRD refs:** FR-013, US-08
 - **Prerequisites:** S-02
 - **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07
@@ -207,18 +219,18 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Backlog Handoff
 
-| Roadmap ID | Change ID                 | Suggested issue title                                        | Ready for `/10x-plan` | Notes                                   |
-| ---------- | ------------------------- | ------------------------------------------------------------ | --------------------- | --------------------------------------- |
-| F-01       | email-link-callback       | Exchange email-link codes for sessions                       | yes                   | Run `/10x-plan email-link-callback`     |
-| F-02       | supabase-idle-keepalive   | Keep the production database awake between weekly deliveries | yes                   | Run `/10x-plan supabase-idle-keepalive` |
-| S-01       | mo-weekly-delivery        | Accept MO's weekly delivery and show it on the dashboard     | yes                   | Run `/10x-plan mo-weekly-delivery`      |
-| S-02       | recency-annotated-plan    | Annotate upcoming meals with recency from history            | no                    | Needs S-01                              |
-| S-03       | swap-and-save-plan        | Swap meals within the week's menu and save the plan          | no                    | Needs S-01                              |
-| S-04       | invite-on-first-delivery  | Invite new MO users on their first delivery                  | no                    | Needs S-01, F-01                        |
-| S-05       | password-reset            | Password reset by email                                      | no                    | Needs F-01                              |
-| S-06       | week-resubmission-replace | Replace a re-sent week's recommendation                      | no                    | Needs S-01, S-03                        |
-| S-07       | plan-history-list         | Chronological list of past plans                             | no                    | Needs S-02; nice-to-have                |
-| S-08       | rate-recent-meals         | Rate meals from the last 7 days                              | no                    | Needs S-02; nice-to-have                |
+| Roadmap ID | Issue                                                               | Change ID                 | Suggested issue title                                        | Ready for `/10x-plan` | Notes                                   |
+| ---------- | ------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------ | --------------------- | --------------------------------------- |
+| F-01       | [#2](https://github.com/malpiszon/meal-orchestrator-web/issues/2)   | email-link-callback       | Exchange email-link codes for sessions                       | yes                   | Run `/10x-plan email-link-callback`     |
+| F-02       | [#3](https://github.com/malpiszon/meal-orchestrator-web/issues/3)   | supabase-idle-keepalive   | Keep the production database awake between weekly deliveries | yes                   | Run `/10x-plan supabase-idle-keepalive` |
+| S-01       | [#4](https://github.com/malpiszon/meal-orchestrator-web/issues/4)   | mo-weekly-delivery        | Accept MO's weekly delivery and show it on the dashboard     | yes                   | Run `/10x-plan mo-weekly-delivery`      |
+| S-02       | [#6](https://github.com/malpiszon/meal-orchestrator-web/issues/6)   | recency-annotated-plan    | Annotate upcoming meals with recency from history            | no                    | Needs S-01                              |
+| S-03       | [#7](https://github.com/malpiszon/meal-orchestrator-web/issues/7)   | swap-and-save-plan        | Swap meals within the week's menu and save the plan          | no                    | Needs S-01                              |
+| S-04       | [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)   | invite-on-first-delivery  | Invite new MO users on their first delivery                  | no                    | Needs S-01, F-01                        |
+| S-05       | [#5](https://github.com/malpiszon/meal-orchestrator-web/issues/5)   | password-reset            | Password reset by email                                      | no                    | Needs F-01                              |
+| S-06       | [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)   | week-resubmission-replace | Replace a re-sent week's recommendation                      | no                    | Needs S-01, S-03                        |
+| S-07       | [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10) | plan-history-list         | Chronological list of past plans                             | no                    | Needs S-02; nice-to-have                |
+| S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals         | Rate meals from the last 7 days                              | no                    | Needs S-02; nice-to-have                |
 
 ## Open Roadmap Questions
 
