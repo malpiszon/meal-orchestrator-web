@@ -112,7 +112,7 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-No database tables or migrations are required — this project uses Supabase Auth's built-in `auth.users` table only.
+`npx supabase start` applies the repo's migrations (currently just the `keepalive` function pinged by the daily Cron Trigger, see [Deployment](#deployment)) automatically. A hosted or production project needs them pushed explicitly — see below.
 
 ### Using a cloud Supabase project instead
 
@@ -126,6 +126,13 @@ If you prefer to use a hosted Supabase project, add these variables to your `.en
 ```
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_KEY=<anon-key>
+```
+
+Push the repo's migrations to the hosted project (local development gets this for free from `npx supabase start`):
+
+```bash
+npx supabase link --project-ref <project-ref>
+npx supabase db push
 ```
 
 ### Email confirmation in local development
@@ -166,6 +173,25 @@ npx wrangler deploy
 ```
 
 Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
+
+### Keep-alive Cron Trigger
+
+The Worker runs a daily Cron Trigger (`0 3 * * *`, see `wrangler.jsonc`) that calls the `keepalive` Postgres function via Supabase RPC, keeping the free-tier project from pausing after ~7 days of inactivity. Make sure the `keepalive` migration has been pushed to production (see [Supabase Configuration](#supabase-configuration)) **before** deploying the Worker.
+
+To fire the scheduled handler locally, hit the trigger endpoint the Cloudflare Vite plugin exposes against `npm run dev` or `npm run preview`:
+
+```bash
+curl -i http://localhost:4321/cdn-cgi/handler/scheduled
+```
+
+Or, without an Astro dev/preview server, via Wrangler directly:
+
+```bash
+npx wrangler dev --test-scheduled
+curl "http://localhost:8787/__scheduled?cron=0+3+*+*+*"
+```
+
+A successful run logs `keepalive ok`; a failure logs `keepalive failed: <message>` and the invocation is reported as failed.
 
 ## Smoke test
 

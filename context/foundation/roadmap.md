@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -27,7 +27,7 @@ gh_milestone: "M-1: Weekly plan loop with memory"
 - **Intent:** MO's weekly recommendation lands in mo-web alongside the existing email; invited users see it annotated with how recently each meal appeared in their own history, adjust it within that week's menu, and every plan becomes history automatically when the next week arrives.
 - **Source materials:** `context/foundation/prd.md` (v1)
 - **Done when:** every F-NN and S-NN below is `done`.
-- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-018.
+- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-018, FR-019.
 
 ## Vision recap
 
@@ -42,7 +42,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status   |
 | ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | -------- |
 | F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | ready    |
-| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | ready    |
+| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | in-progress |
 | S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | ready    |
 | S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | proposed |
 | S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | proposed |
@@ -104,7 +104,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Scheduled keep-alive ping vs paid database plan (leading option in infrastructure.md: scheduled ping every few days; scheduled CI jobs stop after 60 days without commits in public repos). — Owner: user. Block: no.
 - **Risk:** MO's weekly cadence sits right at the ~7-day pause threshold; a paused database would make MO's delivery fail silently from the user's point of view.
-- **Status:** ready
+- **Status:** in-progress
 
 ## Slices
 
