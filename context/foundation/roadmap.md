@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -27,7 +27,7 @@ gh_milestone: "M-1: Weekly plan loop with memory"
 - **Intent:** MO's weekly recommendation lands in mo-web alongside the existing email; invited users see it annotated with how recently each meal appeared in their own history, adjust it within that week's menu, and every plan becomes history automatically when the next week arrives.
 - **Source materials:** `context/foundation/prd.md` (v1)
 - **Done when:** every F-NN and S-NN below is `done`.
-- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-018.
+- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-018, FR-019.
 
 ## Vision recap
 

@@ -190,6 +190,11 @@ A plan moves through three states, clarified during the FR Socrates round and re
   > Update (2026-09-23): confirmed. Until FR-018 is built, this also overwrites a plan the user has already saved or swapped for that week. FR-018 adds the rules for when overwriting is not allowed.
 - FR-018: If the user has already saved/swapped their plan for that week (FR-010) before a later re-submission arrives, the re-submission does not overwrite the user's saved choices. Priority: nice-to-have
 
+### Operations
+
+- FR-019: Operator is notified when a scheduled operational job (e.g. the database keep-alive) or MO's delivery fails. Priority: nice-to-have
+  > Originated in F-02 (`supabase-idle-keepalive`) planning (2026-09-25): the keep-alive cron and MO's delivery both fail silently today; alerting is parked as future work rather than built as part of F-02.
+
 ## Non-Functional Requirements
 
 - A user's data (plans, history, ratings) is visible only to that user — never to other mo-web users, even within the same small trusted group.

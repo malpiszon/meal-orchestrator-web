@@ -3,7 +3,7 @@ change_id: supabase-idle-keepalive
 title: Supabase idle keepalive
 status: implementing
 created: 2026-09-25
-updated: 2026-09-25
+updated: 2026-09-26
 archived_at: null
 ---
 
