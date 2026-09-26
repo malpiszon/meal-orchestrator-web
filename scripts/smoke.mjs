@@ -36,15 +36,11 @@ async function request(path, { method = "GET", form } = {}) {
 }
 
 const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
+// Same schedule as wrangler.jsonc, so local logs read like production ("keepalive ok (0 3 * * *)").
+const KEEPALIVE_TRIGGER = "/cdn-cgi/handler/scheduled?cron=0+3+*+*+*";
 
 const steps = KEEPALIVE_EXPECT_FAILURE
-  ? [
-      [
-        "keepalive cron reports failure",
-        () => request("/cdn-cgi/handler/scheduled"),
-        { status: (status) => status >= 400 },
-      ],
-    ]
+  ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
   : [
       ["home renders", () => request("/"), { status: 200 }],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
@@ -70,7 +66,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 302, location: "/" },
       ],
       ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
-      ["keepalive cron succeeds", () => request("/cdn-cgi/handler/scheduled"), { status: 200 }],
+      ["keepalive cron succeeds", () => request(KEEPALIVE_TRIGGER), { status: 200 }],
     ];
 
 let failed = 0;

@@ -77,6 +77,12 @@ const scriptsConfig = defineConfig({
   rules: { "no-console": "off" },
 });
 
+// Cron logs are the keep-alive's only observability signal (Workers Logs).
+const workerConfig = defineConfig({
+  files: ["src/worker.ts"],
+  rules: { "no-console": "off" },
+});
+
 export default defineConfig(
   includeIgnoreFile(gitignorePath),
   baseConfig,
@@ -85,5 +91,6 @@ export default defineConfig(
   eslintPluginAstro.configs["flat/jsx-a11y-recommended"],
   astroConfig,
   scriptsConfig,
+  workerConfig,
   eslintPluginPrettier,
 );

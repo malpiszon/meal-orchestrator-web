@@ -204,6 +204,8 @@ BASE_URL=http://localhost:4321 npm run smoke
 
 It needs a reachable Supabase instance (local or cloud) with email confirmation disabled.
 
+The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
+
 > **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Once you build your own product on top of this starter, add proper tests (unit, integration, end-to-end) suited to your application.
 
 ## CI
