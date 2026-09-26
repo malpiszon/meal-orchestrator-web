@@ -253,8 +253,8 @@ First migration in the repo. It uses `create or replace function` and grants, so
 
 #### Automated
 
-- [ ] 2.1 CI `ci`, `smoke` and `deploy` jobs pass on the merge to `master`
-- [ ] 2.2 `npx wrangler deployments list` shows the new version as active
+- [x] 2.1 CI `ci`, `smoke` and `deploy` jobs pass on the merge to `master` — 7772f03
+- [x] 2.2 `npx wrangler deployments list` shows the new version as active — 7772f03
 
 #### Manual
 
