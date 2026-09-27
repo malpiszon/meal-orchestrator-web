@@ -258,7 +258,7 @@ First migration in the repo. It uses `create or replace function` and grants, so
 
 #### Manual
 
-- [x] 2.3 `public.keepalive` exists in production before the Worker deploy
-- [ ] 2.4 Workers dashboard shows the cron trigger `0 3 * * *` and the first scheduled run succeeded with `keepalive ok` in logs
+- [x] 2.3 `public.keepalive` exists in production before the Worker deploy — 6c7b936
+- [x] 2.4 Workers dashboard shows the cron trigger `0 3 * * *` and the first scheduled run succeeded with `keepalive ok` in logs
 - [ ] 2.5 After ≥ 7 consecutive days without user activity, the Supabase project is still Active and auth endpoints respond normally — deferred per user decision 2026-09-26 (see change.md Notes); may be verified opportunistically later
-- [x] 2.6 `infrastructure.md`, `prd.md` (FR-019) and `roadmap.md` updates read correctly
+- [x] 2.6 `infrastructure.md`, `prd.md` (FR-019) and `roadmap.md` updates read correctly — 6c7b936
