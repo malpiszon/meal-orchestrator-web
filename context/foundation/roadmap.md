@@ -272,3 +272,5 @@ Foundations below assume these are present and do NOT re-scaffold them.
 ## Milestone History
 
 ## Done
+
+- **F-02: (foundation) the production database stays active through weeks with no user activity, so MO's weekly delivery and the dashboard keep working.** — Archived 2026-09-29 → `context/archive/2026-09-25-supabase-idle-keepalive/`. Lesson: —.
