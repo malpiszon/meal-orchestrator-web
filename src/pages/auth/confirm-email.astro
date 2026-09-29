@@ -1,6 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const isAutoConfirmed = import.meta.env.DEV;
@@ -27,13 +27,15 @@ const content = isAutoConfirmed
         <div class="mb-2 text-5xl" aria-hidden="true">
           {content.emoji}
         </div>
-        <CardTitle className="text-2xl">{content.heading}</CardTitle>
+        <CardTitle className="text-2xl">
+          <h1>{content.heading}</h1>
+        </CardTitle>
         <CardDescription className="text-base">{content.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button asChild variant="link">
-          <a href="/auth/signin">{content.linkText}</a>
-        </Button>
+        <a href="/auth/signin" class:list={buttonVariants({ variant: "link" })}>
+          {content.linkText}
+        </a>
       </CardContent>
     </Card>
   </div>

@@ -17,17 +17,19 @@ const { title = "10x Astro Starter" } = Astro.props;
     <meta name="viewport" content="width=device-width" />
     <meta name="color-scheme" content="light dark" />
     <script is:inline>
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const apply = () => document.documentElement.classList.toggle("dark", mq.matches);
-      apply();
-      mq.addEventListener("change", apply);
+      {
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        const apply = () => document.documentElement.classList.toggle("dark", mq.matches);
+        apply();
+        mq.addEventListener("change", apply);
+      }
     </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>{title}</title>
   </head>
   <body>
     {missingConfigs.map((cfg) => (
-      <Banner variant="error">
+      <Banner>
         <strong>Uwaga:</strong> {cfg.message}
         {cfg.docsUrl && (
           <>

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { CircleAlert } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface FormFieldProps {
   id: string;
@@ -31,6 +32,8 @@ export function FormField({
   endContent,
 }: FormFieldProps) {
   const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const describedBy = error ? errorId : hint ? hintId : undefined;
 
   return (
     <div>
@@ -51,8 +54,8 @@ export function FormField({
           }}
           placeholder={placeholder}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          className="pl-10"
+          aria-describedby={describedBy}
+          className={cn("pl-10", endContent && "pr-10")}
         />
         {endContent}
       </div>
@@ -62,7 +65,7 @@ export function FormField({
           {error}
         </p>
       ) : (
-        hint
+        hint && <div id={hintId}>{hint}</div>
       )}
     </div>
   );
