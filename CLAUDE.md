@@ -10,6 +10,8 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 - New Supabase tables must enable RLS with granular per-operation, per-role policies.
 - API route handlers use uppercase `GET`/`POST` exports and validate input with zod.
 - Deploy target is Cloudflare **Workers** (`npx wrangler deploy`), never Pages (`wrangler pages …`); see `@context/foundation/infrastructure.md`.
+- Style with design tokens (`bg-background`, `text-muted-foreground`, `bg-primary`, …, defined in `src/styles/global.css`) and shadcn component variants; never hard-code palette colours (`white/*`, `blue-500`, hex) and never pass colour classes to a shadcn component via `className` (tailwind-merge makes them override the variant). Layout classes (`w-full`, spacing) are fine. Legacy exceptions until S-09/S-04: `Welcome.astro`, `Topbar.astro`, `signup.astro`.
+- Never use shadcn `asChild` from `.astro` files (Astro wraps slot children, so Radix `Slot` drops the classes); apply `buttonVariants({ variant })` to the element instead.
 
 ## Issue tracking (GitHub)
 
@@ -33,6 +35,7 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 - Path alias `@/*` → `./src/*`.
 - Astro components for static content; React only where interactivity is needed. Extract hooks to `src/components/hooks/`.
 - shadcn/ui components live in `src/components/ui/` ("new-york" variant); add with `npx shadcn@latest add [name]`.
+- Light/dark mode follows the OS via an inline script in `Layout.astro` that toggles `.dark` on `<html>`.
 - Migrations: `supabase/migrations/YYYYMMDDHHmmss_short_description.sql`.
 - Services/helpers go in `src/lib/` (or `src/lib/services/`); shared types in `src/types.ts`.
 
