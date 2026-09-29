@@ -282,15 +282,15 @@ Not applicable (no data or backend changes).
 
 #### Automated
 
-- [x] 2.1 Lint passes: `npm run lint`
-- [x] 2.2 Type check passes: `npx astro check`
-- [x] 2.3 Build passes: `npm run build`
-- [x] 2.4 Smoke test passes against the dev server: `npm run smoke`
-- [x] 2.5 No hard-coded palette classes remain in in-scope files: `grep -nE "(white|black|blue|purple|red|pink|indigo)-[0-9]+|white/|#[0-9a-fA-F]{3,6}|bg-cosmic" src/components/auth/*.tsx src/components/Banner.astro src/pages/auth/signin.astro src/pages/auth/confirm-email.astro src/pages/dashboard.astro` returns nothing
+- [x] 2.1 Lint passes: `npm run lint` — ffaf075
+- [x] 2.2 Type check passes: `npx astro check` — ffaf075
+- [x] 2.3 Build passes: `npm run build` — ffaf075
+- [x] 2.4 Smoke test passes against the dev server: `npm run smoke` — ffaf075
+- [x] 2.5 No hard-coded palette classes remain in in-scope files: `grep -nE "(white|black|blue|purple|red|pink|indigo)-[0-9]+|white/|#[0-9a-fA-F]{3,6}|bg-cosmic" src/components/auth/*.tsx src/components/Banner.astro src/pages/auth/signin.astro src/pages/auth/confirm-email.astro src/pages/dashboard.astro` returns nothing — ffaf075
 
 #### Manual
 
-- [x] 2.6 `/auth/signin` looks right in light and in dark mode: neutral card, green "Sign in" button, visible green focus ring, no sign-up link
-- [x] 2.7 Sign-in validation errors (submit empty form) and a server error (wrong password) show in destructive red, readable in both modes
-- [x] 2.8 `/auth/confirm-email` looks right in light and dark mode
-- [x] 2.9 `/dashboard` looks right in light and dark mode and "Sign out" still signs out
+- [x] 2.6 `/auth/signin` looks right in light and in dark mode: neutral card, green "Sign in" button, visible green focus ring, no sign-up link — ffaf075
+- [x] 2.7 Sign-in validation errors (submit empty form) and a server error (wrong password) show in destructive red, readable in both modes — ffaf075
+- [x] 2.8 `/auth/confirm-email` looks right in light and dark mode — ffaf075
+- [x] 2.9 `/dashboard` looks right in light and dark mode and "Sign out" still signs out — ffaf075
