@@ -269,28 +269,28 @@ Not applicable (no data or backend changes).
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Type check passes: `npx astro check`
-- [x] 1.3 Build passes: `npm run build`
-- [x] 1.4 `src/components/ui/` contains `button.tsx`, `input.tsx`, `label.tsx`, `card.tsx`, `alert.tsx` and no `LibBadge.astro`
+- [x] 1.1 Lint passes: `npm run lint` — e63fae8
+- [x] 1.2 Type check passes: `npx astro check` — e63fae8
+- [x] 1.3 Build passes: `npm run build` — e63fae8
+- [x] 1.4 `src/components/ui/` contains `button.tsx`, `input.tsx`, `label.tsx`, `card.tsx`, `alert.tsx` and no `LibBadge.astro` — e63fae8
 
 #### Manual
 
-- [x] 1.5 With the OS set to dark, DevTools shows `class="dark"` on `<html>` of `/auth/signin`, and toggling the OS setting flips it without reload
+- [x] 1.5 With the OS set to dark, DevTools shows `class="dark"` on `<html>` of `/auth/signin`, and toggling the OS setting flips it without reload — e63fae8
 
 ### Phase 2: Wire views to tokens and record the rule
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Type check passes: `npx astro check`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 Smoke test passes against the dev server: `npm run smoke`
-- [ ] 2.5 No hard-coded palette classes remain in in-scope files: `grep -nE "(white|black|blue|purple|red|pink|indigo)-[0-9]+|white/|#[0-9a-fA-F]{3,6}|bg-cosmic" src/components/auth/*.tsx src/components/Banner.astro src/pages/auth/signin.astro src/pages/auth/confirm-email.astro src/pages/dashboard.astro` returns nothing
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Type check passes: `npx astro check`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 Smoke test passes against the dev server: `npm run smoke`
+- [x] 2.5 No hard-coded palette classes remain in in-scope files: `grep -nE "(white|black|blue|purple|red|pink|indigo)-[0-9]+|white/|#[0-9a-fA-F]{3,6}|bg-cosmic" src/components/auth/*.tsx src/components/Banner.astro src/pages/auth/signin.astro src/pages/auth/confirm-email.astro src/pages/dashboard.astro` returns nothing
 
 #### Manual
 
-- [ ] 2.6 `/auth/signin` looks right in light and in dark mode: neutral card, green "Sign in" button, visible green focus ring, no sign-up link
-- [ ] 2.7 Sign-in validation errors (submit empty form) and a server error (wrong password) show in destructive red, readable in both modes
-- [ ] 2.8 `/auth/confirm-email` looks right in light and dark mode
-- [ ] 2.9 `/dashboard` looks right in light and dark mode and "Sign out" still signs out
+- [x] 2.6 `/auth/signin` looks right in light and in dark mode: neutral card, green "Sign in" button, visible green focus ring, no sign-up link
+- [x] 2.7 Sign-in validation errors (submit empty form) and a server error (wrong password) show in destructive red, readable in both modes
+- [x] 2.8 `/auth/confirm-email` looks right in light and dark mode
+- [x] 2.9 `/dashboard` looks right in light and dark mode and "Sign out" still signs out
