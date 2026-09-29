@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-09-27
+updated: 2026-09-29
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -51,6 +51,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | proposed |
 | S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | proposed |
 | S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | proposed |
+| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | proposed |
 
 ## Streams
 
@@ -60,7 +61,7 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 | ------ | ----------------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
 | A      | Delivery → memory | `S-01` → `S-02` → `S-07`, `S-08` | Critical path to the north star; speed goal puts every other stream behind or beside it. |
 | B      | Plan editing      | `S-03` → `S-06`                  | Joins Stream A at `S-01`; runs in parallel with `S-02`.                                  |
-| C      | Accounts & access | `F-01` → `S-04`, `S-05`          | `S-04` joins Stream A at `S-01`; `F-01` and `S-05` can start immediately.                |
+| C      | Accounts & access | `F-01` → `S-04`, `S-05` → `S-09` | `S-04` joins Stream A at `S-01`; `F-01` and `S-05` can start immediately.                |
 | D      | Operations        | `F-02`                           | Standalone; must land before real users rely on weekly delivery.                         |
 
 ## Baseline
@@ -99,7 +100,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **PRD refs:** NFR idle availability (added 2026-09-24)
 - **Unlocks:** verification path for S-01 — a weekly delivery after ≥ 7 idle days must still be accepted.
 - **Prerequisites:** —
-- **Parallel with:** F-01, S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08
+- **Parallel with:** F-01, S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-09
 - **Blockers:** —
 - **Unknowns:**
   - Scheduled keep-alive ping vs paid database plan (leading option in infrastructure.md: scheduled ping every few days; scheduled CI jobs stop after 60 days without commits in public repos). — Owner: user. Block: no.
@@ -115,7 +116,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#4](https://github.com/malpiszon/meal-orchestrator-web/issues/4)
 - **PRD refs:** FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation
 - **Prerequisites:** —
-- **Parallel with:** F-01, F-02, S-05
+- **Parallel with:** F-01, F-02, S-05, S-09
 - **Blockers:** —
 - **Unknowns:**
   - PRD Open Question 1: does MO's payload carry everything needed (e.g. a provider-side meal ID stable across weeks)? Settle on a real MO payload sample during planning. — Owner: user. Block: no.
@@ -131,7 +132,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#6](https://github.com/malpiszon/meal-orchestrator-web/issues/6)
 - **PRD refs:** FR-008, FR-011, US-01, US-06
 - **Prerequisites:** S-01
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-09
 - **Blockers:** —
 - **Unknowns:**
   - What counts as "the same meal" across weeks if the payload has no stable meal ID (depends on S-01's resolution of PRD Open Question 1). — Owner: user. Block: no.
@@ -145,7 +146,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#7](https://github.com/malpiszon/meal-orchestrator-web/issues/7)
 - **PRD refs:** FR-009, FR-010, US-01
 - **Prerequisites:** S-01
-- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08
+- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09
 - **Blockers:** —
 - **Unknowns:**
   - Which time zone defines "the plan's first day" for the edit cut-off. — Owner: user. Block: no.
@@ -159,7 +160,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)
 - **PRD refs:** FR-002, FR-003, FR-004, US-02, US-03
 - **Prerequisites:** S-01, F-01
-- **Parallel with:** F-02, S-02, S-03, S-05, S-06, S-07, S-08
+- **Parallel with:** F-02, S-02, S-03, S-05, S-06, S-07, S-08, S-09
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Sequenced after the north star because the first users can be created manually; auth email rate limit (30/hour) is ample for 2–4 users but must be re-tested with a real invite.
@@ -185,7 +186,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)
 - **PRD refs:** FR-017, US-07
 - **Prerequisites:** S-01, S-03
-- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08
+- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Follows S-03 so the overwrite behaviour over saved/swapped plans is tested against real saved state rather than assumed.
@@ -198,7 +199,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10)
 - **PRD refs:** FR-012
 - **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08, S-09
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have (secondary success criterion); scoped to a plain list with no filtering or search.
@@ -211,10 +212,23 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11)
 - **PRD refs:** FR-013, US-08
 - **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07, S-09
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have, last in line under the speed goal; the rating window is governed by each meal's date, not the plan's state, which is easy to get wrong.
+- **Status:** proposed
+
+### S-09: Landing page
+
+- **Outcome:** user opening `/` lands on a sign-in page that looks finished and matches the rest of the app, logs in from there, or follows "forgot password" into the reset flow; the starter's "10x Astro Starter" page is gone.
+- **Change ID:** landing-page
+- **Issue:** [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18)
+- **PRD refs:** FR-004, FR-005, US-03, US-04
+- **Prerequisites:** S-05
+- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Not a marketing page: no pitch or ad copy, just a pleasant entry point. Build it through the Core Skills Chain (`/10x-new` → `/10x-research` → `/10x-plan` → `/10x-implement`), then polish with `/10x-ui`. Must not link to `/auth/signup`, which S-04 removes. The login and reset paths from `/` need a test, not only a manual check.
 - **Status:** proposed
 
 ## Backlog Handoff
@@ -231,6 +245,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-06       | [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)   | week-resubmission-replace | Replace a re-sent week's recommendation                      | no                    | Needs S-01, S-03                        |
 | S-07       | [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10) | plan-history-list         | Chronological list of past plans                             | no                    | Needs S-02; nice-to-have                |
 | S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals         | Rate meals from the last 7 days                              | no                    | Needs S-02; nice-to-have                |
+| S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page              | Sign-in landing page with login and password reset           | no                    | Needs S-05                              |
 
 ## Open Roadmap Questions
 
