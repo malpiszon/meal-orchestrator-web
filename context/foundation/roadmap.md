@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-09-29
+updated: 2026-09-30
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -43,7 +43,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | -------- |
 | F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | ready    |
 | F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done     |
-| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | ready    |
+| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | planning |
 | S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | proposed |
 | S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | proposed |
 | S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | proposed |
@@ -121,9 +121,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - PRD Open Question 1: does MO's payload carry everything needed (e.g. a provider-side meal ID stable across weeks)? Settle on a real MO payload sample during planning. — Owner: user. Block: no.
   - How MO authenticates its delivery and how a non-2xx response reaches MO's operator for manual retry (MO's email must still succeed). — Owner: user. Block: no.
-  - First account for the requester: created manually until S-04 lands; deliveries for unknown emails are rejected until then. — Owner: user. Block: no.
+  - Accounts: resolved 2026-09-30. MO is the authority, so a delivery for an email mo-web hasn't seen creates that account (unconfirmed, no password, no email sent) and stores the week. No accounts are created manually; before S-04 the dashboard is verified on the dev stack, where a password is set with an Admin API call. Invitation emails are S-04. — Owner: user. Block: no.
 - **Risk:** First slice to introduce data and per-user isolation; the submission shape chosen here constrains meal matching in S-02, so a wrong meal identity is the costliest mistake in the roadmap.
-- **Status:** ready
+- **Status:** planning
 
 ### S-02: Recency-annotated upcoming plan (north star)
 
@@ -136,6 +136,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:**
   - What counts as "the same meal" across weeks if the payload has no stable meal ID (depends on S-01's resolution of PRD Open Question 1). — Owner: user. Block: no.
+  - How the dashboard shows the in-progress week. S-01 shows only the upcoming plan, so from a plan's first day (Monday) until MO's next delivery the dashboard shows "No upcoming plan yet"; this slice is expected to close that gap (decided 2026-09-30 while planning S-01). — Owner: user. Block: no.
 - **Risk:** Proves the product; the annotation must stay cheap per request (Workers free-plan CPU limit per infrastructure.md) and use the most recent earlier occurrence anywhere in history.
 - **Status:** proposed
 
@@ -155,15 +156,16 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-04: Invitation on first delivery
 
-- **Outcome:** a user whose email MO sends for the first time gets an account and an invitation email, sets a password, logs in, and sees only their own plan; the public sign-up path is gone.
+- **Outcome:** a user whose account was created by MO's first delivery for their email (S-01) gets an invitation email, sets a password, logs in, and sees only their own plan. This includes accounts S-01 created before this slice shipped. The public sign-up path is gone.
 - **Change ID:** invite-on-first-delivery
 - **Issue:** [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)
 - **PRD refs:** FR-002, FR-003, FR-004, US-02, US-03
 - **Prerequisites:** S-01, F-01
 - **Parallel with:** F-02, S-02, S-03, S-05, S-06, S-07, S-08, S-09
 - **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Sequenced after the north star because the first users can be created manually; auth email rate limit (30/hour) is ample for 2–4 users but must be re-tested with a real invite.
+- **Unknowns:**
+  - Supabase must be able to invite an existing, unconfirmed account (the ones S-01 creates). Checked on local Supabase during S-01 Phase 2 (plan row 2.6). — Owner: agent. Block: no.
+- **Risk:** Sequenced after the north star because S-01 already creates accounts on first delivery, so no week is lost while invitations wait; auth email rate limit (30/hour) is ample for 2–4 users but must be re-tested with a real invite.
 - **Status:** proposed
 
 ### S-05: Password reset
@@ -268,6 +270,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **FR-014 / FR-015 nutritional summaries and comparison** — Why parked: nice-to-have; blocked by Open Roadmap Question 2.
 - **FR-016 import of MO's historical logs** — Why parked: nice-to-have, exploratory; blocked by Open Roadmap Question 3.
 - **FR-018 keep saved choices on re-submission** — Why parked: nice-to-have; speed goal. S-06 overwrites saved plans until this is picked up.
+- **Smarter tie-break between equally scored options** — Why parked: nice-to-have, outside the MVP (decided while planning S-01, 2026-09-30). S-01 recommends the highest-scored option and breaks ties by menu order (first listed wins); a later slice may resolve ties better (e.g. prefer the option not recently eaten, or let MO send an explicit pick).
 
 ## Milestone History
 
