@@ -430,7 +430,10 @@ The README states that this is for local development only. Production accounts g
 
 **Intent**: Give production the schema and secrets that the new Worker code needs. Nothing account- or user-specific happens in production.
 
-**Contract**: steps recorded in the README Deployment section:
+**Contract**: steps recorded in the README Deployment section.
+
+**Timing:** all four phases ship in **one** implementation PR (`Closes #4`), because every merge to `master` deploys to production. Run both steps below **after that PR's CI is green and before merging it**, so the deploy lands on a database and Worker that are already prepared. Don't merge phases to `master` one at a time: for example, the Phase 3 dashboard would query tables that don't exist in production yet.
+
 1. `npx supabase db push` to the linked production project, **before** the Worker code that calls the function is deployed.
 2. `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY` and `npx wrangler secret put MO_INGEST_TOKEN`. Generate the token with `openssl rand -hex 32` and store it for MO as `MO_WEB_TOKEN`.
 
@@ -476,7 +479,7 @@ Ingestion is one RPC (about 30–90 option rows) with no per-row round-trips, an
 
 ## Migration Notes
 
-The tables are new, so there is no data to migrate. Push the migration to production **before** deploying the Worker code that calls the function (Phase 4 production setup, step 1). Rollback: `wrangler rollback` for the Worker. The tables can stay, since nothing else depends on them.
+The tables are new, so there is no data to migrate. Push the migration to production **before** deploying the Worker code that calls the function (Phase 4 production setup, step 1), which means before merging the single implementation PR. Rollback: `wrangler rollback` for the Worker. The tables can stay, since nothing else depends on them.
 
 ## References
 
