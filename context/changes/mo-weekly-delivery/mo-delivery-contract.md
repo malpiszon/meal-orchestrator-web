@@ -1,7 +1,7 @@
 # MO → mo-web Weekly Delivery: Requirements for Meal Orchestrator
 
 > Audience: whoever implements the sending side in the `meal-orchestrator` repo.
-> Source of truth for the payload is `src/lib/mo-delivery.ts` in mo-web (implemented in `plan.md` Phase 2); this document must be kept in sync with it.
+> Source of truth for the payload is `moDeliverySchema` in mo-web's `src/lib/mo-delivery.ts`; this document is kept in sync with it. A valid example is mo-web's `scripts/fixtures/mo-delivery.sample.json`.
 > Roadmap: mo-web S-01 (`mo-weekly-delivery`), issue malpiszon/meal-orchestrator-web#4.
 
 ## Goal
@@ -9,6 +9,7 @@
 After MO emails a user's weekly recommendation, it also delivers the same week to mo-web: the full menu plus every variant's score, so mo-web can keep plan history and later let the user swap meals within that menu.
 
 The PRD guardrails apply:
+
 - MO's recommendation logic doesn't change. Delivery to mo-web is an additional step alongside the email, not a replacement.
 - A mo-web failure must never affect the email or anything else MO does.
 
@@ -16,10 +17,10 @@ The PRD guardrails apply:
 
 There are two mo-web environments, and each has its own endpoint and token:
 
-| Environment | Endpoint URL | Token on the mo-web side |
-| --- | --- | --- |
-| dev | `http://localhost:4321/api/mo/deliveries` (the mo-web dev server, `npm run dev`; use `http://host.docker.internal:4321/…` when MO runs in Docker) | `MO_INGEST_TOKEN` in mo-web's `.dev.vars` |
-| prod | `https://mo-web.malpiszon.workers.dev/api/mo/deliveries` | `MO_INGEST_TOKEN` Worker secret |
+| Environment | Endpoint URL                                                                                                                                      | Token on the mo-web side                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| dev         | `http://localhost:4321/api/mo/deliveries` (the mo-web dev server, `npm run dev`; use `http://host.docker.internal:4321/…` when MO runs in Docker) | `MO_INGEST_TOKEN` in mo-web's `.dev.vars` |
+| prod        | `https://mo-web.malpiszon.workers.dev/api/mo/deliveries`                                                                                          | `MO_INGEST_TOKEN` Worker secret           |
 
 - Method `POST`, with headers:
   - `Content-Type: application/json`
@@ -49,7 +50,15 @@ There are two mo-web environments, and each has its own endpoint and token:
               "provider_meal_id": "496",
               "name": "Kofty z miętą i pietruszką, sos jogurtowy…",
               "composition": "…",
-              "nutrition": { "protein_g": 23.8, "fat_g": 27.4, "saturated_fat_g": 12.9, "carbs_g": 6.7, "sugar_g": 1.3, "fiber_g": 1.1, "salt_g": 2.0 },
+              "nutrition": {
+                "protein_g": 23.8,
+                "fat_g": 27.4,
+                "saturated_fat_g": 12.9,
+                "carbs_g": 6.7,
+                "sugar_g": 1.3,
+                "fiber_g": 1.1,
+                "salt_g": 2.0
+              },
               "score": 8,
               "justifications": [{ "icon": "🥗", "text": "…" }]
             }
@@ -61,23 +70,25 @@ There are two mo-web environments, and each has its own endpoint and token:
 }
 ```
 
-| Field | Source in MO | Rules |
-| --- | --- | --- |
-| `schema_version` | constant | Must be `1`. |
-| `run_id` | `orchestrator.py` `run_id` (uuid4 hex) | Optional string; stored for tracing. |
-| `provider` | `CanonicalMenu.provider` | Non-empty string. |
-| `week_start` / `week_end` | `CanonicalMenu.week_start` / `week_end` | ISO dates; `week_start` is a Monday; `week_end` is between `week_start` and `week_start + 6`. MO always sends `week_start + 4`. The CLI's `--week-start` accepts any date (`cli.py:21`); a non-Monday value is expected to email normally, then get a 400 and an ops alert. No CLI check is required. |
-| `user.email` | `UserConfig.email` | Email; matched case-insensitively to an existing mo-web account. |
-| `days[].date` | `CanonicalDay.date` | Unique; within `[week_start, week_end]`. |
-| `meals[].type` | `CanonicalMeal.type` | One of `breakfast, second_breakfast, lunch, tea, dinner, snack`; unique within a day. |
-| `variants[]` | `CanonicalMeal.variants` joined with `MealAssessment.variants` by `variant_index` | 1–10 per meal, **in the menu's original order**. Don't sort by score: mo-web's tie rule (the first-listed option wins) depends on this order. |
-| `variants[].provider_meal_id` | **new:** raw `configurable_product_id` as a string | Required; unique within a meal; must be the dish-level ID that stays the same across weeks and sizes (not `simple_product_id`, not the name). mo-web keys meals **only** by (`provider`, `provider_meal_id`). |
-| `variants[].name` / `composition` | `MealVariant.name` / `composition` | `name` is required and non-empty. `composition` is a string, and `""` is accepted: MO sends it as-is and mo-web stores an empty value as "no composition". Both are **display text**. The same `provider_meal_id` can arrive under a different name in another week (e.g. ID `2654` has a German and a Polish name in the fixtures); mo-web shows the latest name and never matches on it. |
-| `variants[].nutrition` | `MealVariant.nutrition` | Optional object; each key optional number; leave out nulls, as `to_compact_dict()` already does. |
-| `variants[].score` | `VariantAssessment.score` | Integer 1–10. |
-| `variants[].justifications` | `VariantAssessment.justifications` | 0–5 `{icon, text}` objects. |
+| Field                             | Source in MO                                                                      | Rules                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schema_version`                  | constant                                                                          | Must be `1`.                                                                                                                                                                                                                                                                                                                                                                               |
+| `run_id`                          | `orchestrator.py` `run_id` (uuid4 hex)                                            | Optional string; stored for tracing. Leave it out rather than sending `null`.                                                                                                                                                                                                                                                                                                              |
+| `provider`                        | `CanonicalMenu.provider`                                                          | Non-empty string.                                                                                                                                                                                                                                                                                                                                                                          |
+| `week_start` / `week_end`         | `CanonicalMenu.week_start` / `week_end`                                           | ISO dates; `week_start` is a Monday; `week_end` is between `week_start` and `week_start + 6`. MO always sends `week_start + 4`. The CLI's `--week-start` accepts any date (`cli.py:21`); a non-Monday value is expected to email normally, then get a 400 and an ops alert. No CLI check is required.                                                                                      |
+| `user.email`                      | `UserConfig.email`                                                                | A valid email address; matched case-insensitively to an existing mo-web account, which is created if there is none (see Responses).                                                                                                                                                                                                                                                        |
+| `days[].date`                     | `CanonicalDay.date`                                                               | ISO date (`YYYY-MM-DD`); unique; within `[week_start, week_end]`.                                                                                                                                                                                                                                                                                                                          |
+| `meals[].type`                    | `CanonicalMeal.type`                                                              | One of `breakfast, second_breakfast, lunch, tea, dinner, snack`; unique within a day.                                                                                                                                                                                                                                                                                                      |
+| `variants[]`                      | `CanonicalMeal.variants` joined with `MealAssessment.variants` by `variant_index` | 1–10 per meal, **in the menu's original order**. Don't sort by score: mo-web's tie rule (the first-listed option wins) depends on this order.                                                                                                                                                                                                                                              |
+| `variants[].provider_meal_id`     | **new:** raw `configurable_product_id` as a string                                | Required; unique within a meal; must be the dish-level ID that stays the same across weeks and sizes (not `simple_product_id`, not the name). mo-web keys meals **only** by (`provider`, `provider_meal_id`).                                                                                                                                                                              |
+| `variants[].name` / `composition` | `MealVariant.name` / `composition`                                                | `name` is required and non-empty. `composition` is a string, and `""` is accepted: MO sends it as-is and mo-web stores an empty value as "no composition". Both are **display text**. The same `provider_meal_id` can arrive under a different name in another week (e.g. ID `2654` has a German and a Polish name in the fixtures); mo-web shows the latest name and never matches on it. |
+| `variants[].nutrition`            | `MealVariant.nutrition`                                                           | Optional object with the keys `protein_g`, `fat_g`, `saturated_fat_g`, `carbs_g`, `sugar_g`, `fiber_g`, `salt_g`; each optional and a number. Leave out unknown values instead of sending `null` (a `null` is rejected), as `to_compact_dict()` already does. Leave the whole object out when it would be empty.                                                                           |
+| `variants[].score`                | `VariantAssessment.score`                                                         | Integer 1–10.                                                                                                                                                                                                                                                                                                                                                                              |
+| `variants[].justifications`       | `VariantAssessment.justifications`                                                | 0–5 `{icon, text}` objects; both are strings.                                                                                                                                                                                                                                                                                                                                              |
 
-Unknown top-level keys are rejected (HTTP 400). Extending the payload therefore means bumping `schema_version` in coordination with mo-web.
+Unknown top-level keys are rejected (HTTP 400). Unknown keys inside nested objects (`user`, days, meals, variants, `nutrition`) are not rejected but are ignored; mo-web only keeps them in the stored raw payload. Extending the payload therefore means bumping `schema_version` in coordination with mo-web.
+
+All date checks use the calendar date as written, with no time zone involved.
 
 ## Configuration
 
@@ -88,8 +99,8 @@ delivery:
   email_from: "Meal Orchestrator <meals@example.com>"
   operational_discord_webhook_env: "DISCORD_OPS_WEBHOOK_URL"
   mo_web:
-    url: "https://mo-web.malpiszon.workers.dev/api/mo/deliveries"   # dev config: http://localhost:4321/api/mo/deliveries
-    token_env: "MO_WEB_TOKEN"   # name of the env var holding this environment's token
+    url: "https://mo-web.malpiszon.workers.dev/api/mo/deliveries" # dev config: http://localhost:4321/api/mo/deliveries
+    token_env: "MO_WEB_TOKEN" # name of the env var holding this environment's token
     timeout_seconds: 10
 ```
 
@@ -101,16 +112,23 @@ delivery:
 
 ## Responses and retry policy
 
-| Status | Body | Meaning | MO should |
-| --- | --- | --- | --- |
-| 200 | `{"plan_id","week_start","account_created"}` | Stored. A re-sent week replaces the earlier one. A new email becomes an account first (`account_created: true`); mo-web invites that user later (mo-web S-04). | Done. Optionally log `account_created`. |
-| 400 | `{"error":"invalid_payload","issues":[…]}` | Contract violation | Not retry; alert the operator with `issues`. |
-| 401 | `{"error":"unauthorized"}` | Wrong or missing token | Not retry; alert. |
-| 429, 5xx, network error, timeout | — | Transient; 503 `not_configured` means mo-web's secrets are missing | Retry with backoff via `retries.with_retries` + `is_transient_http_error`, then alert. |
+| Status                                 | Body                                                                                  | Meaning                                                                                                                                                         | MO should                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 200                                    | `{"plan_id","week_start","account_created"}`                                          | Stored. A re-sent week replaces the earlier one. A new email becomes an account first (`account_created: true`); mo-web invites that user later (mo-web S-04).  | Done. Optionally log `account_created`.                                                |
+| 400                                    | `{"error":"invalid_payload","issues":[{"path":"days.0.meals.1.type","message":"…"}]}` | Contract violation, or a body that isn't JSON. `path` is the dotted location of the offending field (`""` for the whole body).                                  | Not retry; alert the operator with `issues`.                                           |
+| 401                                    | `{"error":"unauthorized"}`                                                            | Wrong or missing token                                                                                                                                          | Not retry; alert.                                                                      |
+| 403                                    | `Cross-site POST form submissions are forbidden` (plain text)                         | The request wasn't sent as `Content-Type: application/json`, so mo-web's framework treated it as a cross-site form post and rejected it before the endpoint ran | Not retry; fix the client to send `Content-Type: application/json`, alert.             |
+| 500                                    | `{"error":"storage_failed"}`                                                          | mo-web couldn't store the week or create the account; details are in mo-web's logs                                                                              | Retry with backoff (below), then alert.                                                |
+| 503                                    | `{"error":"not_configured"}`                                                          | mo-web's secrets are missing (a deploy problem)                                                                                                                 | Retry with backoff (below), then alert.                                                |
+| 429, other 5xx, network error, timeout | —                                                                                     | Transient                                                                                                                                                       | Retry with backoff via `retries.with_retries` + `is_transient_http_error`, then alert. |
+
+mo-web checks in this order: configuration (503), token (401), payload (400), storage (500). Every response body from the endpoint is JSON; the 403 above comes from the framework before the endpoint runs.
 
 **Idempotency:** a delivery for the same (email, `week_start`) replaces the stored week, so repeating a request is always safe, whether it's an automatic retry or a manual one.
 
 ## Changes required in MO
+
+> **Status:** already implemented in `meal-orchestrator` (commit `fd3748e` "Deliver each user's weekly plan to mo-web", merged as PR #65 at `45616ab`), and its payload builder matches `moDeliverySchema`. This section stays as the reference for what MO must keep doing.
 
 1. **Carry the meal ID through normalization.**
    - Add a required `provider_meal_id: str` to `MealVariant` (`domain/models.py:51-65`). It has to go **before** `nutrition`, which has a default, or the dataclass won't compile. Update every `MealVariant(...)` call site (11 files, including `tests/unit/helpers.py` and the rendering, prompt and LLM-output tests).

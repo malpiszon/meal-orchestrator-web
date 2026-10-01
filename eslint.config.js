@@ -77,9 +77,9 @@ const scriptsConfig = defineConfig({
   rules: { "no-console": "off" },
 });
 
-// Cron logs are the keep-alive's only observability signal (Workers Logs).
+// Cron logs and failed MO deliveries are only observable through Workers Logs.
 const workerConfig = defineConfig({
-  files: ["src/worker.ts"],
+  files: ["src/worker.ts", "src/pages/api/mo/**/*.ts"],
   rules: { "no-console": "off" },
 });
 

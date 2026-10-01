@@ -97,12 +97,16 @@ npx supabase init
 npx supabase start
 ```
 
-4. Copy the credentials printed by the CLI into your `.env` (Node) or `.dev.vars` (Cloudflare local dev, gitignored).
+4. Copy the credentials printed by the CLI into your `.env` (Node) or `.dev.vars` (Cloudflare local dev, gitignored). `npx supabase status -o env` prints them again later: `API_URL`, `ANON_KEY` and `SERVICE_ROLE_KEY`.
 
 ```
 SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_KEY=<anon key from CLI output>
+SUPABASE_KEY=<ANON_KEY>
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY>
+MO_INGEST_TOKEN=<any random string, e.g. openssl rand -hex 32>
 ```
+
+The last two are only needed for the [MO delivery endpoint](#mo-delivery-endpoint).
 
 5. To stop the stack when done:
 
@@ -118,10 +122,12 @@ The local Studio UI is available at `http://localhost:54323`.
 
 If you prefer to use a hosted Supabase project, add these variables to your `.env` and `.dev.vars` files:
 
-| Variable       | Description                                                |
-| -------------- | ---------------------------------------------------------- |
-| `SUPABASE_URL` | Project URL from Supabase dashboard → Settings → API       |
-| `SUPABASE_KEY` | `anon` public key from Supabase dashboard → Settings → API |
+| Variable                    | Description                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Project URL from Supabase dashboard → Settings → API                                      |
+| `SUPABASE_KEY`              | `anon` public key from Supabase dashboard → Settings → API                                |
+| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key from Supabase dashboard → Settings → API (server-only, bypasses RLS)   |
+| `MO_INGEST_TOKEN`           | Bearer token Meal Orchestrator sends to the [MO delivery endpoint](#mo-delivery-endpoint) |
 
 ```
 SUPABASE_URL=https://<project-ref>.supabase.co
@@ -156,6 +162,24 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 
 Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
 
+### MO delivery endpoint
+
+`POST /api/mo/deliveries` is how Meal Orchestrator (MO) delivers a user's weekly plan: the week's full menu with every option's score. It is machine-to-machine: no cookie session, the middleware skips it, and it must never be added to `PROTECTED_ROUTES`.
+
+- **Auth:** `Authorization: Bearer <MO_INGEST_TOKEN>`. A missing or wrong token returns 401.
+- **Body:** payload v1, defined by `moDeliverySchema` in `src/lib/mo-delivery.ts`. An invalid body returns 400 with the validation issues. A sample is in `scripts/fixtures/mo-delivery.sample.json`.
+- **Storage:** one call to the `ingest_weekly_plan` Postgres function through a service-role client. Re-sending a week for the same user replaces it. An email mo-web doesn't know yet becomes an unconfirmed account without a password (`app_metadata.provisioned_by = "mo-delivery"`), and no email is sent.
+- **Responses:** 200 `{"plan_id","week_start","account_created"}`; 503 `not_configured` when `SUPABASE_SERVICE_ROLE_KEY` or `MO_INGEST_TOKEN` is missing; 500 `storage_failed` on a database error (details in the Worker logs).
+
+The full contract for the MO side is in `context/changes/mo-weekly-delivery/mo-delivery-contract.md`. To try it locally against `npm run dev` (rewrite the email to a local user's, or a new one to see provisioning):
+
+```bash
+curl -i http://localhost:4321/api/mo/deliveries \
+  -H "Authorization: Bearer $MO_INGEST_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data @scripts/fixtures/mo-delivery.sample.json
+```
+
 ## Deployment
 
 This project deploys to [Cloudflare Workers](https://workers.cloudflare.com/).
@@ -172,7 +196,7 @@ npm run build
 npx wrangler deploy
 ```
 
-Set `SUPABASE_URL` and `SUPABASE_KEY` as secrets in your Cloudflare dashboard or via `npx wrangler secret put`.
+Set `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN` as secrets in your Cloudflare dashboard or via `npx wrangler secret put <NAME>`. The production `MO_INGEST_TOKEN` must differ from any dev token (`openssl rand -hex 32`); hand it to MO's operator. Without the last two, the MO delivery endpoint answers 503.
 
 ### Keep-alive Cron Trigger
 

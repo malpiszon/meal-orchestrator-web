@@ -498,29 +498,29 @@ The tables are new, so there is no data to migrate. Push the migration to produc
 
 #### Automated
 
-- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [x] 1.2 The function is not executable by `anon`
-- [x] 1.3 Lint and type check pass: `npm run lint && npx astro check`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset` — 8643573
+- [x] 1.2 The function is not executable by `anon` — 8643573
+- [x] 1.3 Lint and type check pass: `npm run lint && npx astro check` — 8643573
 
 #### Manual
 
-- [x] 1.4 In local Studio, both tables show RLS enabled with only the `select` policy for `authenticated`
-- [x] 1.5 `ingest_weekly_plan` inserts, replaces on repeat, and raises `unknown_user` for an unknown email
+- [x] 1.4 In local Studio, both tables show RLS enabled with only the `select` policy for `authenticated` — 8643573
+- [x] 1.5 `ingest_weekly_plan` inserts, replaces on repeat, and raises `unknown_user` for an unknown email — 8643573
 
 ### Phase 2: Delivery endpoint & MO contract
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm test`
-- [ ] 2.2 Lint and type check pass: `npm run lint && npx astro check`
-- [ ] 2.3 Build succeeds: `npm run build`
+- [x] 2.1 Unit tests pass: `npm test`
+- [x] 2.2 Lint and type check pass: `npm run lint && npx astro check`
+- [x] 2.3 Build succeeds: `npm run build`
 
 #### Manual
 
-- [ ] 2.4 Local curl returns 401/400/200 as specified, and a repeated POST keeps a single plan
-- [ ] 2.5 A POST for a new email creates an unconfirmed `mo-delivery` account and sends no email, and a repeat returns `account_created: false`
-- [ ] 2.6 `inviteUserByEmail` succeeds for a provisioned account (result recorded on #8)
-- [ ] 2.7 `mo-delivery-contract.md` reads as a complete spec for the MO repo
+- [x] 2.4 Local curl returns 401/400/200 as specified, and a repeated POST keeps a single plan
+- [x] 2.5 A POST for a new email creates an unconfirmed `mo-delivery` account and sends no email, and a repeat returns `account_created: false`
+- [x] 2.6 `inviteUserByEmail` succeeds for a provisioned account (result recorded on #8)
+- [x] 2.7 `mo-delivery-contract.md` reads as a complete spec for the MO repo
 
 ### Phase 3: Dashboard
 
