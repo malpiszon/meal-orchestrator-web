@@ -11,11 +11,17 @@ function firstMeal(delivery: MoDelivery) {
   return delivery.days[0].meals[0];
 }
 
-function rejects(mutate: (delivery: Record<string, unknown> & MoDelivery) => void): boolean {
-  const delivery = sampleDelivery() as Record<string, unknown> & MoDelivery;
+type MutableDelivery = Record<string, unknown> & MoDelivery;
+
+/** Applies `mutate` to a copy of the sample and returns the dotted paths of every validation issue. */
+function issuePaths(mutate: (delivery: MutableDelivery) => void): string[] {
+  const delivery = sampleDelivery() as MutableDelivery;
   mutate(delivery);
-  return !moDeliverySchema.safeParse(delivery).success;
+  const result = moDeliverySchema.safeParse(delivery);
+  return (result.error?.issues ?? []).map((issue) => issue.path.map(String).join("."));
 }
+
+const FIRST_VARIANT = "days.0.meals.0.variants.0";
 
 describe("moDeliverySchema", () => {
   it("accepts the sample payload", () => {
@@ -35,53 +41,123 @@ describe("moDeliverySchema", () => {
   });
 
   it("rejects a week_start that is not a Monday", () => {
+    // Sunday before the sample week: every day and week_end stay in range, so only the Monday rule fires.
     expect(
-      rejects((d) => {
-        d.week_start = "2026-06-30";
+      issuePaths((d) => {
+        d.week_start = "2026-06-28";
       }),
-    ).toBe(true);
+    ).toEqual(["week_start"]);
+  });
+
+  it("rejects a week_end more than 6 days after week_start", () => {
+    expect(
+      issuePaths((d) => {
+        d.week_end = "2026-07-06";
+      }),
+    ).toEqual(["week_end"]);
   });
 
   it("rejects a date outside the week", () => {
     expect(
-      rejects((d) => {
+      issuePaths((d) => {
         d.days[0].date = "2026-07-06";
       }),
-    ).toBe(true);
+    ).toEqual(["days.0.date"]);
+  });
+
+  it("rejects a duplicate date", () => {
+    expect(
+      issuePaths((d) => {
+        d.days[1].date = d.days[0].date;
+      }),
+    ).toEqual(["days.1.date"]);
+  });
+
+  it("rejects a delivery without days", () => {
+    expect(
+      issuePaths((d) => {
+        d.days = [];
+      }),
+    ).toEqual(["days"]);
+  });
+
+  it("rejects a day without meals", () => {
+    expect(
+      issuePaths((d) => {
+        d.days[0].meals = [];
+      }),
+    ).toEqual(["days.0.meals"]);
   });
 
   it("rejects a duplicate meal type within a day", () => {
     expect(
-      rejects((d) => {
+      issuePaths((d) => {
         const meals = d.days[0].meals;
         meals[1].type = meals[0].type;
       }),
-    ).toBe(true);
+    ).toEqual(["days.0.meals.1.type"]);
   });
 
-  it.each([0, 11])("rejects score %i", (score) => {
+  it("rejects a meal without variants", () => {
     expect(
-      rejects((d) => {
+      issuePaths((d) => {
+        firstMeal(d).variants = [];
+      }),
+    ).toEqual(["days.0.meals.0.variants"]);
+  });
+
+  it("rejects a meal with more than 10 variants", () => {
+    expect(
+      issuePaths((d) => {
+        const meal = firstMeal(d);
+        meal.variants = Array.from({ length: 11 }, (_, index) => ({
+          ...meal.variants[0],
+          provider_meal_id: String(9000 + index),
+        }));
+      }),
+    ).toEqual(["days.0.meals.0.variants"]);
+  });
+
+  it("rejects a duplicate provider_meal_id within a meal", () => {
+    expect(
+      issuePaths((d) => {
+        const variants = firstMeal(d).variants;
+        variants[1].provider_meal_id = variants[0].provider_meal_id;
+      }),
+    ).toEqual(["days.0.meals.0.variants.1.provider_meal_id"]);
+  });
+
+  it.each([0, 11, 7.5])("rejects score %s", (score) => {
+    expect(
+      issuePaths((d) => {
         firstMeal(d).variants[0].score = score;
       }),
-    ).toBe(true);
+    ).toEqual([`${FIRST_VARIANT}.score`]);
+  });
+
+  it("rejects more than 5 justifications", () => {
+    expect(
+      issuePaths((d) => {
+        const variant = firstMeal(d).variants[0];
+        variant.justifications = Array.from({ length: 6 }, () => ({ icon: "⚖️", text: "…" }));
+      }),
+    ).toEqual([`${FIRST_VARIANT}.justifications`]);
   });
 
   it("rejects an unknown top-level key", () => {
-    expect(
-      rejects((d) => {
-        d.extra = true;
-      }),
-    ).toBe(true);
+    const delivery = sampleDelivery() as MutableDelivery;
+    delivery.extra = true;
+    const issues = moDeliverySchema.safeParse(delivery).error?.issues ?? [];
+    expect(issues.map((issue) => issue.code)).toEqual(["unrecognized_keys"]);
   });
 
   it("rejects a variant without provider_meal_id", () => {
     expect(
-      rejects((d) => {
+      issuePaths((d) => {
         const variant: Partial<Record<"provider_meal_id", string>> = firstMeal(d).variants[0];
         delete variant.provider_meal_id;
       }),
-    ).toBe(true);
+    ).toEqual([`${FIRST_VARIANT}.provider_meal_id`]);
   });
 });
 

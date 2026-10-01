@@ -8,6 +8,10 @@ export const prerender = false;
 const PROVISIONED_BY = "mo-delivery";
 // GoTrue error codes for "a user with this email already exists" (a concurrent delivery created it).
 const EMAIL_EXISTS_CODES = new Set(["email_exists", "user_already_exists"]);
+// Postgres "untranslatable_character": a string Postgres can't store (e.g. "\u0000" in jsonb/text).
+const UNTRANSLATABLE_CHARACTER = "22P05";
+// A week is ~40 KB (see scripts/fixtures/mo-delivery.sample.json); anything far larger is a bug, not a menu.
+const MAX_BODY_BYTES = 256 * 1024;
 
 function json(body: unknown, status: number): Response {
   return Response.json(body, { status });
@@ -60,10 +64,17 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: "unauthorized" }, 401);
   }
 
-  // 3. Payload.
+  // 3. Payload. Size-capped first: parsing and validating a huge body could exceed the Worker's CPU limit.
+  if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) {
+    return json({ error: "payload_too_large" }, 413);
+  }
+  const text = await request.text();
+  if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) {
+    return json({ error: "payload_too_large" }, 413);
+  }
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(text);
   } catch {
     return json({ error: "invalid_payload", issues: [{ path: "", message: "Request body is not valid JSON" }] }, 400);
   }
@@ -85,7 +96,7 @@ export const POST: APIRoute = async ({ request }) => {
       p_week_start: delivery.week_start,
       p_week_end: delivery.week_end,
       p_run_id: delivery.run_id ?? null,
-      // The body as received (validated), so later changes can re-derive data from it.
+      // The body as received (top level validated; unknown nested keys kept), so later changes can re-derive data from it.
       p_raw: body,
       p_options: toOptionRows(delivery),
     });
@@ -107,6 +118,16 @@ export const POST: APIRoute = async ({ request }) => {
     result = await ingest();
   }
 
+  if (result.error?.code === UNTRANSLATABLE_CHARACTER) {
+    // e.g. a "\u0000" in a string: valid JSON, but Postgres can't store it, so a retry would never succeed.
+    return json(
+      {
+        error: "invalid_payload",
+        issues: [{ path: "", message: "Payload contains a character that cannot be stored (\\u0000)" }],
+      },
+      400,
+    );
+  }
   if (result.error) {
     logStorageError("ingest_weekly_plan", result.error);
     return json({ error: "storage_failed" }, 500);

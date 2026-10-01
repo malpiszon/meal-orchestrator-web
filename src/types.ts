@@ -1,5 +1,7 @@
-/** Meal slots MO can deliver, in MO's slot order. */
-export type MealType = "breakfast" | "second_breakfast" | "lunch" | "tea" | "dinner" | "snack";
+/** Meal slots MO can deliver, in MO's slot order. The single source for `MealType` and the payload schema. */
+export const MEAL_TYPES = ["breakfast", "second_breakfast", "lunch", "tea", "dinner", "snack"] as const;
+
+export type MealType = (typeof MEAL_TYPES)[number];
 
 export interface Justification {
   icon: string;

@@ -511,16 +511,16 @@ The tables are new, so there is no data to migrate. Push the migration to produc
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Lint and type check pass: `npm run lint && npx astro check`
-- [x] 2.3 Build succeeds: `npm run build`
+- [x] 2.1 Unit tests pass: `npm test` — 04e6b21
+- [x] 2.2 Lint and type check pass: `npm run lint && npx astro check` — 04e6b21
+- [x] 2.3 Build succeeds: `npm run build` — 04e6b21
 
 #### Manual
 
-- [x] 2.4 Local curl returns 401/400/200 as specified, and a repeated POST keeps a single plan
-- [x] 2.5 A POST for a new email creates an unconfirmed `mo-delivery` account and sends no email, and a repeat returns `account_created: false`
-- [x] 2.6 `inviteUserByEmail` succeeds for a provisioned account (result recorded on #8)
-- [x] 2.7 `mo-delivery-contract.md` reads as a complete spec for the MO repo
+- [x] 2.4 Local curl returns 401/400/200 as specified, and a repeated POST keeps a single plan — 04e6b21
+- [x] 2.5 A POST for a new email creates an unconfirmed `mo-delivery` account and sends no email, and a repeat returns `account_created: false` — 04e6b21
+- [x] 2.6 `inviteUserByEmail` succeeds for a provisioned account (result recorded on #8) — 04e6b21
+- [x] 2.7 `mo-delivery-contract.md` reads as a complete spec for the MO repo — 04e6b21
 
 ### Phase 3: Dashboard
 

@@ -1,20 +1,11 @@
 import { z } from "zod";
-import type { MealType, OptionRow } from "@/types";
+import { MEAL_TYPES, type OptionRow } from "@/types";
 
 /**
  * Payload v1 of MO's weekly delivery (`POST /api/mo/deliveries`).
  * Keep in sync with context/changes/mo-weekly-delivery/mo-delivery-contract.md.
  * No `astro:env` import here, so Vitest can load this module.
  */
-
-export const MEAL_TYPES = [
-  "breakfast",
-  "second_breakfast",
-  "lunch",
-  "tea",
-  "dinner",
-  "snack",
-] as const satisfies readonly MealType[];
 
 const MS_PER_DAY = 86_400_000;
 
@@ -75,7 +66,7 @@ const mealSchema = z
 const daySchema = z
   .object({
     date: isoDateSchema,
-    meals: z.array(mealSchema),
+    meals: z.array(mealSchema).min(1),
   })
   .superRefine((day, ctx) => {
     const seen = new Set<string>();
@@ -99,7 +90,8 @@ export const moDeliverySchema = z
     week_start: isoDateSchema,
     week_end: isoDateSchema,
     user: z.object({ email: z.email() }),
-    days: z.array(daySchema),
+    // At least one day: an empty delivery would replace (wipe) an already stored week.
+    days: z.array(daySchema).min(1),
   })
   .superRefine((delivery, ctx) => {
     if (!isMonday(delivery.week_start)) {
