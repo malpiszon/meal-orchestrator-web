@@ -498,14 +498,14 @@ The tables are new, so there is no data to migrate. Push the migration to produc
 
 #### Automated
 
-- [ ] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [ ] 1.2 The function is not executable by `anon`
-- [ ] 1.3 Lint and type check pass: `npm run lint && npx astro check`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
+- [x] 1.2 The function is not executable by `anon`
+- [x] 1.3 Lint and type check pass: `npm run lint && npx astro check`
 
 #### Manual
 
-- [ ] 1.4 In local Studio, both tables show RLS enabled with only the `select` policy for `authenticated`
-- [ ] 1.5 `ingest_weekly_plan` inserts, replaces on repeat, and raises `unknown_user` for an unknown email
+- [x] 1.4 In local Studio, both tables show RLS enabled with only the `select` policy for `authenticated`
+- [x] 1.5 `ingest_weekly_plan` inserts, replaces on repeat, and raises `unknown_user` for an unknown email
 
 ### Phase 2: Delivery endpoint & MO contract
 
