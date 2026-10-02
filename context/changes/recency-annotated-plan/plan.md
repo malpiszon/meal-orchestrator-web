@@ -236,33 +236,33 @@ Additive: one new function, no table changes, no backfill. Rollback: deploy the 
 
 #### Automated
 
-- [ ] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [ ] 1.2 Unit tests pass, including `formatRecency` and `addDays` boundaries: `npm test`
-- [ ] 1.3 Lint and type checks pass: `npm run lint` and `npx astro check`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset` — 804864a
+- [x] 1.2 Unit tests pass, including `formatRecency` and `addDays` boundaries: `npm test` — 804864a
+- [x] 1.3 Lint and type checks pass: `npm run lint` and `npx astro check` — 804864a
 
 #### Manual
 
-- [ ] 1.4 `get_plan_recency` returns expected dates; offered-only options and other users' plans are excluded
-- [ ] 1.5 `anon` cannot execute `get_plan_recency`
+- [x] 1.4 `get_plan_recency` returns expected dates; offered-only options and other users' plans are excluded — 804864a
+- [x] 1.5 `anon` cannot execute `get_plan_recency` — 804864a
 
 ### Phase 2: Dashboard tabs and recency notes
 
 #### Automated
 
-- [ ] 2.1 Lint, type checks, unit tests and build pass
-- [ ] 2.2 Existing smoke still passes against the preview on :4322
+- [x] 2.1 Lint, type checks, unit tests and build pass — 71ac804
+- [x] 2.2 Existing smoke still passes against the preview on :4322 — 71ac804
 
 #### Manual
 
-- [ ] 2.3 Two delivered weeks: "Next week" default with recency notes on all options; "This week" without notes
-- [ ] 2.4 Only current week delivered: "This week" opens, "Next week" shows "No upcoming plan yet"
-- [ ] 2.5 Tabs keyboard-accessible; light/dark and phone width look right
+- [x] 2.3 Two delivered weeks: "Next week" default with recency notes on all options; "This week" without notes — 71ac804
+- [x] 2.4 Only current week delivered: "This week" opens, "Next week" shows "No upcoming plan yet" — 71ac804
+- [x] 2.5 Tabs keyboard-accessible; light/dark and phone width look right — 71ac804
 
 ### Phase 3: Smoke and docs
 
 #### Automated
 
-- [ ] 3.1 Smoke passes locally against the preview on :4322
+- [x] 3.1 Smoke passes locally against the preview on :4322
 - [ ] 3.2 CI `ci` and `smoke` jobs pass on the PR
 
 #### Manual

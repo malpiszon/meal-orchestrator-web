@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { formatDayLabel, formatWeekRange, groupPlanOptions, mealTypeLabel, todayInWarsaw } from "@/lib/plans";
+import {
+  addDays,
+  formatDayLabel,
+  formatRecency,
+  formatWeekRange,
+  groupPlanOptions,
+  mealTypeLabel,
+  todayInWarsaw,
+} from "@/lib/plans";
 import { MEAL_TYPES } from "@/types";
 
 describe("todayInWarsaw", () => {
@@ -124,5 +132,53 @@ describe("labels", () => {
     expect(formatWeekRange("2026-10-05", "2026-10-09")).toBe("5–9 October 2026");
     expect(formatWeekRange("2026-09-28", "2026-10-02")).toBe("28 September – 2 October 2026");
     expect(formatWeekRange("2026-12-28", "2027-01-01")).toBe("28 December 2026 – 1 January 2027");
+  });
+});
+
+describe("addDays", () => {
+  it("shifts within a month", () => {
+    expect(addDays("2026-10-02", -7)).toBe("2026-09-25");
+    expect(addDays("2026-10-05", 4)).toBe("2026-10-09");
+  });
+
+  it("crosses month and year ends in both directions", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2026-11-03", -7)).toBe("2026-10-27");
+    expect(addDays("2026-12-29", 7)).toBe("2027-01-05");
+    expect(addDays("2027-01-03", -7)).toBe("2026-12-27");
+  });
+
+  it("handles the leap day", () => {
+    expect(addDays("2028-03-01", -1)).toBe("2028-02-29");
+    expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
+    expect(addDays("2027-03-01", -1)).toBe("2027-02-28");
+  });
+
+  it("is independent of the runtime timezone and DST (tests run in UTC-10)", () => {
+    expect(addDays("2026-10-25", 1)).toBe("2026-10-26");
+    expect(addDays("2026-03-30", -1)).toBe("2026-03-29");
+  });
+});
+
+describe("formatRecency", () => {
+  it("uses the singular for 1 day", () => {
+    expect(formatRecency("2026-10-02", "2026-10-01")).toBe("In your plan 1 day earlier (Thu 1 Oct)");
+  });
+
+  it("counts calendar days: 7 and 11 days, same year without the year", () => {
+    expect(formatRecency("2026-10-08", "2026-10-01")).toBe("In your plan 7 days earlier (Thu 1 Oct)");
+    expect(formatRecency("2026-10-12", "2026-10-01")).toBe("In your plan 11 days earlier (Thu 1 Oct)");
+  });
+
+  it("crosses a month end", () => {
+    expect(formatRecency("2026-10-02", "2026-09-28")).toBe("In your plan 4 days earlier (Mon 28 Sep)");
+  });
+
+  it("shows the year when it differs from the meal's year", () => {
+    expect(formatRecency("2027-01-04", "2026-12-28")).toBe("In your plan 7 days earlier (Mon 28 Dec 2026)");
+  });
+
+  it("is not shifted by a DST change between the two dates", () => {
+    expect(formatRecency("2026-10-26", "2026-10-24")).toBe("In your plan 2 days earlier (Sat 24 Oct)");
   });
 });
