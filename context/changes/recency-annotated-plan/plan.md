@@ -262,7 +262,7 @@ Additive: one new function, no table changes, no backfill. Rollback: deploy the 
 
 #### Automated
 
-- [ ] 3.1 Smoke passes locally against the preview on :4322
+- [x] 3.1 Smoke passes locally against the preview on :4322
 - [ ] 3.2 CI `ci` and `smoke` jobs pass on the PR
 
 #### Manual

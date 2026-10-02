@@ -60,20 +60,39 @@ function isoDate(epochMs) {
 }
 
 /**
- * The sample delivery for `deliveryEmail`, moved to the first Monday at least 7 days after today (UTC).
- * Today in Europe/Warsaw is at most one day after today in UTC, so that Monday is always "upcoming".
+ * The first Monday at least 7 days after today (UTC), as `YYYY-MM-DD`. Today in Europe/Warsaw is at most
+ * one day after today in UTC, so that Monday is always "upcoming".
  */
-async function loadDelivery(deliveryEmail) {
-  const sample = JSON.parse(await readFile(new URL("./fixtures/mo-delivery.sample.json", import.meta.url), "utf8"));
+function upcomingMonday() {
   const now = new Date();
   let weekStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) + 7 * MS_PER_DAY;
   while (new Date(weekStart).getUTCDay() !== 1) weekStart += MS_PER_DAY;
+  return isoDate(weekStart);
+}
+
+/** The Monday of the current week in Europe/Warsaw (the dashboard's "This week"), as `YYYY-MM-DD`. */
+function currentMonday() {
+  // en-CA formats as YYYY-MM-DD.
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" }).format(new Date());
+  let weekStart = Date.parse(`${today}T00:00:00Z`);
+  while (new Date(weekStart).getUTCDay() !== 1) weekStart -= MS_PER_DAY;
+  return isoDate(weekStart);
+}
+
+/** Whole days from one `YYYY-MM-DD` date to a later one. */
+function daysBetween(from, to) {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / MS_PER_DAY);
+}
+
+/** The sample delivery for `deliveryEmail`, moved to the week starting on the Monday `weekStart` (`YYYY-MM-DD`). */
+async function loadDelivery(deliveryEmail, weekStart) {
+  const sample = JSON.parse(await readFile(new URL("./fixtures/mo-delivery.sample.json", import.meta.url), "utf8"));
   const shift = (date) =>
-    isoDate(Date.parse(`${date}T00:00:00Z`) - Date.parse(`${sample.week_start}T00:00:00Z`) + weekStart);
+    isoDate(Date.parse(`${weekStart}T00:00:00Z`) + daysBetween(sample.week_start, date) * MS_PER_DAY);
   return {
     ...sample,
     user: { email: deliveryEmail },
-    week_start: isoDate(weekStart),
+    week_start: weekStart,
     week_end: shift(sample.week_end),
     days: sample.days.map((day) => ({ ...day, date: shift(day.date) })),
   };
@@ -93,15 +112,19 @@ const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-let delivery, newUserDelivery, redelivery, oldName, newName;
+let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote;
 if (!KEEPALIVE_EXPECT_FAILURE) {
   if (!MO_INGEST_TOKEN) {
     console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
     process.exit(1);
   }
   if (!SUPABASE_URL || !SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_URL and SUPABASE_KEY)\n");
-  delivery = await loadDelivery(email);
-  newUserDelivery = await loadDelivery(`smoke-mo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`);
+  const nextWeek = upcomingMonday();
+  delivery = await loadDelivery(email, nextWeek);
+  newUserDelivery = await loadDelivery(
+    `smoke-mo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`,
+    nextWeek,
+  );
 
   // Re-delivery: the same week with the first day's first recommended meal renamed.
   const firstMeal = delivery.days[0].meals[0];
@@ -115,6 +138,17 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     console.error(`Fixture problem: "${oldName}" occurs more than once in the sample delivery.`);
     process.exit(1);
   }
+
+  // History: the same sample in the current week, with the meal renamed there, so that its name is
+  // specific to "This week" and the upcoming week's old name still occurs only in the upcoming week.
+  // Its meals keep their ids, so every recommended meal of the upcoming week was planned on the same
+  // weekday of the current week, the number of days between the two Mondays earlier.
+  const thisWeek = currentMonday();
+  currentDelivery = await loadDelivery(email, thisWeek);
+  currentName = `Smoke current-week meal ${Date.now()}`;
+  currentDelivery.days[0].meals[0].variants[index].name = currentName;
+  const gap = daysBetween(thisWeek, nextWeek);
+  recencyNote = `In your plan ${gap} days earlier (`;
 }
 
 const deliver = (payload) =>
@@ -184,6 +218,22 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 200, body: ["account_created: true", (body) => jsonField(body, "account_created") === true] },
       ],
       [
+        "current-week delivery for the signed-in user is stored",
+        () => deliver(currentDelivery),
+        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+      ],
+      [
+        "dashboard shows this week's plan",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `contains "This week" and "${currentName}"`,
+            (body) => body.includes("This week") && body.includes(escapeHtml(currentName ?? "")),
+          ],
+        },
+      ],
+      [
         "delivery for the signed-in user is stored",
         () => deliver(delivery),
         { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
@@ -192,6 +242,11 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         "dashboard shows the recommended meal",
         () => request("/dashboard"),
         { status: 200, body: [`contains "${oldName}"`, (body) => body.includes(escapeHtml(oldName ?? ""))] },
+      ],
+      [
+        "dashboard shows recency notes on the upcoming week",
+        () => request("/dashboard"),
+        { status: 200, body: [`contains "${recencyNote}"`, (body) => body.includes(recencyNote ?? "")] },
       ],
       ["re-delivery of the same week is stored", () => deliver(redelivery), { status: 200 }],
       [

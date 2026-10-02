@@ -216,6 +216,8 @@ The sample's week is in the past, so the dashboard won't show it; the walkthroug
 
 3. Sign in at `/auth/signin` with that email and password, and check that `/dashboard` shows the delivered week. A user without a delivered upcoming week sees "No upcoming plan yet" instead.
 
+4. Deliver a second week to see recency notes: run step 1 again with `--arg start` set to this week's Monday (Europe/Warsaw; today counts if it is a Monday), and send `/tmp/mo-delivery.json` with the same `curl`. The response shows `"account_created":false`. Reload `/dashboard`: it now has two tabs. "This week" shows the plan for the current week and "Next week" (open by default) the upcoming one. Every recommended meal of the upcoming week was also recommended on the same weekday this week, so it carries a note such as "In your plan 14 days earlier (Mon 28 Sep)". A meal only gets a note when it was recommended earlier; the "This week" tab shows no notes.
+
 ## Deployment
 
 This project deploys to [Cloudflare Workers](https://workers.cloudflare.com/).
@@ -257,6 +259,8 @@ The weekly-plan tables, the `ingest_weekly_plan` function and the two Worker sec
    npx wrangler secret put MO_INGEST_TOKEN             # paste that token
    ```
 
+Every later change that adds a migration (for example `get_plan_recency`, which the dashboard's recency notes call) follows the same timing: push it with `npx supabase db push` after the PR's CI is green and before merging, so the deployed Worker never calls a function production doesn't have yet.
+
 After the merge, the post-deploy smoke expects `POST /api/mo/deliveries` without a token to answer 401. A 503 there means the Worker secrets are missing.
 
 ### Keep-alive Cron Trigger
@@ -289,7 +293,7 @@ BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> npm run smok
 
 It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both.
 
-The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery for the smoke user shows its recommended meal on the dashboard; and a re-delivery of the same week with a renamed meal replaces it.
+The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead (and, for the history, to the current week's Monday) and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery of the same sample for the current week (Europe/Warsaw), with one meal renamed, shows the "This week" tab with that meal; a delivery of the upcoming week for the smoke user shows its recommended meal on the dashboard; the upcoming week then shows a recency note ("In your plan N days earlier (…"), N being the days between the two Mondays; and a re-delivery of the same week with a renamed meal replaces it.
 
 The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check (no `MO_INGEST_TOKEN` needed) and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
 
