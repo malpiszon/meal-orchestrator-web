@@ -135,7 +135,8 @@ const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "S
 /**
  * The recency note for a meal planned on `mealDate` that was last planned on `lastPlannedOn` (earlier),
  * e.g. `2026-10-12`, `2026-10-01` → "In your plan 11 days earlier (Thu 1 Oct)". The year is appended
- * only when it differs from `mealDate`'s year.
+ * only when it differs from `mealDate`'s year. Assumes `lastPlannedOn` is strictly before `mealDate`,
+ * as `get_plan_recency` guarantees; otherwise the count is 0 or negative.
  */
 export function formatRecency(mealDate: string, lastPlannedOn: string): string {
   const meal = utcMidnight(mealDate);

@@ -236,14 +236,14 @@ Additive: one new function, no table changes, no backfill. Rollback: deploy the 
 
 #### Automated
 
-- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [x] 1.2 Unit tests pass, including `formatRecency` and `addDays` boundaries: `npm test`
-- [x] 1.3 Lint and type checks pass: `npm run lint` and `npx astro check`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset` — 804864a
+- [x] 1.2 Unit tests pass, including `formatRecency` and `addDays` boundaries: `npm test` — 804864a
+- [x] 1.3 Lint and type checks pass: `npm run lint` and `npx astro check` — 804864a
 
 #### Manual
 
-- [x] 1.4 `get_plan_recency` returns expected dates; offered-only options and other users' plans are excluded
-- [x] 1.5 `anon` cannot execute `get_plan_recency`
+- [x] 1.4 `get_plan_recency` returns expected dates; offered-only options and other users' plans are excluded — 804864a
+- [x] 1.5 `anon` cannot execute `get_plan_recency` — 804864a
 
 ### Phase 2: Dashboard tabs and recency notes
 

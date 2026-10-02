@@ -300,7 +300,7 @@ The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`)
 GitHub Actions runs two jobs on every push and PR to `master`:
 
 - **ci** — lint, unit tests (`npm test`), `astro check` and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
-- **smoke** — starts a local Supabase via the Supabase CLI (its `SERVICE_ROLE_KEY` included), builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN` and runs `npm run smoke` against it. No secrets required.
+- **smoke** — starts a local Supabase via the Supabase CLI (its `SERVICE_ROLE_KEY` included), runs the pgTAP database tests in `supabase/tests/` (`npx supabase test db` locally), builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN` and runs `npm run smoke` against it. No secrets required.
 
 On pushes to `master`, a **deploy** job then runs `npx wrangler deploy` and a post-deploy smoke against production, including a token-less `POST /api/mo/deliveries` that must return 401 (503 means the Worker secrets are missing; 403 or a challenge page means Cloudflare bot protection is blocking MO).
 
