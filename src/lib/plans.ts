@@ -119,3 +119,29 @@ export function formatWeekRange(weekStart: string, weekEnd: string): string {
   }
   return `${start.getUTCDate()}–${tail}`;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** `isoDate` shifted by `days` calendar days (negative goes back), e.g. `2026-03-01`, -1 → `2026-02-28`. */
+export function addDays(isoDate: string, days: number): string {
+  return new Date(utcMidnight(isoDate).getTime() + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+// Hand-built rather than Intl: short month names differ between ICU versions ("Sept" vs "Sep" in
+// en-GB), and the build runs on workerd while tests run on Node.
+const SHORT_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/**
+ * The recency note for a meal planned on `mealDate` that was last planned on `lastPlannedOn` (earlier),
+ * e.g. `2026-10-12`, `2026-10-01` → "In your plan 11 days earlier (Thu 1 Oct)". The year is appended
+ * only when it differs from `mealDate`'s year.
+ */
+export function formatRecency(mealDate: string, lastPlannedOn: string): string {
+  const meal = utcMidnight(mealDate);
+  const last = utcMidnight(lastPlannedOn);
+  const days = Math.round((meal.getTime() - last.getTime()) / DAY_MS);
+  const year = last.getUTCFullYear() === meal.getUTCFullYear() ? "" : ` ${last.getUTCFullYear()}`;
+  const date = `${SHORT_WEEKDAYS[last.getUTCDay()]} ${last.getUTCDate()} ${SHORT_MONTHS[last.getUTCMonth()]}${year}`;
+  return `In your plan ${days} ${days === 1 ? "day" : "days"} earlier (${date})`;
+}
