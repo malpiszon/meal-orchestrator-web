@@ -89,6 +89,9 @@ const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
 const KEEPALIVE_TRIGGER = "/cdn-cgi/handler/scheduled?cron=0+3+*+*+*";
 const DELIVERIES = "/api/mo/deliveries";
 const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
+// Optional: the Supabase instance the server uses, to check its grants directly (CI sets both).
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
 let delivery, newUserDelivery, redelivery, oldName, newName;
 if (!KEEPALIVE_EXPECT_FAILURE) {
@@ -96,6 +99,7 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
     process.exit(1);
   }
+  if (!SUPABASE_URL || !SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_URL and SUPABASE_KEY)\n");
   delivery = await loadDelivery(email);
   newUserDelivery = await loadDelivery(`smoke-mo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`);
 
@@ -115,6 +119,24 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
 
 const deliver = (payload) =>
   request(DELIVERIES, { method: "POST", json: payload, headers: { Authorization: `Bearer ${MO_INGEST_TOKEN}` } });
+
+/** Calls ingest_weekly_plan through PostgREST with the anon key, as a browser holding that key could. */
+async function anonIngestRpc() {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/ingest_weekly_plan`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      p_email: email,
+      p_provider: "smoke",
+      p_week_start: delivery.week_start,
+      p_week_end: delivery.week_end,
+      p_run_id: null,
+      p_raw: {},
+      p_options: [],
+    }),
+  });
+  return { status: response.status, location: "", body: await response.text() };
+}
 
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
@@ -146,6 +168,16 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         () => request(DELIVERIES, { method: "POST", json: delivery }),
         { status: 401 },
       ],
+      ...(SUPABASE_URL && SUPABASE_KEY
+        ? [
+            [
+              "anon cannot execute ingest_weekly_plan",
+              anonIngestRpc,
+              // 42501 = permission denied; a 404 (e.g. a signature mismatch) must not pass as "refused".
+              { status: 401, body: ["code 42501", (body) => jsonField(body, "code") === "42501"] },
+            ],
+          ]
+        : []),
       [
         "delivery for a new email creates the account",
         () => deliver(newUserDelivery),

@@ -1,7 +1,7 @@
 ---
 change_id: mo-weekly-delivery
 title: Mo weekly delivery
-status: implemented
+status: impl_reviewed
 created: 2026-09-30
 updated: 2026-10-02
 archived_at: null
