@@ -13,7 +13,7 @@ interface PlanTabsProps {
 
 /**
  * Switches between the two server-rendered weeks. Both panels are force-mounted and only hidden when
- * inactive, so both weeks are in the server HTML and readable before hydration.
+ * inactive, so both weeks are in the server HTML; the active one is readable before hydration.
  */
 export default function PlanTabs({ defaultTab, current, upcoming }: PlanTabsProps) {
   return (

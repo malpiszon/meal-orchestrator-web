@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import NoUpcomingPlan from "@/components/plan/NoUpcomingPlan.astro";
+import NothingThisWeek from "@/components/plan/NothingThisWeek.astro";
 import PlanTabs from "@/components/plan/PlanTabs";
 import WeekPlan from "@/components/plan/WeekPlan.astro";
 import { Button } from "@/components/ui/button";
@@ -25,14 +26,19 @@ if (supabase && user) {
       getCurrentPlan(supabase, user.id, today),
       getUpcomingPlan(supabase, user.id, today),
     ]);
-    // Notes only on the upcoming week; "This week" shows its plan without them.
-    if (upcomingPlan) {
-      upcomingRecency = await getPlanRecency(supabase, upcomingPlan.id);
-    }
   } catch (error) {
     // Code and message only (see the plan services); no user data.
     console.error(`dashboard plan load failed: ${error instanceof Error ? error.message : String(error)}`);
     loadFailed = true;
+  }
+  // Notes only on the upcoming week; "This week" shows its plan without them. The notes are an
+  // annotation: if they fail, the weeks still render, just without notes.
+  if (upcomingPlan) {
+    try {
+      upcomingRecency = await getPlanRecency(supabase, upcomingPlan.id);
+    } catch (error) {
+      console.error(`dashboard recency load failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }
 ---
@@ -64,18 +70,7 @@ if (supabase && user) {
       ) : currentPlan || upcomingPlan ? (
         <PlanTabs client:load defaultTab={upcomingPlan ? "upcoming" : "current"}>
           <Fragment slot="current">
-            {currentPlan ? (
-              <WeekPlan plan={currentPlan} label="This week" />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    <h2>Nothing planned for this week</h2>
-                  </CardTitle>
-                  <CardDescription>You're freestyling this one.</CardDescription>
-                </CardHeader>
-              </Card>
-            )}
+            {currentPlan ? <WeekPlan plan={currentPlan} label="This week" /> : <NothingThisWeek />}
           </Fragment>
           <Fragment slot="upcoming">
             {upcomingPlan ? (

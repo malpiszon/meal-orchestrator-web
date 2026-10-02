@@ -249,14 +249,14 @@ Additive: one new function, no table changes, no backfill. Rollback: deploy the 
 
 #### Automated
 
-- [x] 2.1 Lint, type checks, unit tests and build pass
-- [x] 2.2 Existing smoke still passes against the preview on :4322
+- [x] 2.1 Lint, type checks, unit tests and build pass — 71ac804
+- [x] 2.2 Existing smoke still passes against the preview on :4322 — 71ac804
 
 #### Manual
 
-- [x] 2.3 Two delivered weeks: "Next week" default with recency notes on all options; "This week" without notes
-- [x] 2.4 Only current week delivered: "This week" opens, "Next week" shows "No upcoming plan yet"
-- [x] 2.5 Tabs keyboard-accessible; light/dark and phone width look right
+- [x] 2.3 Two delivered weeks: "Next week" default with recency notes on all options; "This week" without notes — 71ac804
+- [x] 2.4 Only current week delivered: "This week" opens, "Next week" shows "No upcoming plan yet" — 71ac804
+- [x] 2.5 Tabs keyboard-accessible; light/dark and phone width look right — 71ac804
 
 ### Phase 3: Smoke and docs
 
