@@ -1,20 +1,33 @@
 ---
+import RecencyNote from "@/components/plan/RecencyNote.astro";
 import { Badge } from "@/components/ui/badge";
-import { mealTypeLabel } from "@/lib/plans";
-import type { PlanSlot } from "@/types";
+import { formatRecency, mealTypeLabel } from "@/lib/plans";
+import type { PlanMealOption, PlanSlot } from "@/types";
 
 interface Props {
   meal: PlanSlot;
+  /** Option id → the date that meal was last planned earlier (`getPlanRecency`). Absent: no notes. */
+  recency?: Map<string, string>;
 }
 
-const { meal } = Astro.props;
+const { meal, recency } = Astro.props;
 const { recommended, others } = meal;
+
+/** The recency note for an option, or `null` when it was not planned earlier. */
+function recencyNote(option: PlanMealOption): string | null {
+  const lastPlannedOn = recency?.get(option.id);
+  return lastPlannedOn ? formatRecency(option.meal_date, lastPlannedOn) : null;
+}
+const recommendedNote = recencyNote(recommended);
 ---
 
 <div class="flex flex-col gap-2 border-t pt-4 first:border-t-0 first:pt-0">
   <h4 class="text-xs font-medium tracking-wide text-muted-foreground uppercase">{mealTypeLabel(meal.mealType)}</h4>
   <div class="flex items-start justify-between gap-3">
-    <p class="font-medium">{recommended.name}</p>
+    <div class="flex flex-col gap-0.5">
+      <p class="font-medium">{recommended.name}</p>
+      {recommendedNote && <RecencyNote note={recommendedNote} />}
+    </div>
     <Badge>
       {recommended.score}/10<span class="sr-only"> score</span>
     </Badge>
@@ -33,14 +46,20 @@ const { recommended, others } = meal;
     <details class="text-sm">
       <summary class="cursor-pointer text-muted-foreground">Other options ({others.length})</summary>
       <ul class="mt-2 flex flex-col gap-2">
-        {others.map((option) => (
-          <li class="flex items-start justify-between gap-3">
-            <span>{option.name}</span>
-            <Badge variant="outline">
-              {option.score}/10<span class="sr-only"> score</span>
-            </Badge>
-          </li>
-        ))}
+        {others.map((option) => {
+          const note = recencyNote(option);
+          return (
+            <li class="flex items-start justify-between gap-3">
+              <div class="flex flex-col gap-0.5">
+                <span>{option.name}</span>
+                {note && <RecencyNote note={note} />}
+              </div>
+              <Badge variant="outline">
+                {option.score}/10<span class="sr-only"> score</span>
+              </Badge>
+            </li>
+          );
+        })}
       </ul>
     </details>
   )}

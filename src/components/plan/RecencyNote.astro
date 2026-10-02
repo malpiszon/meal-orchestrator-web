@@ -1,0 +1,15 @@
+---
+import { History } from "lucide-react";
+
+interface Props {
+  /** The note text from `formatRecency`. */
+  note: string;
+}
+
+const { note } = Astro.props;
+---
+
+<span class="flex items-center gap-1 text-sm font-medium text-primary">
+  <History aria-hidden="true" className="size-3.5 shrink-0" />
+  {note}
+</span>
