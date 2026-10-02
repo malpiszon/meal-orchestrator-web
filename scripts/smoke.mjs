@@ -1,5 +1,8 @@
-// Smoke test: proves the built app, the Cloudflare adapter and the Supabase auth flow still work together.
-// Zero dependencies on purpose. Run against a live server: BASE_URL=http://localhost:4321 node scripts/smoke.mjs
+// Smoke test: proves the built app, the Cloudflare adapter and the Supabase auth and MO delivery flows still work together.
+// Zero dependencies on purpose. Run against a live server:
+//   BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> node scripts/smoke.mjs
+
+import { readFile } from "node:fs/promises";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
 const email = `smoke-${Date.now()}@example.com`;
@@ -20,7 +23,7 @@ function storeCookies(response) {
   }
 }
 
-async function request(path, { method = "GET", form } = {}) {
+async function request(path, { method = "GET", form, json, headers = {} } = {}) {
   const response = await fetch(BASE_URL + path, {
     method,
     redirect: "manual",
@@ -28,16 +31,90 @@ async function request(path, { method = "GET", form } = {}) {
       Cookie: cookieHeader(),
       Origin: BASE_URL,
       ...(form ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+      ...(json ? { "Content-Type": "application/json" } : {}),
+      ...headers,
     },
-    body: form ? new URLSearchParams(form).toString() : undefined,
+    body: form ? new URLSearchParams(form).toString() : json ? JSON.stringify(json) : undefined,
   });
   storeCookies(response);
-  return { status: response.status, location: response.headers.get("location") ?? "" };
+  return { status: response.status, location: response.headers.get("location") ?? "", body: await response.text() };
+}
+
+// Astro escapes these characters in rendered text, so match names the way they appear in the HTML.
+function escapeHtml(text) {
+  return text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function jsonField(body, key) {
+  try {
+    return JSON.parse(body)[key];
+  } catch {
+    return undefined;
+  }
+}
+
+const MS_PER_DAY = 86_400_000;
+
+function isoDate(epochMs) {
+  return new Date(epochMs).toISOString().slice(0, 10);
+}
+
+/**
+ * The sample delivery for `deliveryEmail`, moved to the first Monday at least 7 days after today (UTC).
+ * Today in Europe/Warsaw is at most one day after today in UTC, so that Monday is always "upcoming".
+ */
+async function loadDelivery(deliveryEmail) {
+  const sample = JSON.parse(await readFile(new URL("./fixtures/mo-delivery.sample.json", import.meta.url), "utf8"));
+  const now = new Date();
+  let weekStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) + 7 * MS_PER_DAY;
+  while (new Date(weekStart).getUTCDay() !== 1) weekStart += MS_PER_DAY;
+  const shift = (date) =>
+    isoDate(Date.parse(`${date}T00:00:00Z`) - Date.parse(`${sample.week_start}T00:00:00Z`) + weekStart);
+  return {
+    ...sample,
+    user: { email: deliveryEmail },
+    week_start: isoDate(weekStart),
+    week_end: shift(sample.week_end),
+    days: sample.days.map((day) => ({ ...day, date: shift(day.date) })),
+  };
+}
+
+/** The variant the dashboard recommends for a meal: highest score, ties going to the first listed. */
+function recommendedIndex(meal) {
+  return meal.variants.reduce((best, variant, index) => (variant.score > meal.variants[best].score ? index : best), 0);
 }
 
 const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
 // Same schedule as wrangler.jsonc, so local logs read like production ("keepalive ok (0 3 * * *)").
 const KEEPALIVE_TRIGGER = "/cdn-cgi/handler/scheduled?cron=0+3+*+*+*";
+const DELIVERIES = "/api/mo/deliveries";
+const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
+
+let delivery, newUserDelivery, redelivery, oldName, newName;
+if (!KEEPALIVE_EXPECT_FAILURE) {
+  if (!MO_INGEST_TOKEN) {
+    console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
+    process.exit(1);
+  }
+  delivery = await loadDelivery(email);
+  newUserDelivery = await loadDelivery(`smoke-mo-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`);
+
+  // Re-delivery: the same week with the first day's first recommended meal renamed.
+  const firstMeal = delivery.days[0].meals[0];
+  const index = recommendedIndex(firstMeal);
+  oldName = firstMeal.variants[index].name;
+  newName = `Smoke re-delivered meal ${Date.now()}`;
+  redelivery = structuredClone(delivery);
+  redelivery.days[0].meals[0].variants[index].name = newName;
+  // The "old name is gone" check is only meaningful if the name occurs nowhere else in the week.
+  if (JSON.stringify(redelivery).includes(JSON.stringify(oldName).slice(1, -1))) {
+    console.error(`Fixture problem: "${oldName}" occurs more than once in the sample delivery.`);
+    process.exit(1);
+  }
+}
+
+const deliver = (payload) =>
+  request(DELIVERIES, { method: "POST", json: payload, headers: { Authorization: `Bearer ${MO_INGEST_TOKEN}` } });
 
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
@@ -59,6 +136,43 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
         { status: 302, location: "/" },
       ],
+      [
+        "dashboard shows no upcoming plan yet",
+        () => request("/dashboard"),
+        { status: 200, body: ["contains 'No upcoming plan yet'", (body) => body.includes("No upcoming plan yet")] },
+      ],
+      [
+        "delivery without a token is rejected",
+        () => request(DELIVERIES, { method: "POST", json: delivery }),
+        { status: 401 },
+      ],
+      [
+        "delivery for a new email creates the account",
+        () => deliver(newUserDelivery),
+        { status: 200, body: ["account_created: true", (body) => jsonField(body, "account_created") === true] },
+      ],
+      [
+        "delivery for the signed-in user is stored",
+        () => deliver(delivery),
+        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+      ],
+      [
+        "dashboard shows the recommended meal",
+        () => request("/dashboard"),
+        { status: 200, body: [`contains "${oldName}"`, (body) => body.includes(escapeHtml(oldName ?? ""))] },
+      ],
+      ["re-delivery of the same week is stored", () => deliver(redelivery), { status: 200 }],
+      [
+        "dashboard shows the re-delivered week",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `contains "${newName}" and not "${oldName}"`,
+            (body) => body.includes(escapeHtml(newName ?? "")) && !body.includes(escapeHtml(oldName ?? "")),
+          ],
+        },
+      ],
       ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
       [
         "signout clears session",
@@ -74,12 +188,17 @@ for (const [name, run, expected] of steps) {
   const actual = await run();
   const statusOk =
     typeof expected.status === "function" ? expected.status(actual.status) : actual.status === expected.status;
-  const ok = statusOk && (expected.location === undefined || actual.location.startsWith(expected.location));
+  const bodyOk = expected.body === undefined || expected.body[1](actual.body);
+  const ok = statusOk && bodyOk && (expected.location === undefined || actual.location.startsWith(expected.location));
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (!ok) {
     failed++;
     const expectedStatus = typeof expected.status === "function" ? "non-2xx" : expected.status;
-    console.log(`      expected ${expectedStatus} ${expected.location ?? ""}`);
+    console.log(
+      `      expected ${expectedStatus} ${expected.location ?? ""}${expected.body ? `, body ${expected.body[0]}` : ""}`,
+    );
+    // JSON error bodies (e.g. a delivery's validation issues) are short and worth seeing; HTML pages are not.
+    if (actual.body.startsWith("{")) console.log(`      got ${actual.body.slice(0, 500)}`);
   }
 }
 

@@ -15,6 +15,10 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
+    // Dev server only: lets MO running in Docker deliver to http://host.docker.internal:4321.
+    server: {
+      allowedHosts: ["host.docker.internal"],
+    },
   },
   adapter: cloudflare(),
   env: {

@@ -180,6 +180,42 @@ curl -i http://localhost:4321/api/mo/deliveries \
   --data @scripts/fixtures/mo-delivery.sample.json
 ```
 
+The sample's week is in the past, so the dashboard won't show it; the walkthrough below moves it to an upcoming week.
+
+### Dev walkthrough: sign in as an account a delivery created
+
+**Local development only** (`npm run dev` against local Supabase). It shows the dashboard exactly as a real user will see it: the account is created by a delivery, as in production, and then given a password with one Admin API call. That call stands in for the account invitation (roadmap item S-04), which doesn't exist yet. In production, accounts get their password only through that invitation; there are no manual accounts or test deliveries there.
+
+1. Deliver the sample for your email and an upcoming week. `start` must be a Monday after today (Europe/Warsaw); the day dates are shifted to match. The response shows `"account_created":true`.
+
+   ```bash
+   jq --arg email you@example.com --arg start 2026-10-12 '
+     ((($start + "T00:00:00Z") | fromdate) - ((.week_start + "T00:00:00Z") | fromdate)) as $shift
+     | def move: ((. + "T00:00:00Z") | fromdate) + $shift | strftime("%Y-%m-%d");
+     .user.email = $email | .week_start = $start | .week_end |= move | .days |= map(.date |= move)' \
+     scripts/fixtures/mo-delivery.sample.json > /tmp/mo-delivery.json
+
+   curl -i http://localhost:4321/api/mo/deliveries \
+     -H "Authorization: Bearer $MO_INGEST_TOKEN" \
+     -H "Content-Type: application/json" \
+     --data @/tmp/mo-delivery.json
+   ```
+
+2. Give the account a password through the local Admin API, using the local `SERVICE_ROLE_KEY` (from `npx supabase status -o env`) as both `apikey` and bearer token. Find the user's `<id>` in Studio (**Authentication → Users**) or with the `GET` below.
+
+   ```bash
+   curl -s http://127.0.0.1:54321/auth/v1/admin/users \
+     -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+     | jq -r '.users[] | select(.email == "you@example.com") | .id'
+
+   curl -X PUT http://127.0.0.1:54321/auth/v1/admin/users/<id> \
+     -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"password": "<a password>", "email_confirm": true}'
+   ```
+
+3. Sign in at `/auth/signin` with that email and password, and check that `/dashboard` shows the delivered week. A user without a delivered upcoming week sees "No upcoming plan yet" instead.
+
 ## Deployment
 
 This project deploys to [Cloudflare Workers](https://workers.cloudflare.com/).
@@ -197,6 +233,31 @@ npx wrangler deploy
 ```
 
 Set `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN` as secrets in your Cloudflare dashboard or via `npx wrangler secret put <NAME>`. The production `MO_INGEST_TOKEN` must differ from any dev token (`openssl rand -hex 32`); hand it to MO's operator. Without the last two, the MO delivery endpoint answers 503.
+
+In practice CI deploys: every push to `master` runs `npx wrangler deploy` once the `ci` and `smoke` jobs pass, then a post-deploy smoke checks production (see [CI](#ci)).
+
+### Production setup for the MO delivery endpoint (one-time)
+
+The weekly-plan tables, the `ingest_weekly_plan` function and the two Worker secrets must exist in production before the code that uses them is deployed. Nothing account- or user-specific is done in production: no manual accounts, no test deliveries.
+
+**Timing:** the change ships in one PR, and every merge to `master` deploys to production. Run both steps **after that PR's CI is green and before merging it**, so the deploy lands on a database and Worker that are already prepared.
+
+1. Push the migrations to the linked production project, **before** the Worker code that calls `ingest_weekly_plan` is deployed:
+
+   ```bash
+   npx supabase link --project-ref <project-ref>   # once per machine
+   npx supabase db push
+   ```
+
+2. Set the two Worker secrets. Generate a fresh token for production and store it for MO as `MO_WEB_TOKEN` (the env var MO's `delivery.mo_web.token_env` points to, see `context/changes/mo-weekly-delivery/mo-delivery-contract.md`):
+
+   ```bash
+   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY   # service_role key of the production project
+   openssl rand -hex 32                                # the production token
+   npx wrangler secret put MO_INGEST_TOKEN             # paste that token
+   ```
+
+After the merge, the post-deploy smoke expects `POST /api/mo/deliveries` without a token to answer 401. A 503 there means the Worker secrets are missing.
 
 ### Keep-alive Cron Trigger
 
@@ -219,16 +280,18 @@ A successful run logs `keepalive ok`; a failure logs `keepalive failed: <message
 
 ## Smoke test
 
-`scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) over HTTP. Run it against the dev server or the production preview after dependency upgrades:
+`scripts/smoke.mjs` is a dependency-free Node script that walks the whole auth flow (sign-up, sign-in, protected page, sign-out) and the MO delivery flow over HTTP. Run it against the dev server or the production preview after dependency upgrades:
 
 ```bash
 npm run dev            # or: npm run build && npm run preview
-BASE_URL=http://localhost:4321 npm run smoke
+BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> npm run smoke
 ```
 
-It needs a reachable Supabase instance (local or cloud) with email confirmation disabled.
+It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it.
 
-The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
+The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery for the smoke user shows its recommended meal on the dashboard; and a re-delivery of the same week with a renamed meal replaces it.
+
+The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check (no `MO_INGEST_TOKEN` needed) and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
 
 > **Note:** this script exists primarily to guard the development of the starter itself — it is a fast sanity check that dependency upgrades did not break the build, the Cloudflare adapter or the Supabase auth flow. It is **not** a substitute for a real test suite. Once you build your own product on top of this starter, add proper tests (unit, integration, end-to-end) suited to your application.
 
@@ -236,8 +299,10 @@ The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`)
 
 GitHub Actions runs two jobs on every push and PR to `master`:
 
-- **ci** — lint, `astro check` and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
-- **smoke** — starts a local Supabase via the Supabase CLI, builds, serves the production preview on the Cloudflare runtime and runs `npm run smoke` against it. No secrets required.
+- **ci** — lint, unit tests (`npm test`), `astro check` and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
+- **smoke** — starts a local Supabase via the Supabase CLI (its `SERVICE_ROLE_KEY` included), builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN` and runs `npm run smoke` against it. No secrets required.
+
+On pushes to `master`, a **deploy** job then runs `npx wrangler deploy` and a post-deploy smoke against production, including a token-less `POST /api/mo/deliveries` that must return 401 (503 means the Worker secrets are missing; 403 or a challenge page means Cloudflare bot protection is blocking MO).
 
 ## License
 
