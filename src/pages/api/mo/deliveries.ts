@@ -89,17 +89,18 @@ export const POST: APIRoute = async ({ request }) => {
   const delivery: MoDelivery = parsed.data;
 
   // 4. Storage: one RPC; on unknown_user provision the account and call once more.
-  const ingest = () =>
-    supabase.rpc("ingest_weekly_plan", {
-      p_email: delivery.user.email,
-      p_provider: delivery.provider,
-      p_week_start: delivery.week_start,
-      p_week_end: delivery.week_end,
-      p_run_id: delivery.run_id ?? null,
-      // The body as received (top level validated; unknown nested keys kept), so later changes can re-derive data from it.
-      p_raw: body,
-      p_options: toOptionRows(delivery),
-    });
+  // Built once: the provisioning path calls the RPC twice.
+  const ingestArgs = {
+    p_email: delivery.user.email,
+    p_provider: delivery.provider,
+    p_week_start: delivery.week_start,
+    p_week_end: delivery.week_end,
+    p_run_id: delivery.run_id ?? null,
+    // The body as received (top level validated; unknown nested keys kept), so later changes can re-derive data from it.
+    p_raw: body,
+    p_options: toOptionRows(delivery),
+  };
+  const ingest = () => supabase.rpc("ingest_weekly_plan", ingestArgs);
 
   let result = await ingest();
   let accountCreated = false;
@@ -111,8 +112,10 @@ export const POST: APIRoute = async ({ request }) => {
       app_metadata: { provisioned_by: PROVISIONED_BY },
     });
     if (createError && !EMAIL_EXISTS_CODES.has(createError.code ?? "")) {
+      // Not fatal: a concurrent delivery may have just created the account, and GoTrue reports that
+      // race as a generic 500 rather than email_exists. The retry below decides; if the user still
+      // doesn't exist it fails as storage_failed.
       logStorageError("createUser", createError);
-      return json({ error: "storage_failed" }, 500);
     }
     accountCreated = !createError;
     result = await ingest();

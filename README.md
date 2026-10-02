@@ -116,7 +116,7 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-`npx supabase start` applies the repo's migrations (currently just the `keepalive` function pinged by the daily Cron Trigger, see [Deployment](#deployment)) automatically. A hosted or production project needs them pushed explicitly — see below.
+`npx supabase start` applies the repo's migrations (the `keepalive` function pinged by the daily Cron Trigger, see [Deployment](#deployment), and the weekly-plan tables with the `ingest_weekly_plan` function) automatically. A hosted or production project needs them pushed explicitly — see below.
 
 ### Using a cloud Supabase project instead
 
@@ -169,7 +169,7 @@ Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_
 - **Auth:** `Authorization: Bearer <MO_INGEST_TOKEN>`. A missing or wrong token returns 401.
 - **Body:** payload v1, defined by `moDeliverySchema` in `src/lib/mo-delivery.ts`. An invalid body returns 400 with the validation issues. A sample is in `scripts/fixtures/mo-delivery.sample.json`.
 - **Storage:** one call to the `ingest_weekly_plan` Postgres function through a service-role client. Re-sending a week for the same user replaces it. An email mo-web doesn't know yet becomes an unconfirmed account without a password (`app_metadata.provisioned_by = "mo-delivery"`), and no email is sent.
-- **Responses:** 200 `{"plan_id","week_start","account_created"}`; 503 `not_configured` when `SUPABASE_SERVICE_ROLE_KEY` or `MO_INGEST_TOKEN` is missing; 500 `storage_failed` on a database error (details in the Worker logs).
+- **Responses:** 200 `{"plan_id","week_start","account_created"}`; 503 `not_configured` when `SUPABASE_SERVICE_ROLE_KEY` or `MO_INGEST_TOKEN` is missing; 413 `payload_too_large` over 256 KiB; 500 `storage_failed` on a database error (details in the Worker logs). The full response table, with what MO should retry, is in the contract linked below.
 
 The full contract for the MO side is in `context/changes/mo-weekly-delivery/mo-delivery-contract.md`. To try it locally against `npm run dev` (rewrite the email to a local user's, or a new one to see provisioning):
 
@@ -287,7 +287,7 @@ npm run dev            # or: npm run build && npm run preview
 BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> npm run smoke
 ```
 
-It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it.
+It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both.
 
 The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery for the smoke user shows its recommended meal on the dashboard; and a re-delivery of the same week with a renamed meal replaces it.
 
