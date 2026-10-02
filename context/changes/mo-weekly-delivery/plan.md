@@ -540,11 +540,11 @@ The tables are new, so there is no data to migrate. Push the migration to produc
 
 #### Automated
 
-- [x] 4.1 Local smoke passes against the preview
+- [x] 4.1 Local smoke passes against the preview — 726941c
 - [ ] 4.2 CI `ci`, `smoke` and `deploy` jobs are green, including the post-deploy 401 probe
 
 #### Manual
 
-- [x] 4.3 Dev walkthrough: a delivery creates your account, the admin call sets a password, and the dashboard shows the plan
-- [ ] 4.4 The production migration has been pushed and both Worker secrets set
-- [ ] 4.5 The MO token has been handed over and the contract document is linked from issue #4
+- [x] 4.3 Dev walkthrough: a delivery creates your account, the admin call sets a password, and the dashboard shows the plan — 726941c
+- [x] 4.4 The production migration has been pushed and both Worker secrets set
+- [x] 4.5 The MO token has been handed over and the contract document is linked from issue #4
