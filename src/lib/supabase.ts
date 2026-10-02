@@ -1,6 +1,7 @@
 import { createServerClient, parseCookieHeader } from "@supabase/ssr";
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AstroCookies } from "astro";
-import { SUPABASE_URL, SUPABASE_KEY } from "astro:env/server";
+import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY } from "astro:env/server";
 
 export function createClient(requestHeaders: Headers, cookies: AstroCookies) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -17,5 +18,18 @@ export function createClient(requestHeaders: Headers, cookies: AstroCookies) {
         });
       },
     },
+  });
+}
+
+/**
+ * Cookie-less service-role client for machine-to-machine writes (MO deliveries).
+ * It bypasses RLS: never use it in a user-facing code path.
+ */
+export function createServiceClient(): SupabaseClient | null {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return null;
+  }
+  return createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }

@@ -15,12 +15,18 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
+    // Dev server only: lets MO running in Docker deliver to http://host.docker.internal:4321.
+    server: {
+      allowedHosts: ["host.docker.internal"],
+    },
   },
   adapter: cloudflare(),
   env: {
     schema: {
       SUPABASE_URL: envField.string({ context: "server", access: "secret", optional: true }),
       SUPABASE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      SUPABASE_SERVICE_ROLE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      MO_INGEST_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });

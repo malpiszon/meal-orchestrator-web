@@ -73,13 +73,15 @@ const astroConfig = defineConfig({
 const scriptsConfig = defineConfig({
   files: ["scripts/**/*.mjs"],
   extends: [tseslint.configs.disableTypeChecked],
-  languageOptions: { globals: { console: true, process: true, fetch: true, URLSearchParams: true } },
+  languageOptions: {
+    globals: { console: true, process: true, fetch: true, URL: true, URLSearchParams: true, structuredClone: true },
+  },
   rules: { "no-console": "off" },
 });
 
-// Cron logs are the keep-alive's only observability signal (Workers Logs).
+// Cron logs, failed MO deliveries and failed dashboard plan loads are only observable through Workers Logs.
 const workerConfig = defineConfig({
-  files: ["src/worker.ts"],
+  files: ["src/worker.ts", "src/pages/api/mo/**/*.ts", "src/pages/dashboard.astro"],
   rules: { "no-console": "off" },
 });
 

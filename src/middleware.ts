@@ -3,7 +3,15 @@ import { createClient } from "@/lib/supabase";
 
 const PROTECTED_ROUTES = ["/dashboard"];
 
+// Machine-to-machine routes (MO): bearer-token auth, no cookie session. Never add them to PROTECTED_ROUTES.
+const MACHINE_ROUTE_PREFIX = "/api/mo/";
+
 export const onRequest = defineMiddleware(async (context, next) => {
+  if (context.url.pathname.startsWith(MACHINE_ROUTE_PREFIX)) {
+    context.locals.user = null;
+    return next();
+  }
+
   const supabase = createClient(context.request.headers, context.cookies);
 
   if (supabase) {

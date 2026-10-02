@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-09-30
+updated: 2026-10-01
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -43,7 +43,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | -------- |
 | F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | ready    |
 | F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done     |
-| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | planning |
+| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | in-progress |
 | S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | proposed |
 | S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | proposed |
 | S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | proposed |
@@ -123,7 +123,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - How MO authenticates its delivery and how a non-2xx response reaches MO's operator for manual retry (MO's email must still succeed). — Owner: user. Block: no.
   - Accounts: resolved 2026-09-30. MO is the authority, so a delivery for an email mo-web hasn't seen creates that account (unconfirmed, no password, no email sent) and stores the week. No accounts are created manually; before S-04 the dashboard is verified on the dev stack, where a password is set with an Admin API call. Invitation emails are S-04. — Owner: user. Block: no.
 - **Risk:** First slice to introduce data and per-user isolation; the submission shape chosen here constrains meal matching in S-02, so a wrong meal identity is the costliest mistake in the roadmap.
-- **Status:** planning
+- **Status:** in-progress
 
 ### S-02: Recency-annotated upcoming plan (north star)
 

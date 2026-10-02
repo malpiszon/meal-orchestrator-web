@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npx astro sync
       - run: npm run lint
+      - run: npm test
       - run: npx astro check
       - run: npm run build
         env:
@@ -34,6 +35,9 @@ jobs:
 
   smoke:
     runs-on: ubuntu-latest
+    env:
+      # Test-only token shared by the preview (.env/.dev.vars) and the smoke script; not a secret.
+      MO_INGEST_TOKEN: ci-smoke-mo-ingest-token
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -46,18 +50,19 @@ jobs:
       - name: Start local Supabase
         run: |
           supabase start -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
-          supabase status -o env | grep -E '^(API_URL|ANON_KEY)=' > supabase.env
+          supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY)=' > supabase.env
       - name: Configure secrets for build and preview
         run: |
           source supabase.env
-          printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\n' "$API_URL" "$ANON_KEY" > .env
+          printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nMO_INGEST_TOKEN=%s\n' \
+            "$API_URL" "$ANON_KEY" "$SERVICE_ROLE_KEY" "$MO_INGEST_TOKEN" > .env
           cp .env .dev.vars
       - run: npm run build
       - name: Run smoke test against production preview
         run: |
           npm run preview -- --port 4321 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:4321/ && break; sleep 1; done
-          BASE_URL=http://localhost:4321 npm run smoke
+          BASE_URL=http://localhost:4321 MO_INGEST_TOKEN="$MO_INGEST_TOKEN" npm run smoke
       - name: Run keepalive failure-mode smoke
         run: |
           npx astro preview stop
@@ -101,3 +106,10 @@ jobs:
             -d 'email=ci-probe%40example.com&password=not-a-real-password' "$PROD_URL/api/auth/signin")
           echo "$location"
           echo "$location" | grep -q 'Invalid%20login%20credentials'
+          # MO delivery endpoint without a token must answer 401. A 503 means the Worker secrets
+          # SUPABASE_SERVICE_ROLE_KEY / MO_INGEST_TOKEN are missing; a 403 or challenge page means
+          # Cloudflare bot protection is blocking machine-to-machine calls, so MO couldn't deliver either.
+          status=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+            -d '{}' "$PROD_URL/api/mo/deliveries")
+          echo "mo deliveries without token -> $status"
+          test "$status" = 401
