@@ -1,32 +1,67 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import WeekPlan from "@/components/plan/WeekPlan.astro";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { todayInWarsaw } from "@/lib/plans";
+import { getUpcomingPlan } from "@/lib/services/plans";
+import { createClient } from "@/lib/supabase";
+import type { WeeklyPlan } from "@/types";
 
 const { user } = Astro.locals;
+
+// Upcoming = week_start after today's date in Europe/Warsaw (MO's timezone), not UTC.
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+let plan: WeeklyPlan | null = null;
+let loadFailed = false;
+if (supabase) {
+  try {
+    plan = await getUpcomingPlan(supabase, todayInWarsaw(new Date()));
+  } catch {
+    loadFailed = true;
+  }
+}
 ---
 
 <Layout title="Dashboard">
-  <div class="flex min-h-screen items-center justify-center bg-background p-4">
-    <Card className="w-full max-w-sm text-center">
-      <CardHeader>
-        <CardTitle className="text-3xl">
-          <h1>Dashboard</h1>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div class="text-muted-foreground">
-          <p>
-            Welcome, <span class="font-semibold text-foreground">{user?.email}</span>
-          </p>
-          <p class="mt-2 text-sm">This page is only for authenticated users.</p>
+  <main class="min-h-screen bg-background text-foreground">
+    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 sm:py-8">
+      <header class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+          <h1 class="text-2xl font-semibold">Your meals</h1>
+          <p class="truncate text-sm text-muted-foreground">{user?.email}</p>
         </div>
-        <form method="POST" action="/api/auth/signout" class="mt-6">
-          <Button type="submit" variant="outline">
+        <form method="POST" action="/api/auth/signout">
+          <Button type="submit" variant="outline" size="sm">
             Sign out
           </Button>
         </form>
-      </CardContent>
-    </Card>
-  </div>
+      </header>
+
+      {loadFailed ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>Couldn't load your plan</h2>
+            </CardTitle>
+            <CardDescription>Something went wrong on our side. Please reload the page in a moment.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : plan ? (
+        <WeekPlan plan={plan} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>No upcoming plan yet</h2>
+            </CardTitle>
+            <CardDescription>
+              Meal Orchestrator's recommendation for next week usually arrives on Tuesday or Wednesday before the week
+              starts. Check back then.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+    </div>
+  </main>
 </Layout>

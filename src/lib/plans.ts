@@ -1,0 +1,121 @@
+import { MEAL_TYPES, type MealType, type PlanDay, type PlanSlot } from "@/types";
+
+/**
+ * Pure plan-state helpers for the dashboard. No `astro:env` import, so Vitest can load this module.
+ */
+
+/** The fields of an option row that grouping relies on. */
+export interface GroupableOption {
+  meal_date: string;
+  meal_type: string;
+  variant_index: number;
+  score: number;
+  is_recommended: boolean;
+}
+
+const warsawDate = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Warsaw",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** Today's calendar date (`YYYY-MM-DD`) in Europe/Warsaw, the timezone MO plans weeks in. */
+export function todayInWarsaw(now: Date): string {
+  const parts = warsawDate.formatToParts(now);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function isMealType(value: string): value is MealType {
+  return (MEAL_TYPES as readonly string[]).includes(value);
+}
+
+/** Best first: score descending, then menu order (lowest `variant_index`). */
+function byScoreThenIndex(a: GroupableOption, b: GroupableOption): number {
+  return b.score - a.score || a.variant_index - b.variant_index;
+}
+
+/**
+ * Group a plan's option rows into days (date order) and meal slots (MO's slot order, `MEAL_TYPES`).
+ * Each slot holds its `recommended` option and the `others`, sorted by score descending, then index.
+ * Rows whose `meal_type` is not in `MEAL_TYPES` are skipped. A slot without an `is_recommended`
+ * row falls back to its best option (highest score, lowest index).
+ */
+export function groupPlanOptions<T extends GroupableOption>(rows: readonly T[]): PlanDay<T>[] {
+  const byDate = new Map<string, Map<MealType, T[]>>();
+  for (const row of rows) {
+    if (!isMealType(row.meal_type)) continue;
+    let slots = byDate.get(row.meal_date);
+    if (!slots) {
+      slots = new Map();
+      byDate.set(row.meal_date, slots);
+    }
+    const options = slots.get(row.meal_type);
+    if (options) {
+      options.push(row);
+    } else {
+      slots.set(row.meal_type, [row]);
+    }
+  }
+
+  // `YYYY-MM-DD` strings sort chronologically.
+  return [...byDate.keys()].sort().map((date) => {
+    const slotsByType = byDate.get(date) ?? new Map<MealType, T[]>();
+    const slots: PlanSlot<T>[] = [];
+    for (const mealType of MEAL_TYPES) {
+      const options = slotsByType.get(mealType);
+      if (!options?.length) continue;
+      const sorted = [...options].sort(byScoreThenIndex);
+      const recommended = sorted.find((option) => option.is_recommended) ?? sorted[0];
+      slots.push({ mealType, recommended, others: sorted.filter((option) => option !== recommended) });
+    }
+    return { date, slots };
+  });
+}
+
+/** Human label for a meal type, derived from its identifier: `second_breakfast` → "Second breakfast". */
+export function mealTypeLabel(mealType: MealType): string {
+  const words = mealType.replaceAll("_", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// Dates are calendar dates: format them at UTC midnight in UTC, so the label never shifts by a day.
+function utcMidnight(isoDate: string): Date {
+  return new Date(`${isoDate}T00:00:00Z`);
+}
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+const monthFormat = new Intl.DateTimeFormat("en-GB", { month: "long", timeZone: "UTC" });
+
+/** e.g. `2026-10-05` → "Monday 5 October". */
+export function formatDayLabel(isoDate: string): string {
+  return dayFormat.format(utcMidnight(isoDate));
+}
+
+/**
+ * e.g. `2026-10-05`, `2026-10-09` → "5–9 October 2026"; across months "28 September – 2 October 2026".
+ * Built by hand: `formatRange` spacing differs between ICU versions (Node vs workerd).
+ */
+export function formatWeekRange(weekStart: string, weekEnd: string): string {
+  const [start, end] = [utcMidnight(weekStart), utcMidnight(weekEnd)];
+  const startYear = start.getUTCFullYear();
+  const endYear = end.getUTCFullYear();
+  const startMonth = monthFormat.format(start);
+  const endMonth = monthFormat.format(end);
+  const tail = `${end.getUTCDate()} ${endMonth} ${endYear}`;
+
+  if (startYear !== endYear) {
+    return `${start.getUTCDate()} ${startMonth} ${startYear} – ${tail}`;
+  }
+  if (start.getUTCMonth() !== end.getUTCMonth()) {
+    return `${start.getUTCDate()} ${startMonth} – ${tail}`;
+  }
+  return `${start.getUTCDate()}–${tail}`;
+}

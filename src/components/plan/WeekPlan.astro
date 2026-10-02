@@ -1,0 +1,36 @@
+---
+import MealSlot from "@/components/plan/MealSlot.astro";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDayLabel, formatWeekRange, groupPlanOptions } from "@/lib/plans";
+import type { WeeklyPlan } from "@/types";
+
+interface Props {
+  plan: WeeklyPlan;
+}
+
+const { plan } = Astro.props;
+const days = groupPlanOptions(plan.plan_meal_options);
+---
+
+<section aria-labelledby="week-heading" class="flex flex-col gap-4">
+  <div>
+    <p class="text-sm text-muted-foreground">Upcoming week</p>
+    <h2 id="week-heading" class="text-xl font-semibold">
+      {formatWeekRange(plan.week_start, plan.week_end)}
+    </h2>
+  </div>
+  {days.map((day) => (
+    <Card className="gap-4">
+      <CardHeader>
+        <CardTitle>
+          <h3>{formatDayLabel(day.date)}</h3>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {day.slots.map((slot) => (
+          <MealSlot meal={slot} />
+        ))}
+      </CardContent>
+    </Card>
+  ))}
+</section>
