@@ -14,10 +14,12 @@ const { user } = Astro.locals;
 const supabase = createClient(Astro.request.headers, Astro.cookies);
 let plan: WeeklyPlan | null = null;
 let loadFailed = false;
-if (supabase) {
+if (supabase && user) {
   try {
-    plan = await getUpcomingPlan(supabase, todayInWarsaw(new Date()));
-  } catch {
+    plan = await getUpcomingPlan(supabase, user.id, todayInWarsaw(new Date()));
+  } catch (error) {
+    // Code and message only (see getUpcomingPlan); no user data.
+    console.error(`dashboard plan load failed: ${error instanceof Error ? error.message : String(error)}`);
     loadFailed = true;
   }
 }

@@ -526,15 +526,15 @@ The tables are new, so there is no data to migrate. Push the migration to produc
 
 #### Automated
 
-- [x] 3.1 Unit tests pass: `npm test`
-- [x] 3.2 Lint, type check and build pass: `npm run lint && npx astro check && npm run build`
+- [x] 3.1 Unit tests pass: `npm test` — 0f93eae
+- [x] 3.2 Lint, type check and build pass: `npm run lint && npx astro check && npm run build` — 0f93eae
 
 #### Manual
 
-- [x] 3.3 The dashboard shows 5 days × 2 slots, the tied slot recommends the first-listed option, and other options expand
-- [x] 3.4 A second user with no delivery sees "No upcoming plan yet" and not the first user's plan
-- [x] 3.5 A delivery with `week_start` today or earlier is not shown as upcoming
-- [x] 3.6 Readable on a phone-width viewport and in dark mode
+- [x] 3.3 The dashboard shows 5 days × 2 slots, the tied slot recommends the first-listed option, and other options expand — 0f93eae
+- [x] 3.4 A second user with no delivery sees "No upcoming plan yet" and not the first user's plan — 0f93eae
+- [x] 3.5 A delivery with `week_start` today or earlier is not shown as upcoming — 0f93eae
+- [x] 3.6 Readable on a phone-width viewport and in dark mode — 0f93eae
 
 ### Phase 4: Smoke, CI & production setup
 

@@ -19,6 +19,7 @@ const days = groupPlanOptions(plan.plan_meal_options);
       {formatWeekRange(plan.week_start, plan.week_end)}
     </h2>
   </div>
+  {days.length === 0 && <p class="text-sm text-muted-foreground">This week's plan has no meals to show.</p>}
   {days.map((day) => (
     <Card className="gap-4">
       <CardHeader>

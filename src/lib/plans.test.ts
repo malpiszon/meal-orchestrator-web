@@ -76,13 +76,14 @@ describe("groupPlanOptions", () => {
     expect(slot.others.map((option) => option.variant_index)).toEqual([1, 3, 0, 4]);
   });
 
-  it("keeps a tied recommended option (first listed) and lists the tie in others", () => {
-    const rows = [row("2026-10-05", "breakfast", 1, 9), row("2026-10-05", "breakfast", 0, 9, true)];
+  it("shows the stored recommendation even when the score/index fallback would pick another option", () => {
+    // Index 1 is flagged although index 0 ties on score: the stored flag wins, not the fallback.
+    const rows = [row("2026-10-05", "breakfast", 0, 9), row("2026-10-05", "breakfast", 1, 9, true)];
 
     const [slot] = groupPlanOptions(rows)[0].slots;
 
-    expect(slot.recommended.variant_index).toBe(0);
-    expect(slot.others.map((option) => option.variant_index)).toEqual([1]);
+    expect(slot.recommended.variant_index).toBe(1);
+    expect(slot.others.map((option) => option.variant_index)).toEqual([0]);
   });
 
   it("falls back to the highest score, lowest index when no option is recommended", () => {
@@ -113,7 +114,8 @@ describe("labels", () => {
     expect(mealTypeLabel("tea")).toBe("Tea");
   });
 
-  it("formats a calendar date as weekday and date, independent of the runtime timezone", () => {
+  it("formats a calendar date as weekday and date, independent of the runtime timezone (tests run in UTC-10)", () => {
+    expect(new Date(2026, 0, 1).getTimezoneOffset()).toBe(600);
     expect(formatDayLabel("2026-10-05")).toBe("Monday 5 October");
     expect(formatDayLabel("2026-10-25")).toBe("Sunday 25 October");
   });
