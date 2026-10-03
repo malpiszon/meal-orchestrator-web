@@ -61,7 +61,9 @@ function isoDate(epochMs) {
 
 /**
  * The first Monday at least 7 days after today (UTC), as `YYYY-MM-DD`. Today in Europe/Warsaw is at most
- * one day after today in UTC, so that Monday is always "upcoming".
+ * one day after today in UTC, so that Monday is always "upcoming". Except on Mondays it is two Mondays
+ * ahead; the dashboard's "Next week" tab still shows it, because it shows the latest future plan (as in
+ * S-01), and the recency gap is then 14 days instead of 7.
  */
 function upcomingMonday() {
   const now = new Date();
@@ -246,7 +248,19 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       [
         "dashboard shows recency notes on the upcoming week",
         () => request("/dashboard"),
-        { status: 200, body: [`contains "${recencyNote}"`, (body) => body.includes(recencyNote ?? "")] },
+        {
+          status: 200,
+          body: [
+            `"Next week" contains "${recencyNote}" and "This week" has no note`,
+            (body) => {
+              // The panels render in tab order: "This week", then "Next week".
+              const [, thisWeek, nextWeek] = body.split('data-slot="tabs-content"');
+              return (
+                nextWeek !== undefined && !thisWeek.includes("In your plan") && nextWeek.includes(recencyNote ?? "")
+              );
+            },
+          ],
+        },
       ],
       ["re-delivery of the same week is stored", () => deliver(redelivery), { status: 200 }],
       [

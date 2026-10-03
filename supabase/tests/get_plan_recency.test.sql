@@ -46,13 +46,13 @@ select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-0000000
 select results_eq(
   $$ select option_id, last_planned_on from public.get_plan_recency('10000000-0000-0000-0000-000000000002') order by option_id $$,
   $$ values
-       -- 10-12 X: earlier planned 10-05; other provider's 10-08 and user B's 10-10 ignored.
+       -- 10-12 X: earlier planned 10-05; other provider's 10-08 and user B's 10-10 ignored (by the join on user_id; RLS is shown below).
        ('a2000000-0000-0000-0000-000000000002'::uuid, '2026-10-05'::date),
        -- 10-13 X: 10-12 X was only offered, so 10-05 is the latest planned date.
        ('a2000000-0000-0000-0000-000000000003'::uuid, '2026-10-05'::date),
        -- 10-13 Y: an earlier day of the same plan counts.
        ('a2000000-0000-0000-0000-000000000004'::uuid, '2026-10-12'::date) $$,
-  'most recent earlier planned date per option, same provider, own history only'
+  'most recent earlier planned date per option, same provider, history of the plan owner only'
 );
 
 select is_empty(

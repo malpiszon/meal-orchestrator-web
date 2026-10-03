@@ -262,10 +262,10 @@ Additive: one new function, no table changes, no backfill. Rollback: deploy the 
 
 #### Automated
 
-- [x] 3.1 Smoke passes locally against the preview on :4322
-- [ ] 3.2 CI `ci` and `smoke` jobs pass on the PR
+- [x] 3.1 Smoke passes locally against the preview on :4322 — 8f05164
+- [x] 3.2 CI `ci` and `smoke` jobs pass on the PR — 8f05164
 
 #### Manual
 
-- [ ] 3.3 Production `npx supabase db push` before merge; post-deploy smoke green after merge
-- [ ] 3.4 README walkthrough followed from scratch produces the documented notes
+- [x] 3.3 Production `npx supabase db push` before merge; post-deploy smoke green after merge — 8f05164
+- [x] 3.4 README walkthrough followed from scratch produces the documented notes — 8f05164
