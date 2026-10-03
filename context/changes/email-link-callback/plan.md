@@ -236,22 +236,22 @@ No database changes. The local stack must be restarted (`npx supabase stop && np
 
 #### Automated
 
-- [x] 1.1 Unit tests pass: `npm test`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Type check and build pass: `npx astro check && npm run build`
+- [x] 1.1 Unit tests pass: `npm test` — d0c284c
+- [x] 1.2 Lint passes: `npm run lint` — d0c284c
+- [x] 1.3 Type check and build pass: `npx astro check && npm run build` — d0c284c
 
 #### Manual
 
-- [x] 1.4 Generated invite link on the :4322 preview lands on /dashboard signed in
-- [x] 1.5 Reopening the used invite link lands on /auth/signin with the friendly error
-- [x] 1.6 After the user's Supabase restart, a Studio invite email in Mailpit links to /api/auth/confirm
+- [x] 1.4 Generated invite link on the :4322 preview lands on /dashboard signed in — d0c284c
+- [x] 1.5 Reopening the used invite link lands on /auth/signin with the friendly error — d0c284c
+- [x] 1.6 After the user's Supabase restart, a Studio invite email in Mailpit links to /api/auth/confirm — d0c284c
 
 ### Phase 2: Smoke coverage in CI
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Smoke passes locally against the preview, email-link steps included
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Smoke passes locally against the preview, email-link steps included
 - [ ] 2.3 CI `ci` and `smoke` jobs are green on the PR
 
 ### Phase 3: Production configuration and verification
