@@ -64,7 +64,16 @@ const upcomingDays: EditorDay[] = upcomingPlan
         is_recommended: option.is_recommended,
         is_chosen: option.is_chosen,
       })),
-    ).map((day) => ({ ...day, label: formatDayLabel(day.date) }))
+    ).map((day) => ({
+      date: day.date,
+      label: formatDayLabel(day.date),
+      slots: day.slots.map(({ mealType, options, topScore, chosen }) => ({
+        mealType,
+        options,
+        topScore,
+        chosenId: chosen.id,
+      })),
+    }))
   : [];
 ---
 

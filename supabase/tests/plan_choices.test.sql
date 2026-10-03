@@ -3,7 +3,7 @@
 -- (see context/changes/swap-and-save-plan/plan.md). Dates are relative to today in Europe/Warsaw,
 -- so the test never ages. Run with `npx supabase test db`.
 begin;
-select plan(27);
+select plan(29);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'choices-a@test.local'),
@@ -62,6 +62,15 @@ select ok(
 select ok(
   has_function_privilege('authenticated', 'public.confirm_plan(uuid)', 'execute'),
   'authenticated can execute confirm_plan'
+);
+-- The cut-off lives only in the two functions, so direct table writes must stay revoked.
+select ok(
+  not has_table_privilege('authenticated', 'public.plan_meal_options', 'update'),
+  'authenticated cannot update plan_meal_options directly'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.weekly_plans', 'update'),
+  'authenticated cannot update weekly_plans directly'
 );
 
 set local role authenticated;

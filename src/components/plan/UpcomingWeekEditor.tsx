@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRecency, mealTypeLabel } from "@/lib/plans";
 import { cn } from "@/lib/utils";
-import type { PlanDay, PlanMealOption, PlanSlot } from "@/types";
+import type { PlanMealOption, PlanSlot } from "@/types";
 
 /** The fields of an option the editor shows; `meal_type` and `variant_index` are kept for grouping. */
 export type EditorOption = Pick<
@@ -22,8 +22,15 @@ export type EditorOption = Pick<
   | "is_chosen"
 >;
 
+/** A grouped slot reduced to what the editor reads, so each option is serialized into the page once. */
+export type EditorSlot = Pick<PlanSlot<EditorOption>, "mealType" | "options" | "topScore"> & { chosenId: string };
+
 /** A grouped day plus its label, formatted on the server so the browser's ICU can't change it on hydration. */
-export type EditorDay = PlanDay<EditorOption> & { label: string };
+export interface EditorDay {
+  date: string;
+  label: string;
+  slots: EditorSlot[];
+}
 
 interface UpcomingWeekEditorProps {
   planId: string;
@@ -33,14 +40,14 @@ interface UpcomingWeekEditorProps {
   editableUntil: string;
   /** `formatSavedAt` of the plan's `saved_at`; `null` when never saved. */
   savedAtLabel: string | null;
-  /** `groupPlanOptions` of the plan's options, each day with its `formatDayLabel`. */
+  /** `groupPlanOptions` of the plan's options, reduced to `EditorSlot`s, each day with its `formatDayLabel`. */
   days: EditorDay[];
   /** Option id → last earlier planned date (`getPlanRecency`). */
   recency: Record<string, string>;
 }
 
 interface SlotFieldsetProps {
-  slot: PlanSlot<EditorOption>;
+  slot: EditorSlot;
   name: string;
   chosenId: string | undefined;
   recency: Record<string, string>;
@@ -134,7 +141,7 @@ export default function UpcomingWeekEditor({
   // Per plan, as in WeekPlan.astro; useId would restart per island and could clash with PlanTabs.
   const headingId = `week-heading-${planId}`;
   const initialChosen = Object.fromEntries(
-    days.flatMap((day) => day.slots.map((slot) => [slotKey(day.date, slot.mealType), slot.chosen.id])),
+    days.flatMap((day) => day.slots.map((slot) => [slotKey(day.date, slot.mealType), slot.chosenId])),
   );
   const { chosen, savedAtLabel, recency, pending, locked, error, choose, confirm } = usePlanChoices({
     planId,
