@@ -309,25 +309,25 @@ The migration backfills `is_chosen = is_recommended` for existing rows, so recen
 
 #### Automated
 
-- [x] 1.1 Migrations apply cleanly on a fresh local stack
-- [x] 1.2 pgTAP tests pass, including plan_choices and updated get_plan_recency
-- [x] 1.3 Existing unit tests still pass
+- [x] 1.1 Migrations apply cleanly on a fresh local stack — 0126b95
+- [x] 1.2 pgTAP tests pass, including plan_choices and updated get_plan_recency — 0126b95
+- [x] 1.3 Existing unit tests still pass — 0126b95
 
 #### Manual
 
-- [x] 1.4 Existing local plans show is_chosen equal to is_recommended and saved_at null
+- [x] 1.4 Existing local plans show is_chosen equal to is_recommended and saved_at null — 0126b95
 
 ### Phase 2: Server: services and API
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass, including grouping and label tests
-- [ ] 2.2 Lint passes
-- [ ] 2.3 Type check and build pass
+- [x] 2.1 Unit tests pass, including grouping and label tests
+- [x] 2.2 Lint passes
+- [x] 2.3 Type check and build pass
 
 #### Manual
 
-- [ ] 2.4 curl against choose returns 200 / 409 / 400 / 401 as specified
+- [x] 2.4 curl against choose returns 200 / 409 / 400 / 401 as specified
 
 ### Phase 3: Dashboard: swap UI
 

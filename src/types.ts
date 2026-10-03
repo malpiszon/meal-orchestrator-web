@@ -50,6 +50,8 @@ export interface PlanMealOption {
   score: number;
   justifications: Justification[];
   is_recommended: boolean;
+  /** The user's choice for the slot; MO's recommendation until the user swaps. */
+  is_chosen: boolean;
 }
 
 /** A `weekly_plans` row with its embedded options (raw payload not selected). */
@@ -59,14 +61,22 @@ export interface WeeklyPlan {
   week_start: string;
   week_end: string;
   received_at: string;
+  /** When the user last saved the plan (a choice or a confirm); `null` when never saved. */
+  saved_at: string | null;
   plan_meal_options: PlanMealOption[];
 }
 
-/** One meal slot of a day: the recommended option plus the others, best first. */
+/** One meal slot of a day: the chosen option, the others and all options, best first. */
 export interface PlanSlot<T = PlanMealOption> {
   mealType: MealType;
-  recommended: T;
+  /** The headline: the user's choice (falls back to MO's recommendation, then the best option). */
+  chosen: T;
+  /** Every option except `chosen`, best first. */
   others: T[];
+  /** Every option of the slot, best first, in an order independent of the choice (for the editor). */
+  options: T[];
+  /** The slot's highest score; every option with this score gets the star. */
+  topScore: number;
 }
 
 export interface PlanDay<T = PlanMealOption> {

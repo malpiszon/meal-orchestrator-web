@@ -79,9 +79,16 @@ const scriptsConfig = defineConfig({
   rules: { "no-console": "off" },
 });
 
-// Cron logs, failed MO deliveries and failed dashboard plan loads are only observable through Workers Logs.
+// Cron logs, failed MO deliveries, failed dashboard plan loads and failed plan saves are only observable
+// through Workers Logs.
 const workerConfig = defineConfig({
-  files: ["src/worker.ts", "src/pages/api/mo/**/*.ts", "src/pages/dashboard.astro"],
+  files: [
+    "src/worker.ts",
+    "src/pages/api/mo/**/*.ts",
+    "src/pages/dashboard.astro",
+    "src/pages/api/plans/**/*.ts",
+    "src/lib/plan-save.ts",
+  ],
   rules: { "no-console": "off" },
 });
 

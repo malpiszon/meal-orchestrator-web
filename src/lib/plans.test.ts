@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   formatDayLabel,
+  formatEditableUntil,
   formatRecency,
+  formatSavedAt,
   formatWeekRange,
   groupPlanOptions,
   mealTypeLabel,
@@ -43,10 +45,18 @@ interface Row {
   variant_index: number;
   score: number;
   is_recommended: boolean;
+  is_chosen: boolean;
 }
 
-function row(meal_date: string, meal_type: string, variant_index: number, score: number, is_recommended = false): Row {
-  return { meal_date, meal_type, variant_index, score, is_recommended };
+function row(
+  meal_date: string,
+  meal_type: string,
+  variant_index: number,
+  score: number,
+  is_recommended = false,
+  is_chosen = false,
+): Row {
+  return { meal_date, meal_type, variant_index, score, is_recommended, is_chosen };
 }
 
 describe("groupPlanOptions", () => {
@@ -80,7 +90,7 @@ describe("groupPlanOptions", () => {
 
     const [slot] = groupPlanOptions(rows)[0].slots;
 
-    expect(slot.recommended).toBe(rows[2]);
+    expect(slot.chosen).toBe(rows[2]);
     expect(slot.others.map((option) => option.variant_index)).toEqual([1, 3, 0, 4]);
   });
 
@@ -90,7 +100,7 @@ describe("groupPlanOptions", () => {
 
     const [slot] = groupPlanOptions(rows)[0].slots;
 
-    expect(slot.recommended.variant_index).toBe(1);
+    expect(slot.chosen.variant_index).toBe(1);
     expect(slot.others.map((option) => option.variant_index)).toEqual([0]);
   });
 
@@ -99,8 +109,54 @@ describe("groupPlanOptions", () => {
 
     const [slot] = groupPlanOptions(rows)[0].slots;
 
-    expect(slot.recommended.variant_index).toBe(1);
+    expect(slot.chosen.variant_index).toBe(1);
     expect(slot.others.map((option) => option.variant_index)).toEqual([2, 0]);
+  });
+
+  it("prefers the chosen option over the recommended one and the best one", () => {
+    const rows = [
+      row("2026-10-05", "lunch", 0, 9),
+      row("2026-10-05", "lunch", 1, 8, true),
+      row("2026-10-05", "lunch", 2, 6, false, true),
+    ];
+
+    const [slot] = groupPlanOptions(rows)[0].slots;
+
+    expect(slot.chosen).toBe(rows[2]);
+    expect(slot.others.map((option) => option.variant_index)).toEqual([0, 1]);
+  });
+
+  it("lists every option best first, whichever one is chosen", () => {
+    const recommended = [
+      row("2026-10-05", "dinner", 0, 6),
+      row("2026-10-05", "dinner", 1, 9, true, true),
+      row("2026-10-05", "dinner", 2, 7),
+    ];
+    const swapped = [
+      row("2026-10-05", "dinner", 0, 6, false, true),
+      row("2026-10-05", "dinner", 1, 9, true),
+      row("2026-10-05", "dinner", 2, 7),
+    ];
+
+    const [before] = groupPlanOptions(recommended)[0].slots;
+    const [after] = groupPlanOptions(swapped)[0].slots;
+
+    expect(before.options.map((option) => option.variant_index)).toEqual([1, 2, 0]);
+    expect(after.options.map((option) => option.variant_index)).toEqual([1, 2, 0]);
+    expect(after.chosen.variant_index).toBe(0);
+  });
+
+  it("gives the slot's highest score as topScore, shared by tied options", () => {
+    const rows = [
+      row("2026-10-05", "snack", 0, 8, true, true),
+      row("2026-10-05", "snack", 1, 8),
+      row("2026-10-05", "snack", 2, 5),
+    ];
+
+    const [slot] = groupPlanOptions(rows)[0].slots;
+
+    expect(slot.topScore).toBe(8);
+    expect(slot.options.filter((option) => option.score === slot.topScore).map((o) => o.variant_index)).toEqual([0, 1]);
   });
 
   it("skips rows whose meal type is unknown", () => {
@@ -180,5 +236,33 @@ describe("formatRecency", () => {
 
   it("is not shifted by a DST change between the two dates", () => {
     expect(formatRecency("2026-10-26", "2026-10-24")).toBe("In your plan 2 days earlier (Sat 24 Oct)");
+  });
+});
+
+describe("formatEditableUntil", () => {
+  it("is the day before the week starts", () => {
+    expect(formatEditableUntil("2026-10-12")).toBe("Sun 11 Oct");
+  });
+
+  it("crosses a month boundary", () => {
+    expect(formatEditableUntil("2026-11-02")).toBe("Sun 1 Nov");
+    expect(formatEditableUntil("2026-06-01")).toBe("Sun 31 May");
+  });
+});
+
+describe("formatSavedAt", () => {
+  it("shows Warsaw summer time (UTC+2)", () => {
+    expect(formatSavedAt("2026-10-09T16:42:00Z")).toBe("Fri 9 Oct, 18:42");
+  });
+
+  // Summer time ends on Sunday 2026-10-25 at 01:00 UTC (03:00 CEST -> 02:00 CET).
+  it("shows Warsaw winter time (UTC+1) after the DST switch", () => {
+    expect(formatSavedAt("2026-10-25T00:30:00Z")).toBe("Sun 25 Oct, 02:30");
+    expect(formatSavedAt("2026-10-25T01:30:00Z")).toBe("Sun 25 Oct, 02:30");
+    expect(formatSavedAt("2026-11-06T16:42:00Z")).toBe("Fri 6 Nov, 17:42");
+  });
+
+  it("moves to the next Warsaw day near midnight and pads the time", () => {
+    expect(formatSavedAt("2026-12-31T23:05:00Z")).toBe("Fri 1 Jan, 00:05");
   });
 });
