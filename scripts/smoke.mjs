@@ -351,7 +351,10 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               "used password-reset link is rejected",
               () => {
                 jar.clear();
-                return openEmailLink("recovery", recoveryTokenHash ?? "missing");
+                // Nothing to reuse if the step above got no token; fail rather than pass on a stand-in token.
+                if (!recoveryTokenHash)
+                  return { status: 0, location: "", body: "no password-reset token was generated" };
+                return openEmailLink("recovery", recoveryTokenHash);
               },
               { status: 302, location: "/auth/signin?error=" },
             ],

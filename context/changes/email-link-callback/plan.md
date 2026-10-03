@@ -250,9 +250,9 @@ No database changes. The local stack must be restarted (`npx supabase stop && np
 
 #### Automated
 
-- [x] 2.1 Lint passes: `npm run lint`
-- [x] 2.2 Smoke passes locally against the preview, email-link steps included
-- [ ] 2.3 CI `ci` and `smoke` jobs are green on the PR
+- [x] 2.1 Lint passes: `npm run lint` — 212f3a0
+- [x] 2.2 Smoke passes locally against the preview, email-link steps included — 212f3a0
+- [x] 2.3 CI `ci` and `smoke` jobs are green on the PR — 212f3a0
 
 ### Phase 3: Production configuration and verification
 
