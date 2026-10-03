@@ -12,6 +12,9 @@ export default defineConfig({
   output: "server",
   // Auth uses Supabase cookies, not Astro sessions; disabling stops the Cloudflare adapter from requiring a SESSION KV binding.
   session: false,
+  // Default, pinned on purpose: the cookie-session POST routes under /api/plans/* parse JSON whatever the
+  // Content-Type, so this origin check is what stops cross-site text/plain form posts (CSRF).
+  security: { checkOrigin: true },
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],

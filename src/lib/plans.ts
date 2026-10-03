@@ -11,6 +11,7 @@ export interface GroupableOption {
   variant_index: number;
   score: number;
   is_recommended: boolean;
+  is_chosen: boolean;
 }
 
 const warsawDate = new Intl.DateTimeFormat("en-CA", {
@@ -38,9 +39,10 @@ function byScoreThenIndex(a: GroupableOption, b: GroupableOption): number {
 
 /**
  * Group a plan's option rows into days (date order) and meal slots (MO's slot order, `MEAL_TYPES`).
- * Each slot holds its `recommended` option and the `others`, sorted by score descending, then index.
- * Rows whose `meal_type` is not in `MEAL_TYPES` are skipped. A slot without an `is_recommended`
- * row falls back to its best option (highest score, lowest index).
+ * Each slot holds its `chosen` option, the `others`, and all `options`, each sorted by score
+ * descending, then index, plus the slot's `topScore`. Rows whose `meal_type` is not in `MEAL_TYPES`
+ * are skipped. `chosen` is the `is_chosen` row; without one, the `is_recommended` row; without that,
+ * the best option (highest score, lowest index).
  */
 export function groupPlanOptions<T extends GroupableOption>(rows: readonly T[]): PlanDay<T>[] {
   const byDate = new Map<string, Map<MealType, T[]>>();
@@ -67,8 +69,15 @@ export function groupPlanOptions<T extends GroupableOption>(rows: readonly T[]):
       const options = slotsByType.get(mealType);
       if (!options?.length) continue;
       const sorted = [...options].sort(byScoreThenIndex);
-      const recommended = sorted.find((option) => option.is_recommended) ?? sorted[0];
-      slots.push({ mealType, recommended, others: sorted.filter((option) => option !== recommended) });
+      const chosen =
+        sorted.find((option) => option.is_chosen) ?? sorted.find((option) => option.is_recommended) ?? sorted[0];
+      slots.push({
+        mealType,
+        chosen,
+        others: sorted.filter((option) => option !== chosen),
+        options: sorted,
+        topScore: sorted[0].score,
+      });
     }
     return { date, slots };
   });
@@ -145,4 +154,32 @@ export function formatRecency(mealDate: string, lastPlannedOn: string): string {
   const year = last.getUTCFullYear() === meal.getUTCFullYear() ? "" : ` ${last.getUTCFullYear()}`;
   const date = `${SHORT_WEEKDAYS[last.getUTCDay()]} ${last.getUTCDate()} ${SHORT_MONTHS[last.getUTCMonth()]}${year}`;
   return `In your plan ${days} ${days === 1 ? "day" : "days"} earlier (${date})`;
+}
+
+/** The last day the plan starting on `weekStart` can be edited, e.g. `2026-10-12` → "Sun 11 Oct". */
+export function formatEditableUntil(weekStart: string): string {
+  const day = utcMidnight(addDays(weekStart, -1));
+  return `${SHORT_WEEKDAYS[day.getUTCDay()]} ${day.getUTCDate()} ${SHORT_MONTHS[day.getUTCMonth()]}`;
+}
+
+// Numeric parts only: names come from the hand-built arrays, so Node and workerd agree.
+const warsawDateTime = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Warsaw",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** A save time as Europe/Warsaw wall-clock time, e.g. `2026-10-09T16:42:00Z` → "Fri 9 Oct, 18:42". */
+export function formatSavedAt(isoTimestamp: string): string {
+  const parts = warsawDateTime.formatToParts(new Date(isoTimestamp));
+  const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const [year, month, day] = [part("year"), part("month"), part("day")];
+  // The weekday of the Warsaw calendar date, computed at UTC midnight so the runtime timezone can't shift it.
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${SHORT_WEEKDAYS[weekday]} ${day} ${SHORT_MONTHS[month - 1]}, ${pad(part("hour"))}:${pad(part("minute"))}`;
 }
