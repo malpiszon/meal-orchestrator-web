@@ -113,6 +113,10 @@ const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
 // Optional: the Supabase instance the server uses, to check its grants directly (CI sets both).
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
+// Optional: the same instance's service-role key, to generate invitation and password-reset link tokens (CI sets it).
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const inviteEmail = `smoke-invite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
+let recoveryTokenHash;
 
 let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote;
 if (!KEEPALIVE_EXPECT_FAILURE) {
@@ -121,6 +125,8 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     process.exit(1);
   }
   if (!SUPABASE_URL || !SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_URL and SUPABASE_KEY)\n");
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
+    console.log("SKIP  email link checks (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)\n");
   const nextWeek = upcomingMonday();
   delivery = await loadDelivery(email, nextWeek);
   newUserDelivery = await loadDelivery(
@@ -173,6 +179,31 @@ async function anonIngestRpc() {
   });
   return { status: response.status, location: "", body: await response.text() };
 }
+
+/**
+ * Generates an email link through the Admin API, as Supabase does before sending the email, and returns its
+ * `hashed_token` (the `token_hash` the email templates put in the link). Without one, `failure` is a result
+ * the step can return, so the run reports what the Admin API answered.
+ */
+async function generateLinkToken(type, linkEmail) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ type, email: linkEmail }),
+  });
+  const body = await response.text();
+  // GoTrue versions differ on where the token sits in the response.
+  const hash = jsonField(body, "hashed_token") ?? jsonField(body, "properties")?.hashed_token;
+  return hash ? { hash } : { failure: { status: response.status, location: "", body } };
+}
+
+/** Opens an email link the way a click in the email does. */
+const openEmailLink = (type, tokenHash) =>
+  request(`/api/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${type}`);
 
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
@@ -281,6 +312,59 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 302, location: "/" },
       ],
       ["dashboard redirects after signout", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+      ...(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+        ? [
+            [
+              "invitation link signs a new user in",
+              async () => {
+                jar.clear();
+                const link = await generateLinkToken("invite", inviteEmail);
+                return link.failure ?? openEmailLink("invite", link.hash);
+              },
+              { status: 302, location: "/dashboard" },
+            ],
+            [
+              "invited user's dashboard shows no upcoming plan yet",
+              () => request("/dashboard"),
+              {
+                status: 200,
+                body: ["contains 'No upcoming plan yet'", (body) => body.includes("No upcoming plan yet")],
+              },
+            ],
+            [
+              "password-reset link signs the smoke user in",
+              async () => {
+                jar.clear();
+                const link = await generateLinkToken("recovery", email);
+                recoveryTokenHash = link.hash;
+                return link.failure ?? openEmailLink("recovery", link.hash);
+              },
+              { status: 302, location: "/dashboard" },
+            ],
+            [
+              // The re-delivered week is the smoke user's, so this proves the session is theirs.
+              "dashboard shows the smoke user's plan after the password-reset link",
+              () => request("/dashboard"),
+              { status: 200, body: [`contains "${newName}"`, (body) => body.includes(escapeHtml(newName ?? ""))] },
+            ],
+            [
+              "used password-reset link is rejected",
+              () => {
+                jar.clear();
+                // Nothing to reuse if the step above got no token; fail rather than pass on a stand-in token.
+                if (!recoveryTokenHash)
+                  return { status: 0, location: "", body: "no password-reset token was generated" };
+                return openEmailLink("recovery", recoveryTokenHash);
+              },
+              { status: 302, location: "/auth/signin?error=" },
+            ],
+            [
+              "garbage email link is rejected",
+              () => openEmailLink("invite", "not-a-real-token-hash"),
+              { status: 302, location: "/auth/signin?error=" },
+            ],
+          ]
+        : []),
       ["keepalive cron succeeds", () => request(KEEPALIVE_TRIGGER), { status: 200 }],
     ];
 

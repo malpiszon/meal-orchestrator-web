@@ -39,19 +39,19 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 
 ## At a glance
 
-| ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status   |
-| ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | -------- |
-| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | ready    |
-| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done     |
-| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done     |
-| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done     |
-| S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | ready    |
-| S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | proposed |
-| S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | proposed |
-| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | proposed |
-| S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready    |
-| S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready    |
-| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | proposed |
+| ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status      |
+| ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | ----------- |
+| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | in-progress |
+| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done        |
+| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done        |
+| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done        |
+| S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | ready       |
+| S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | proposed    |
+| S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | proposed    |
+| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | proposed    |
+| S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready       |
+| S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
+| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | proposed    |
 
 ## Streams
 
@@ -90,7 +90,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Shared by two slices and verifiable on its own; without it both invitation and reset links dead-end on the landing page. Redirect allowlist mistakes break links silently — verify against production.
-- **Status:** ready
+- **Handoff to S-04/S-05:** `/api/auth/confirm` verifies `invite` and `recovery` links (`token_hash` + `type`) and forwards both to `/dashboard`, via the constant `AUTH_LINK_DESTINATION` in `src/lib/auth-link.ts`; each slice switches its type's destination to its own set-password page. The route uses up the single-use token on the GET the link opens, so mail scanners that prefetch links (Microsoft Defender Safe Links, corporate gateways) can consume it before the user clicks. Each slice's set-password page should take `token_hash` + `type` on GET and call `verifyOtp` only on the form POST.
+- **Status:** in-progress
 
 ### F-02: Supabase idle keep-alive
 
