@@ -13,6 +13,8 @@ function json(body: unknown, status: number): Response {
   return Response.json(body, { status });
 }
 
+const MAX_BODY_BYTES = 4 * 1024;
+
 const STATUS_BY_KIND = { not_found: 404, plan_locked: 409, failed: 500 } as const;
 const ERROR_BY_KIND = { not_found: "not_found", plan_locked: "plan_locked", failed: "save_failed" } as const;
 
@@ -25,7 +27,8 @@ function logError(step: string, error: unknown): void {
  * Validate the JSON body with `schema`, run `save` with the user's cookie-session client, then answer
  * 200 `{ saved_at, recency }`, where `recency` is option id → `YYYY-MM-DD` from `getPlanRecency(planId)`,
  * or `null` if that re-read failed (the save stands). Errors: 400 `invalid_request`, 401 `unauthorized`,
- * 404 `not_found`, 409 `plan_locked`, 503 `not_configured`, 500 `save_failed`.
+ * 404 `not_found`, 409 `plan_locked`, 413 `payload_too_large` (over 4 KiB), 503 `not_configured`,
+ * 500 `save_failed`.
  */
 export async function handlePlanSave<S extends z.ZodType<{ planId: string }>>(
   context: APIContext,
@@ -43,10 +46,17 @@ export async function handlePlanSave<S extends z.ZodType<{ planId: string }>>(
     return json({ error: "unauthorized" }, 401);
   }
 
-  // 3. Body.
+  // 3. Body. Size-capped first, as in deliveries.ts: the bodies are two uuids, so anything larger is not ours.
+  if (Number(context.request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) {
+    return json({ error: "payload_too_large" }, 413);
+  }
+  const text = await context.request.text();
+  if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) {
+    return json({ error: "payload_too_large" }, 413);
+  }
   let body: unknown;
   try {
-    body = await context.request.json();
+    body = JSON.parse(text);
   } catch {
     return json({ error: "invalid_request", issues: [{ path: "", message: "Request body is not valid JSON" }] }, 400);
   }

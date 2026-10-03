@@ -232,6 +232,8 @@ Replace the server-rendered "Next week" with an island that shows every option, 
 2. "swap in upcoming week is saved": the user picks a non-recommended option of the upcoming plan, with the option id and plan id read from the dashboard HTML (radio `value` next to a known meal name from the sample). The request returns 200 with `saved_at`.
 3. "dashboard shows the swap": the dashboard HTML has that radio `checked` and "Saved ".
 4. "current week is locked": choosing an option of the current-week plan, whose id is read the same way from the "This week" panel, returns 409 `plan_locked`. This needs the "This week" panel to carry option ids, so `MealSlot.astro` adds a `data-option-id` attribute on each option.
+5. "unknown option is not found" (review addendum, phase-2 F4): choosing a random well-formed `optionId` with the upcoming `planId` returns 404 `not_found`.
+6. "invalid body is rejected" (review addendum, phase-2 F4): a non-JSON body with the session returns 400 `invalid_request`.
 
 These steps run before the re-delivery step, which then also proves that the swap is reset ("Not saved yet" is back).
 
@@ -248,7 +250,7 @@ These steps run before the re-delivery step, which then also proves that the swa
 #### Automated Verification:
 
 - Lint, unit tests, type check and build pass: `npm run lint && npm test && npx astro check && npm run build`
-- Smoke passes against the production preview on port 4322, including the new swap, lock and reset steps: `npm run build && npm run preview -- --port 4322` then `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… npm run smoke`
+- Smoke passes against the production preview on port 4323, including the new swap, lock and reset steps: `npm run build && npm run preview -- --port 4323` then `BASE_URL=http://localhost:4323 MO_INGEST_TOKEN=… npm run smoke`
 - pgTAP still passes: `npx supabase test db`
 
 #### Manual Verification:
@@ -321,20 +323,20 @@ The migration backfills `is_chosen = is_recommended` for existing rows, so recen
 
 #### Automated
 
-- [x] 2.1 Unit tests pass, including grouping and label tests
-- [x] 2.2 Lint passes
-- [x] 2.3 Type check and build pass
+- [x] 2.1 Unit tests pass, including grouping and label tests — 62939eb
+- [x] 2.2 Lint passes — 62939eb
+- [x] 2.3 Type check and build pass — 62939eb
 
 #### Manual
 
-- [x] 2.4 curl against choose returns 200 / 409 / 400 / 401 as specified
+- [x] 2.4 curl against choose returns 200 / 409 / 400 / 401 as specified — 62939eb
 
 ### Phase 3: Dashboard: swap UI
 
 #### Automated
 
 - [ ] 3.1 Lint, unit tests, type check and build pass
-- [ ] 3.2 Smoke passes on port 4322 including swap, lock and reset steps
+- [ ] 3.2 Smoke passes on port 4323 including swap, lock and reset steps
 - [ ] 3.3 pgTAP still passes
 
 #### Manual
