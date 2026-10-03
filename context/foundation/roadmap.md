@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-10-02
+updated: 2026-10-03
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -44,7 +44,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | ready       |
 | F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done        |
 | S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done        |
-| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | in-progress |
+| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done        |
 | S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | ready       |
 | S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | proposed    |
 | S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | proposed    |
@@ -138,7 +138,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - What counts as "the same meal" across weeks if the payload has no stable meal ID (depends on S-01's resolution of PRD Open Question 1). — Owner: user. Block: no.
   - How the dashboard shows the in-progress week. S-01 shows only the upcoming plan, so from a plan's first day (Monday) until MO's next delivery the dashboard shows "No upcoming plan yet"; this slice is expected to close that gap (decided 2026-09-30 while planning S-01). — Owner: user. Block: no.
 - **Risk:** Proves the product; the annotation must stay cheap per request (Workers free-plan CPU limit per infrastructure.md) and use the most recent earlier occurrence anywhere in history.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-03: Swap and save the upcoming plan
 
@@ -279,3 +279,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 - **F-02: (foundation) the production database stays active through weeks with no user activity, so MO's weekly delivery and the dashboard keep working.** — Archived 2026-09-29 → `context/archive/2026-09-25-supabase-idle-keepalive/`. Lesson: —.
 - **S-01: user can open the dashboard and see the upcoming plan MO just delivered for their email — or an explicit "no upcoming plan yet" state when nothing has arrived.** — Archived 2026-10-02 → `context/archive/2026-09-30-mo-weekly-delivery/`. Lesson: —.
+- **S-02: user can see last week's plan become history automatically when the next week arrives, and see "was in your plan N days/weeks ago" next to each meal in the upcoming plan that appeared before.** — Archived 2026-10-03 → `context/archive/2026-10-02-recency-annotated-plan/`. Lesson: —.
