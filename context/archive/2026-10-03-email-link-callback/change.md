@@ -1,10 +1,10 @@
 ---
 change_id: email-link-callback
 title: Email link callback
-status: impl_reviewed
+status: archived
 created: 2026-10-03
 updated: 2026-10-03
-archived_at: null
+archived_at: 2026-10-03T18:54:28Z
 ---
 
 ## Notes
