@@ -335,15 +335,15 @@ The migration backfills `is_chosen = is_recommended` for existing rows, so recen
 
 #### Automated
 
-- [x] 3.1 Lint, unit tests, type check and build pass
-- [x] 3.2 Smoke passes on port 4323 including swap, lock and reset steps
-- [x] 3.3 pgTAP still passes
+- [x] 3.1 Lint, unit tests, type check and build pass — efb750e
+- [x] 3.2 Smoke passes on port 4323 including swap, lock and reset steps — efb750e
+- [x] 3.3 pgTAP still passes — efb750e
 
 #### Manual
 
-- [x] 3.4 Next week shows every option at phone width with choice selected and top-scored options starred
-- [x] 3.5 Tapping an option saves it and survives a reload
-- [x] 3.6 Same meal on an earlier day refreshes the later day's recency note without reload
-- [x] 3.7 Keep as recommended appears only on a never-saved plan and marks it saved
-- [x] 3.8 Swapped meal is the This week headline with no editing controls
-- [x] 3.9 Light and dark mode look right and radios are keyboard-operable
+- [x] 3.4 Next week shows every option at phone width with choice selected and top-scored options starred — efb750e
+- [x] 3.5 Tapping an option saves it and survives a reload — efb750e
+- [x] 3.6 Same meal on an earlier day refreshes the later day's recency note without reload — efb750e
+- [x] 3.7 Keep as recommended appears only on a never-saved plan and marks it saved — efb750e
+- [x] 3.8 Swapped meal is the This week headline with no editing controls — efb750e
+- [x] 3.9 Light and dark mode look right and radios are keyboard-operable — efb750e
