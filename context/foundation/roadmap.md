@@ -90,7 +90,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Shared by two slices and verifiable on its own; without it both invitation and reset links dead-end on the landing page. Redirect allowlist mistakes break links silently — verify against production.
-- **Handoff to S-04/S-05:** `/api/auth/confirm` verifies `invite` and `recovery` links (`token_hash` + `type`) and forwards both to `/dashboard`, via the constant `AUTH_LINK_DESTINATION` in `src/lib/auth-link.ts`; each slice switches its type's destination to its own set-password page. The route uses up the single-use token on the GET the link opens, so mail scanners that prefetch links (Microsoft Defender Safe Links, corporate gateways) can consume it before the user clicks. Each slice's set-password page should take `token_hash` + `type` on GET and call `verifyOtp` only on the form POST.
+- **Handoff to S-04/S-05:** `/api/auth/confirm` verifies `invite` and `recovery` links (`token_hash` + `type`) and forwards both to `/dashboard`, via the constant `AUTH_LINK_DESTINATION` in `src/lib/auth-link.ts`; each slice switches its type's destination to its own set-password page. The route uses up the single-use token on the GET the link opens, so mail scanners that prefetch links (Microsoft Defender Safe Links, corporate gateways) can consume it before the user clicks, and any page can make a victim open the attacker's own link and sign them in as the attacker (login CSRF). Each slice's set-password page should take `token_hash` + `type` on GET and call `verifyOtp` only on the form POST.
 - **Status:** in-progress
 
 ### F-02: Supabase idle keep-alive
