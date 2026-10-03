@@ -266,6 +266,19 @@ Every later change that adds a migration (for example `get_plan_recency`, which 
 
 After the merge, the post-deploy smoke expects `POST /api/mo/deliveries` without a token to answer 401. A 503 there means the Worker secrets are missing.
 
+### Production setup for email links (one-time)
+
+Invitation and password-reset emails link to `/api/auth/confirm` only if the production project uses the repo's templates; Supabase's default templates link elsewhere and the user never gets signed in. `supabase/config.toml` sets them for local Supabase only, so production needs them set by hand.
+
+**Timing:** as with the migrations above, do it **after the PR's CI is green and before merging it**.
+
+In the Supabase dashboard of the production project, go to **Authentication → Emails → Templates** and replace the message body of:
+
+- **Invite user** with the contents of `supabase/templates/invite.html` (subject: `You have been invited to Meal Orchestrator`)
+- **Reset password** with the contents of `supabase/templates/recovery.html` (subject: `Reset your Meal Orchestrator password`)
+
+The links use `{{ .SiteURL }}`, so they always point to the production Site URL. Repeat this step only when those template files change.
+
 ### Keep-alive Cron Trigger
 
 The Worker runs a daily Cron Trigger (`0 3 * * *`, see `wrangler.jsonc`) that calls the `keepalive` Postgres function via Supabase RPC, keeping the free-tier project from pausing after ~7 days of inactivity. Make sure the `keepalive` migration has been pushed to production (see [Supabase Configuration](#supabase-configuration)) **before** deploying the Worker.
