@@ -17,7 +17,7 @@ export const GET: APIRoute = async (context) => {
 
   const query = authLinkQuerySchema.safeParse(Object.fromEntries(context.url.searchParams));
   if (!query.success) {
-    console.error("auth confirm: invalid link query", query.error.issues);
+    console.warn("auth confirm: invalid link query", query.error.issues);
     return invalidLink();
   }
 
