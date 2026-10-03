@@ -151,9 +151,9 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09
 - **Blockers:** —
 - **Unknowns:**
-  - Which time zone defines "the plan's first day" for the edit cut-off. — Owner: user. Block: no.
+  - Which time zone defines "the plan's first day" for the edit cut-off. Resolved 2026-10-03: Europe/Warsaw for everyone; a plan is editable while its first day is after today there, enforced in Postgres. — Owner: user. Block: no.
 - **Risk:** Date rule is the only lock; getting the cut-off wrong either blocks legitimate edits or lets in-progress plans change.
-- **Handoff from S-02:** `get_plan_recency` (`supabase/migrations/20261002190000_plan_recency.sql`) treats "planned" as `is_recommended`. S-03 must switch that predicate to the user's saved choice and update `supabase/tests/get_plan_recency.test.sql`. While there, consider a partial index or `LATERAL … order by meal_date desc limit 1`, since the lookup currently reads offered-only history rows too.
+- **Handoff from S-02:** `get_plan_recency` (`supabase/migrations/20261002190000_plan_recency.sql`) treats "planned" as `is_recommended`. S-03 must switch that predicate to the user's saved choice and update `supabase/tests/get_plan_recency.test.sql`. While there, consider a partial index or `LATERAL … order by meal_date desc limit 1`, since the lookup currently reads offered-only history rows too. Done in S-03: the predicate is `is_chosen`, served by a partial index on chosen rows only.
 - **Status:** done
 
 ### S-04: Invitation on first delivery
@@ -194,6 +194,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Follows S-03 so the overwrite behaviour over saved/swapped plans is tested against real saved state rather than assumed.
+- **Handoff from S-03:** re-delivery already resets the week: `ingest_weekly_plan` re-creates the option rows with the user's choice back on MO's recommendation and sets `saved_at` to null (`supabase/migrations/20261003120000_plan_choices.sql`; pgTAP in `supabase/tests/plan_choices.test.sql`, smoke step "re-delivery resets the swap"). S-06 should confirm the remaining FR-017 / US-07 behaviour (other weeks and history untouched) rather than rebuild the reset.
 - **Status:** ready
 
 ### S-07: Browse plan history
