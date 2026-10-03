@@ -41,7 +41,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 
 | ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status      |
 | ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | ----------- |
-| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | ready       |
+| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | in-progress |
 | F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done        |
 | S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done        |
 | S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done        |
@@ -90,7 +90,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Shared by two slices and verifiable on its own; without it both invitation and reset links dead-end on the landing page. Redirect allowlist mistakes break links silently — verify against production.
-- **Status:** ready
+- **Handoff to S-04/S-05:** `/api/auth/confirm` verifies `invite` and `recovery` links (`token_hash` + `type`) and forwards both to `/dashboard`, via the constant `AUTH_LINK_DESTINATION` in `src/lib/auth-link.ts`; each slice switches its type's destination to its own set-password page. The route uses up the single-use token on the GET the link opens, so mail scanners that prefetch links (Microsoft Defender Safe Links, corporate gateways) can consume it before the user clicks. Each slice's set-password page should take `token_hash` + `type` on GET and call `verifyOtp` only on the form POST.
+- **Status:** in-progress
 
 ### F-02: Supabase idle keep-alive
 

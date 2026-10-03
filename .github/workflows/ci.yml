@@ -65,7 +65,7 @@ jobs:
           npm run preview -- --port 4321 &
           for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:4321/ && break; sleep 1; done
           source supabase.env
-          BASE_URL=http://localhost:4321 MO_INGEST_TOKEN="$MO_INGEST_TOKEN" SUPABASE_URL="$API_URL" SUPABASE_KEY="$ANON_KEY" npm run smoke
+          BASE_URL=http://localhost:4321 MO_INGEST_TOKEN="$MO_INGEST_TOKEN" SUPABASE_URL="$API_URL" SUPABASE_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" npm run smoke
       - name: Run keepalive failure-mode smoke
         run: |
           npx astro preview stop

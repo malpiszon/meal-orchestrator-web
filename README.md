@@ -153,14 +153,17 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 
 ### Auth routes
 
-| Route                 | Description                                                             |
-| --------------------- | ----------------------------------------------------------------------- |
-| `/auth/signin`        | Email/password sign-in form                                             |
-| `/auth/signup`        | Email/password sign-up form                                             |
-| `/auth/confirm-email` | Post-signup "check your inbox" page                                     |
-| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated) |
+| Route                 | Description                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `/auth/signin`        | Email/password sign-in form                                                                         |
+| `/auth/signup`        | Email/password sign-up form                                                                         |
+| `/auth/confirm-email` | Post-signup "check your inbox" page                                                                 |
+| `/api/auth/confirm`   | Invitation and password-reset email links land here; signs the user in and forwards to `/dashboard` |
+| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated)                             |
 
 Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
+
+The invitation and password-reset email templates live in `supabase/templates/` and are wired up in `supabase/config.toml`. Local Supabase reads them only at start, so restart it (`npx supabase stop && npx supabase start`) after changing them. Local emails are not sent; they land in Mailpit at `http://127.0.0.1:54324`.
 
 ### MO delivery endpoint
 
@@ -281,6 +284,19 @@ Every later change that adds a migration (for example `get_plan_recency`, which 
 
 After the merge, the post-deploy smoke expects `POST /api/mo/deliveries` without a token to answer 401. A 503 there means the Worker secrets are missing.
 
+### Production setup for email links (one-time)
+
+Invitation and password-reset emails link to `/api/auth/confirm` only if the production project uses the repo's templates; Supabase's default templates link elsewhere and the user never gets signed in. `supabase/config.toml` sets them for local Supabase only, so production needs them set by hand.
+
+**Timing:** as with the migrations above, do it **after the PR's CI is green and before merging it**.
+
+In the Supabase dashboard of the production project, go to **Authentication → Emails → Templates** and replace the message body of:
+
+- **Invite user** with the contents of `supabase/templates/invite.html` (subject: `You have been invited to Meal Orchestrator`)
+- **Reset password** with the contents of `supabase/templates/recovery.html` (subject: `Reset your Meal Orchestrator password`)
+
+The links use `{{ .SiteURL }}`, so they always point to the production Site URL. Repeat this step only when those template files change.
+
 ### Keep-alive Cron Trigger
 
 The Worker runs a daily Cron Trigger (`0 3 * * *`, see `wrangler.jsonc`) that calls the `keepalive` Postgres function via Supabase RPC, keeping the free-tier project from pausing after ~7 days of inactivity. Make sure the `keepalive` migration has been pushed to production (see [Supabase Configuration](#supabase-configuration)) **before** deploying the Worker.
@@ -309,9 +325,11 @@ npm run dev            # or: npm run build && npm run preview
 BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> npm run smoke
 ```
 
-It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both.
+It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both. With `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set, it also checks the email links (see below); CI sets it too.
 
 The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead (and, for the history, to the current week's Monday) and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery of the same sample for the current week (Europe/Warsaw), with one meal renamed, shows the "This week" tab with that meal; a delivery of the upcoming week for the smoke user shows its recommended meal on the dashboard; the upcoming week then shows a recency note ("In your plan N days earlier (…"), N being the days between the two Mondays; that `POST /api/plans/choose` without a session gets 401; that swapping an upcoming meal to a non-recommended option returns 200, and the dashboard then shows that option `checked` and "Saved "; that choosing an option of the current week gets 409 `plan_locked`, an unknown option 404 `not_found` and a non-JSON body 400 `invalid_request`; and that a re-delivery of the same week with a renamed meal replaces it and resets the swap ("Not saved yet").
+
+The email-link steps open `/api/auth/confirm` the way a click in an invitation or password-reset email does, without sending any email: they generate the link's token through the Admin API (`generate_link`) with the service-role key. They check that: an invitation for a new email signs that user in and lands on a dashboard with "No upcoming plan yet"; a password-reset link for the smoke user signs them in and the dashboard shows their re-delivered week (so the session is theirs); and a reused password-reset link or a made-up token is sent back to `/auth/signin` with an error.
 
 The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check (no `MO_INGEST_TOKEN` needed) and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
 
