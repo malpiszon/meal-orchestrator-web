@@ -258,9 +258,9 @@ No database changes. The local stack must be restarted (`npx supabase stop && np
 
 #### Automated
 
-- [x] 3.1 Prettier/lint clean on the changed docs
+- [x] 3.1 Prettier/lint clean on the changed docs — 659cdfa
 
 #### Manual
 
-- [x] 3.2 Production Invite user and Reset password templates are set from the repo files (before merge)
-- [ ] 3.3 Production dashboard invite to a throwaway address lands on /dashboard signed in; test user deleted
+- [x] 3.2 Production Invite user and Reset password templates are set from the repo files (before merge) — 659cdfa
+- [x] 3.3 Production dashboard invite to a throwaway address lands on /dashboard signed in; test user deleted
