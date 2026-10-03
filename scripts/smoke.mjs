@@ -2,6 +2,7 @@
 // Zero dependencies on purpose. Run against a live server:
 //   BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> node scripts/smoke.mjs
 
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
@@ -23,7 +24,7 @@ function storeCookies(response) {
   }
 }
 
-async function request(path, { method = "GET", form, json, headers = {} } = {}) {
+async function request(path, { method = "GET", form, json, raw, headers = {} } = {}) {
   const response = await fetch(BASE_URL + path, {
     method,
     redirect: "manual",
@@ -34,7 +35,7 @@ async function request(path, { method = "GET", form, json, headers = {} } = {}) 
       ...(json ? { "Content-Type": "application/json" } : {}),
       ...headers,
     },
-    body: form ? new URLSearchParams(form).toString() : json ? JSON.stringify(json) : undefined,
+    body: form ? new URLSearchParams(form).toString() : json ? JSON.stringify(json) : raw,
   });
   storeCookies(response);
   return { status: response.status, location: response.headers.get("location") ?? "", body: await response.text() };
@@ -51,6 +52,41 @@ function jsonField(body, key) {
   } catch {
     return undefined;
   }
+}
+
+/** The dashboard's "This week" and "Next week" panels, which render in tab order. */
+function panels(body) {
+  const [, thisWeek = "", nextWeek = ""] = body.split('data-slot="tabs-content"');
+  return { thisWeek, nextWeek };
+}
+
+/**
+ * The option id (`value`) of the first radio in `html` whose option shows `name`, i.e. the name occurs
+ * after that radio and before the next one. React's attribute order is not fixed (it puts `checked` before
+ * `value`), so attributes are read from the whole tag. React escapes `'` as `&#x27;` where `escapeHtml`
+ * gives `&#39;`; the sample's names have neither.
+ */
+function radioIdFor(html, name) {
+  for (const chunk of html.split("<input ").slice(1)) {
+    const tag = chunk.slice(0, chunk.indexOf(">"));
+    if (tag.includes('type="radio"') && chunk.includes(escapeHtml(name))) return /value="([^"]+)"/.exec(tag)?.[1];
+  }
+  return undefined;
+}
+
+/** Whether the radio with option id `optionId` is rendered `checked` in `html`. */
+function isRadioChecked(html, optionId) {
+  const tag = html.split("<input ").find((chunk) => chunk.slice(0, chunk.indexOf(">")).includes(`value="${optionId}"`));
+  return tag !== undefined && /\schecked[=\s/>]/.test(` ${tag.slice(0, tag.indexOf(">") + 1)}`);
+}
+
+/** The option id (`data-option-id`, "This week" layout) of the first option in `html` that shows `name`. */
+function optionIdFor(html, name) {
+  const chunk = html
+    .split('data-option-id="')
+    .slice(1)
+    .find((part) => part.includes(escapeHtml(name)));
+  return chunk?.slice(0, chunk.indexOf('"'));
 }
 
 const MS_PER_DAY = 86_400_000;
@@ -109,12 +145,15 @@ const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
 // Same schedule as wrangler.jsonc, so local logs read like production ("keepalive ok (0 3 * * *)").
 const KEEPALIVE_TRIGGER = "/cdn-cgi/handler/scheduled?cron=0+3+*+*+*";
 const DELIVERIES = "/api/mo/deliveries";
+const CHOOSE = "/api/plans/choose";
 const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
 // Optional: the Supabase instance the server uses, to check its grants directly (CI sets both).
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote;
+let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote, swapName;
+// Read from the dashboard HTML by the swap steps.
+let upcomingPlanId, swapOptionId;
 if (!KEEPALIVE_EXPECT_FAILURE) {
   if (!MO_INGEST_TOKEN) {
     console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
@@ -132,6 +171,12 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   const firstMeal = delivery.days[0].meals[0];
   const index = recommendedIndex(firstMeal);
   oldName = firstMeal.variants[index].name;
+  // The swap: the first option of the same meal that MO did not recommend.
+  swapName = firstMeal.variants.find((_, i) => i !== index)?.name;
+  if (!swapName) {
+    console.error("Fixture problem: the sample's first meal has only one option, so there is nothing to swap to.");
+    process.exit(1);
+  }
   newName = `Smoke re-delivered meal ${Date.now()}`;
   redelivery = structuredClone(delivery);
   redelivery.days[0].meals[0].variants[index].name = newName;
@@ -253,14 +298,65 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           body: [
             `"Next week" contains "${recencyNote}" and "This week" has no note`,
             (body) => {
-              // The panels render in tab order: "This week", then "Next week".
-              const [, thisWeek, nextWeek] = body.split('data-slot="tabs-content"');
-              return (
-                nextWeek !== undefined && !thisWeek.includes("In your plan") && nextWeek.includes(recencyNote ?? "")
-              );
+              const { thisWeek, nextWeek } = panels(body);
+              return !thisWeek.includes("In your plan") && nextWeek.includes(recencyNote ?? "");
             },
           ],
         },
+      ],
+      [
+        "choose without session is rejected",
+        () =>
+          request(CHOOSE, {
+            method: "POST",
+            json: { planId: randomUUID(), optionId: randomUUID() },
+            headers: { Cookie: "" },
+          }),
+        { status: 401 },
+      ],
+      [
+        "swap in upcoming week is saved",
+        async () => {
+          const { nextWeek } = panels((await request("/dashboard")).body);
+          upcomingPlanId = /data-plan-id="([^"]+)"/.exec(nextWeek)?.[1];
+          swapOptionId = radioIdFor(nextWeek, swapName ?? "");
+          return request(CHOOSE, { method: "POST", json: { planId: upcomingPlanId, optionId: swapOptionId } });
+        },
+        { status: 200, body: ["saved_at is set", (body) => typeof jsonField(body, "saved_at") === "string"] },
+      ],
+      [
+        "dashboard shows the swap",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" has "${swapName}" checked and "Saved "`,
+            (body) => {
+              const { nextWeek } = panels(body);
+              return isRadioChecked(nextWeek, swapOptionId) && nextWeek.includes("Saved ");
+            },
+          ],
+        },
+      ],
+      [
+        "current week is locked",
+        async () => {
+          const { thisWeek } = panels((await request("/dashboard")).body);
+          // The function refuses before planId is used (it only re-reads recency after a save).
+          const optionId = optionIdFor(thisWeek, currentName ?? "");
+          return request(CHOOSE, { method: "POST", json: { planId: upcomingPlanId, optionId } });
+        },
+        { status: 409, body: ["error: plan_locked", (body) => jsonField(body, "error") === "plan_locked"] },
+      ],
+      [
+        "unknown option is not found",
+        () => request(CHOOSE, { method: "POST", json: { planId: upcomingPlanId, optionId: randomUUID() } }),
+        { status: 404, body: ["error: not_found", (body) => jsonField(body, "error") === "not_found"] },
+      ],
+      [
+        "invalid body is rejected",
+        () => request(CHOOSE, { method: "POST", raw: "not json", headers: { "Content-Type": "application/json" } }),
+        { status: 400, body: ["error: invalid_request", (body) => jsonField(body, "error") === "invalid_request"] },
       ],
       ["re-delivery of the same week is stored", () => deliver(redelivery), { status: 200 }],
       [
@@ -271,6 +367,23 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           body: [
             `contains "${newName}" and not "${oldName}"`,
             (body) => body.includes(escapeHtml(newName ?? "")) && !body.includes(escapeHtml(oldName ?? "")),
+          ],
+        },
+      ],
+      [
+        "re-delivery resets the swap",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" reads "Not saved yet" and "${swapName}" is not checked`,
+            (body) => {
+              const { nextWeek } = panels(body);
+              const optionId = radioIdFor(nextWeek, swapName ?? "");
+              return (
+                nextWeek.includes("Not saved yet") && optionId !== undefined && !isRadioChecked(nextWeek, optionId)
+              );
+            },
           ],
         },
       ],

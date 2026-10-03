@@ -3,10 +3,18 @@ import Layout from "@/layouts/Layout.astro";
 import NoUpcomingPlan from "@/components/plan/NoUpcomingPlan.astro";
 import NothingThisWeek from "@/components/plan/NothingThisWeek.astro";
 import PlanTabs from "@/components/plan/PlanTabs";
+import UpcomingWeekEditor, { type EditorDay, type EditorOption } from "@/components/plan/UpcomingWeekEditor";
 import WeekPlan from "@/components/plan/WeekPlan.astro";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { todayInWarsaw } from "@/lib/plans";
+import {
+  formatDayLabel,
+  formatEditableUntil,
+  formatSavedAt,
+  formatWeekRange,
+  groupPlanOptions,
+  todayInWarsaw,
+} from "@/lib/plans";
 import { getCurrentPlan, getPlanRecency, getUpcomingPlan } from "@/lib/services/plans";
 import { createClient } from "@/lib/supabase";
 import type { WeeklyPlan } from "@/types";
@@ -41,6 +49,23 @@ if (supabase && user) {
     }
   }
 }
+
+// The editor's props are serialized into the page, so only the fields it shows (no composition or nutrition).
+const upcomingDays: EditorDay[] = upcomingPlan
+  ? groupPlanOptions(
+      upcomingPlan.plan_meal_options.map((option): EditorOption => ({
+        id: option.id,
+        meal_date: option.meal_date,
+        meal_type: option.meal_type,
+        variant_index: option.variant_index,
+        name: option.name,
+        score: option.score,
+        justifications: option.justifications,
+        is_recommended: option.is_recommended,
+        is_chosen: option.is_chosen,
+      })),
+    ).map((day) => ({ ...day, label: formatDayLabel(day.date) }))
+  : [];
 ---
 
 <Layout title="Dashboard">
@@ -74,7 +99,15 @@ if (supabase && user) {
           </Fragment>
           <Fragment slot="upcoming">
             {upcomingPlan ? (
-              <WeekPlan plan={upcomingPlan} label="Next week" recency={upcomingRecency} />
+              <UpcomingWeekEditor
+                client:load
+                planId={upcomingPlan.id}
+                weekLabel={formatWeekRange(upcomingPlan.week_start, upcomingPlan.week_end)}
+                editableUntil={formatEditableUntil(upcomingPlan.week_start)}
+                savedAtLabel={upcomingPlan.saved_at ? formatSavedAt(upcomingPlan.saved_at) : null}
+                days={upcomingDays}
+                recency={Object.fromEntries(upcomingRecency ?? [])}
+              />
             ) : (
               <NoUpcomingPlan />
             )}

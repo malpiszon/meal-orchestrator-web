@@ -182,6 +182,22 @@ curl -i http://localhost:4321/api/mo/deliveries \
 
 The sample's week is in the past, so the dashboard won't show it; the walkthrough below moves it to an upcoming week.
 
+### Swapping and saving the upcoming plan
+
+On `/dashboard`, the "Next week" tab lists every option of every meal slot. The user's choice is selected (MO's recommended option until they swap), and every option with the slot's top score has a star. Tapping another option saves it immediately; a plan nobody swapped can be saved as it is with "Keep as recommended". The status line shows "Not saved yet" or "Saved <time>", plus the last day the plan can be edited.
+
+Both routes take a JSON body and use the signed-in user's cookie session. They are not in `PROTECTED_ROUTES`: they answer 401 themselves instead of redirecting.
+
+| Route                     | Body                   | Effect                                                 |
+| ------------------------- | ---------------------- | ------------------------------------------------------ |
+| `POST /api/plans/choose`  | `{ planId, optionId }` | Makes the option the chosen one of its slot, and saves |
+| `POST /api/plans/confirm` | `{ planId }`           | Saves the plan as it is, without changing any choice   |
+
+- **Responses:** 200 `{"saved_at","recency"}`, where `recency` maps option ids to the date the meal was last chosen earlier (`null` if that re-read failed; the save still stands); 400 `invalid_request` with the validation issues; 401 `unauthorized`; 404 `not_found` (no such option or plan, or someone else's); 409 `plan_locked`; 413 `payload_too_large` over 4 KiB; 503 `not_configured`; 500 `save_failed`.
+- **Cut-off:** a plan can be changed while its `week_start` is after today in Europe/Warsaw, so until Sunday 23:59 Warsaw time before the week starts, for every user. From Monday 00:00 it is "This week" and any save is answered 409. The `choose_plan_option` and `confirm_plan` Postgres functions enforce this and the ownership check, so a stale page can't bypass it.
+- **Re-delivery:** when MO re-sends a week, its choices go back to MO's recommendations and the plan to "Not saved yet".
+- **Recency notes** count the meals the user chose, not the ones MO recommended.
+
 ### Dev walkthrough: sign in as an account a delivery created
 
 **Local development only** (`npm run dev` against local Supabase). It shows the dashboard exactly as a real user will see it: the account is created by a delivery, as in production, and then given a password with one Admin API call. That call stands in for the account invitation (roadmap item S-04), which doesn't exist yet. In production, accounts get their password only through that invitation; there are no manual accounts or test deliveries there.
@@ -217,6 +233,8 @@ The sample's week is in the past, so the dashboard won't show it; the walkthroug
 3. Sign in at `/auth/signin` with that email and password, and check that `/dashboard` shows the delivered week. A user without a delivered upcoming week sees "No upcoming plan yet" instead (in the "Next week" tab once a current week exists).
 
 4. Deliver a second week to see recency notes: run step 1 again with `--arg start` set to this week's Monday (Europe/Warsaw; today counts if it is a Monday), and send `/tmp/mo-delivery.json` with the same `curl`. The response shows `"account_created":false`. Reload `/dashboard`: it now has two tabs. "This week" shows the plan for the current week and "Next week" (open by default) the upcoming one. Every recommended meal of the upcoming week was also recommended on the same weekday this week, so it carries a note such as "In your plan 14 days earlier (Mon 28 Sep)". A meal only gets a note when it was recommended earlier; the "This week" tab shows no notes.
+
+5. Swap a meal: in "Next week", tap another option of any slot. The status line reads "Saved <time> · Editable until <Sunday before the week>". Reload `/dashboard`: the option is still selected. Choosing a meal that is also chosen on an earlier day of the week gives the later one a recency note at once. On a never-saved plan, "Keep as recommended" saves it without swapping. The "This week" plan from step 4 has no controls: it has started, so the API answers 409 for it.
 
 ## Deployment
 
@@ -293,7 +311,7 @@ BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> npm run smok
 
 It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both.
 
-The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead (and, for the history, to the current week's Monday) and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery of the same sample for the current week (Europe/Warsaw), with one meal renamed, shows the "This week" tab with that meal; a delivery of the upcoming week for the smoke user shows its recommended meal on the dashboard; the upcoming week then shows a recency note ("In your plan N days earlier (…"), N being the days between the two Mondays; and a re-delivery of the same week with a renamed meal replaces it.
+The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead (and, for the history, to the current week's Monday) and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery of the same sample for the current week (Europe/Warsaw), with one meal renamed, shows the "This week" tab with that meal; a delivery of the upcoming week for the smoke user shows its recommended meal on the dashboard; the upcoming week then shows a recency note ("In your plan N days earlier (…"), N being the days between the two Mondays; that `POST /api/plans/choose` without a session gets 401; that swapping an upcoming meal to a non-recommended option returns 200, and the dashboard then shows that option `checked` and "Saved "; that choosing an option of the current week gets 409 `plan_locked`, an unknown option 404 `not_found` and a non-JSON body 400 `invalid_request`; and that a re-delivery of the same week with a renamed meal replaces it and resets the swap ("Not saved yet").
 
 The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check (no `MO_INGEST_TOKEN` needed) and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
 

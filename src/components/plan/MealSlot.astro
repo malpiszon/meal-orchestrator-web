@@ -23,7 +23,7 @@ const chosenNote = recencyNote(chosen);
 
 <div class="flex flex-col gap-2 border-t pt-4 first:border-t-0 first:pt-0">
   <h4 class="text-xs font-medium tracking-wide text-muted-foreground uppercase">{mealTypeLabel(meal.mealType)}</h4>
-  <div class="flex items-start justify-between gap-3">
+  <div class="flex items-start justify-between gap-3" data-option-id={chosen.id}>
     <div class="flex flex-col gap-0.5">
       <p class="font-medium">{chosen.name}</p>
       {chosenNote && <RecencyNote note={chosenNote} />}
@@ -49,7 +49,7 @@ const chosenNote = recencyNote(chosen);
         {others.map((option) => {
           const note = recencyNote(option);
           return (
-            <li class="flex items-start justify-between gap-3">
+            <li class="flex items-start justify-between gap-3" data-option-id={option.id}>
               <div class="flex flex-col gap-0.5">
                 <span>{option.name}</span>
                 {note && <RecencyNote note={note} />}
