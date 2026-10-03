@@ -153,14 +153,17 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 
 ### Auth routes
 
-| Route                 | Description                                                             |
-| --------------------- | ----------------------------------------------------------------------- |
-| `/auth/signin`        | Email/password sign-in form                                             |
-| `/auth/signup`        | Email/password sign-up form                                             |
-| `/auth/confirm-email` | Post-signup "check your inbox" page                                     |
-| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated) |
+| Route                 | Description                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `/auth/signin`        | Email/password sign-in form                                                                         |
+| `/auth/signup`        | Email/password sign-up form                                                                         |
+| `/auth/confirm-email` | Post-signup "check your inbox" page                                                                 |
+| `/api/auth/confirm`   | Invitation and password-reset email links land here; signs the user in and forwards to `/dashboard` |
+| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated)                             |
 
 Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
+
+The invitation and password-reset email templates live in `supabase/templates/` and are wired up in `supabase/config.toml`. Local Supabase reads them only at start, so restart it (`npx supabase stop && npx supabase start`) after changing them. Local emails are not sent; they land in Mailpit at `http://127.0.0.1:54324`.
 
 ### MO delivery endpoint
 
