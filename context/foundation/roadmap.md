@@ -152,6 +152,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Which time zone defines "the plan's first day" for the edit cut-off. — Owner: user. Block: no.
 - **Risk:** Date rule is the only lock; getting the cut-off wrong either blocks legitimate edits or lets in-progress plans change.
+- **Handoff from S-02:** `get_plan_recency` (`supabase/migrations/20261002190000_plan_recency.sql`) treats "planned" as `is_recommended`. S-03 must switch that predicate to the user's saved choice and update `supabase/tests/get_plan_recency.test.sql`. While there, consider a partial index or `LATERAL … order by meal_date desc limit 1`, since the lookup currently reads offered-only history rows too.
 - **Status:** ready
 
 ### S-04: Invitation on first delivery

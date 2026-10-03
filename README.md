@@ -116,7 +116,7 @@ npx supabase stop
 
 The local Studio UI is available at `http://localhost:54323`.
 
-`npx supabase start` applies the repo's migrations (the `keepalive` function pinged by the daily Cron Trigger, see [Deployment](#deployment), and the weekly-plan tables with the `ingest_weekly_plan` function) automatically. A hosted or production project needs them pushed explicitly — see below.
+`npx supabase start` applies the repo's migrations (the `keepalive` function pinged by the daily Cron Trigger, see [Deployment](#deployment), the weekly-plan tables with the `ingest_weekly_plan` function, and the `get_plan_recency` function behind the dashboard's recency notes) automatically. A hosted or production project needs them pushed explicitly — see below.
 
 ### Using a cloud Supabase project instead
 
@@ -214,7 +214,7 @@ The sample's week is in the past, so the dashboard won't show it; the walkthroug
      -d '{"password": "<a password>", "email_confirm": true}'
    ```
 
-3. Sign in at `/auth/signin` with that email and password, and check that `/dashboard` shows the delivered week. A user without a delivered upcoming week sees "No upcoming plan yet" instead.
+3. Sign in at `/auth/signin` with that email and password, and check that `/dashboard` shows the delivered week. A user without a delivered upcoming week sees "No upcoming plan yet" instead (in the "Next week" tab once a current week exists).
 
 4. Deliver a second week to see recency notes: run step 1 again with `--arg start` set to this week's Monday (Europe/Warsaw; today counts if it is a Monday), and send `/tmp/mo-delivery.json` with the same `curl`. The response shows `"account_created":false`. Reload `/dashboard`: it now has two tabs. "This week" shows the plan for the current week and "Next week" (open by default) the upcoming one. Every recommended meal of the upcoming week was also recommended on the same weekday this week, so it carries a note such as "In your plan 14 days earlier (Mon 28 Sep)". A meal only gets a note when it was recommended earlier; the "This week" tab shows no notes.
 
