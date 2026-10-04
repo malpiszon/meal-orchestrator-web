@@ -22,13 +22,16 @@ function storeCookies(response) {
   for (const raw of response.headers.getSetCookie()) {
     const [pair, ...attrs] = raw.split(";");
     const [name, ...rest] = pair.split("=");
-    // Supabase deletes cookies with Max-Age=0, Astro with an Expires date in the past.
-    const expired = attrs.some((a) => {
-      const attr = a.trim();
-      if (/^max-age=0$/i.test(attr)) return true;
-      const expires = /^expires=(.*)$/i.exec(attr)?.[1];
-      return expires !== undefined && Date.parse(expires) <= Date.now();
-    });
+    // Supabase deletes cookies with Max-Age=0, Astro with an Expires date in the past. Max-Age wins over Expires.
+    const attr = (key) =>
+      attrs
+        .map((a) => a.trim())
+        .find((a) => a.toLowerCase().startsWith(`${key}=`))
+        ?.slice(key.length + 1);
+    const maxAge = attr("max-age");
+    const expires = attr("expires");
+    const expired =
+      maxAge !== undefined ? Number(maxAge) <= 0 : expires !== undefined && Date.parse(expires) <= Date.now();
     if (expired) jar.delete(name.trim());
     else jar.set(name.trim(), rest.join("="));
   }
@@ -313,7 +316,7 @@ async function newestResetEmailLink(to) {
   try {
     return await pollResetEmailLink(to);
   } catch (error) {
-    return stepFailure(`Mailpit at ${MAILPIT_URL} is unreachable: ${error.message}`);
+    return stepFailure(`Mailpit read at ${MAILPIT_URL} failed: ${error.message}`);
   }
 }
 
@@ -323,7 +326,9 @@ async function pollResetEmailLink(to) {
     if (!search.ok) return stepFailure(`Mailpit search answered ${search.status}: ${await search.text()}`);
     const [newest] = (await search.json()).messages ?? [];
     if (newest) {
-      const message = await (await fetch(`${MAILPIT_URL}/api/v1/message/${newest.ID}`)).json();
+      const read = await fetch(`${MAILPIT_URL}/api/v1/message/${newest.ID}`);
+      if (!read.ok) return stepFailure(`Mailpit message read answered ${read.status}: ${await read.text()}`);
+      const message = await read.json();
       const href =
         /href="([^"]*\/auth\/set-password[^"]*)"/.exec(message.HTML ?? "")?.[1] ??
         /(https?:\/\/[^\s"<>]*\/auth\/set-password[^\s"<>]*)/.exec(message.Text ?? "")?.[1];
@@ -333,7 +338,9 @@ async function pollResetEmailLink(to) {
     }
     await sleep(500);
   }
-  return stepFailure(`no email to ${to} arrived in Mailpit`);
+  return stepFailure(
+    `no email to ${to} arrived in Mailpit (forgot-password hides GoTrue errors; check auth.email.max_frequency and the email_sent rate limit)`,
+  );
 }
 
 const steps = KEEPALIVE_EXPECT_FAILURE
@@ -711,8 +718,10 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               ? [
                   [
                     "reset request for the smoke user is accepted",
-                    () => {
+                    async () => {
                       jar.clear();
+                      // generate_link above set recovery_sent_at; GoTrue refuses another send within max_frequency (1s).
+                      await sleep(1500);
                       return requestReset(email);
                     },
                     { status: 302, location: "/auth/forgot-password?sent=1" },
