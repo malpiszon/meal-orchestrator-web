@@ -39,19 +39,19 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 
 ## At a glance
 
-| ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status      |
-| ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | ----------- |
-| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | done        |
-| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done        |
-| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done        |
-| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done        |
-| S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | done        |
-| S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | in-progress |
-| S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | done        |
-| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | ready       |
-| S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready       |
-| S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
-| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready       |
+| ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status |
+| ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | ------ |
+| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | done   |
+| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done   |
+| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done   |
+| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done   |
+| S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | done   |
+| S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | done   |
+| S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | done   |
+| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | ready  |
+| S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready  |
+| S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready  |
+| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready  |
 
 ## Streams
 
@@ -169,7 +169,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Supabase must be able to invite an existing, unconfirmed account (the ones S-01 creates). Checked on local Supabase during S-01 Phase 2 (plan row 2.6). — Owner: agent. Block: no.
 - **Risk:** Sequenced after the north star because S-01 already creates accounts on first delivery, so no week is lost while invitations wait; auth email rate limit (30/hour) is ample for 2–4 users but must be re-tested with a real invite.
 - **Handoff from S-05:** the set-password page (`/auth/set-password`, `POST /api/auth/set-password`) is built to be shared. (1) Add `"invite"` to `SET_PASSWORD_LINK_TYPES` (`src/lib/set-password.ts`, which `setPasswordLinkSchema` and `authLinkQuerySchema` are built from) and to the page's `WORDING` map (`src/pages/auth/set-password.astro`), and point `supabase/templates/invite.html` at `{{ .SiteURL }}/auth/set-password?token_hash={{ .TokenHash }}&type=invite`. (2) Then remove the GET `verifyOtp` from `/api/auth/confirm`: forward `invite` like `recovery` in `authLinkRoute` (`src/lib/auth-link.ts`), so no GET uses a token; as with S-05's reset template, paste the production **Invite user** template only after the deploy. (3) A rejected invite password is retried through the same `mo-password-retry` cookie gate (set only when saving fails right after `verifyOtp`, holds that user's id, 10 minutes); a signed-in session alone can't set a password, so keep that gate. (4) Invite only accounts that are still unconfirmed: a delivery-created account may already have claimed itself through "Forgot or never set a password?". (5) Once invitations exist, the sign-in link "Forgot or never set a password?" can become "Forgot password?". (6) Known issue: right after a reset (an invite will behave the same), the redirect to `/dashboard` once got PostgREST `PGRST303 JWT issued at future` on one of the dashboard's two plan queries ("Something went wrong"; a reload fixed it; not reproduced in 15 scripted runs). Candidate follow-up: retry the dashboard plan load once on `PGRST303`.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-05: Password reset
 
@@ -287,3 +287,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **F-01: (foundation) links in Supabase auth emails (invitation, password reset) land on a callback that exchanges the link's code for a signed-in session and forwards the user to the right next page.** — Archived 2026-10-03 → `context/archive/2026-10-03-email-link-callback/`. Lesson: —.
 - **S-03: user can swap any meal for another option from that week's menu and save the plan as often as they like until its first day, after which it can no longer be changed.** — Archived 2026-10-03 → `context/archive/2026-10-03-swap-and-save-plan/`. Lesson: —.
 - **S-05: user can request a reset link by email, set a new password, and log in with it.** — Archived 2026-10-04 → `context/archive/2026-10-04-password-reset/`. Lesson: —.
+- **S-04: a user whose account was created by MO's first delivery for their email (S-01) gets an invitation email, sets a password, logs in, and sees only their own plan. This includes accounts S-01 created before this slice shipped. The public sign-up path is gone.** — Archived 2026-10-04 → `context/archive/2026-10-04-invite-on-first-delivery/`. Lesson: —.
