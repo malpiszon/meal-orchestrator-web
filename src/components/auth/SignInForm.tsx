@@ -87,7 +87,7 @@ export default function SignInForm({ serverError }: Props) {
 
       <div className="text-center">
         <a href={FORGOT_PASSWORD_PATH} className={buttonVariants({ variant: "link" })}>
-          Forgot or never set a password?
+          Forgot password?
         </a>
       </div>
     </form>

@@ -253,34 +253,34 @@ None. The invite call replaces the existing `createUser` call; it adds one SMTP 
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Unit tests pass: `npm test`
-- [x] 1.3 Type and Astro check passes: `npx astro check`
-- [x] 1.4 Production build succeeds: `npm run build`
+- [x] 1.1 Lint passes: `npm run lint` — d4a9570
+- [x] 1.2 Unit tests pass: `npm test` — d4a9570
+- [x] 1.3 Type and Astro check passes: `npx astro check` — d4a9570
+- [x] 1.4 Production build succeeds: `npm run build` — d4a9570
 
 #### Manual
 
-- [x] 1.5 On local Supabase (after restarting it for the template), a delivery for a new email returns 200 with `account_created: true`, and an invitation email for that address appears in Mailpit
-- [x] 1.6 The invitation link opens the "set your password" page without using the token (reloading the page still shows the form); posting an 8+ character password lands on `/dashboard` showing the delivered week
-- [x] 1.7 A second delivery for the same email sends no second invitation and returns `account_created: false`
-- [x] 1.8 With the local email rate limit exhausted, a delivery for another new email still returns 200 `account_created: true` with the week stored, and the Worker log shows the invite failure
+- [x] 1.5 On local Supabase (after restarting it for the template), a delivery for a new email returns 200 with `account_created: true`, and an invitation email for that address appears in Mailpit — d4a9570
+- [x] 1.6 The invitation link opens the "set your password" page without using the token (reloading the page still shows the form); posting an 8+ character password lands on `/dashboard` showing the delivered week — d4a9570
+- [x] 1.7 A second delivery for the same email sends no second invitation and returns `account_created: false` — d4a9570
+- [x] 1.8 With the local email rate limit exhausted, a delivery for another new email still returns 200 `account_created: true` with the week stored, and the Worker log shows the invite failure — d4a9570
 
 ### Phase 2: Remove public sign-up and adapt smoke
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Unit tests pass: `npm test`
-- [ ] 2.3 Type and Astro check passes: `npx astro check`
-- [ ] 2.4 Production build succeeds: `npm run build`
-- [ ] 2.5 Smoke passes against the local preview on port 4322: `BASE_URL=http://localhost:4322 npm run smoke`
-- [ ] 2.6 No code references the removed routes: `grep -rn "auth/signup\|api/auth/signup\|confirm-email" src scripts` returns nothing
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Unit tests pass: `npm test`
+- [x] 2.3 Type and Astro check passes: `npx astro check`
+- [x] 2.4 Production build succeeds: `npm run build`
+- [x] 2.5 Smoke passes against the local preview on port 4322: `BASE_URL=http://localhost:4322 npm run smoke`
+- [x] 2.6 No code references the removed routes: `grep -rn "auth/signup\|api/auth/signup\|confirm-email" src scripts` returns nothing
 
 #### Manual
 
-- [ ] 2.7 `/auth/signup`, `/api/auth/signup` and `/auth/confirm-email` return 404 in the dev server
-- [ ] 2.8 The Topbar, Welcome page and sign-in page render with no dead links
-- [ ] 2.9 A direct sign-up attempt against local Supabase is rejected ("Signups not allowed")
+- [x] 2.7 `/auth/signup`, `/api/auth/signup` and `/auth/confirm-email` return 404 in the dev server
+- [x] 2.8 The Topbar, Welcome page and sign-in page render with no dead links
+- [x] 2.9 A direct sign-up attempt against local Supabase is rejected ("Signups not allowed")
 
 ### Phase 3: Docs and follow-up
 
