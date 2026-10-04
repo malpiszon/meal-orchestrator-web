@@ -1,12 +1,15 @@
 import type { APIRoute } from "astro";
-import { AUTH_LINK_DESTINATION, authLinkQuerySchema } from "@/lib/auth-link";
+import { authLinkQuerySchema, authLinkRoute } from "@/lib/auth-link";
 import { createClient } from "@/lib/supabase";
 
 export const prerender = false;
 
 const INVALID_LINK_MESSAGE = "This link is invalid or has expired. Ask for a new one.";
 
-/** Verifies an invitation or password-reset email link and signs the user in. */
+/**
+ * Handles an invitation or password-reset email link. Reset links are forwarded to the
+ * set-password page without using their token; invitations are verified here and sign the user in.
+ */
 export const GET: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
@@ -21,11 +24,14 @@ export const GET: APIRoute = async (context) => {
     return invalidLink();
   }
 
-  const { error } = await supabase.auth.verifyOtp(query.data);
-  if (error) {
-    console.error(`auth confirm: verifyOtp failed (${query.data.type}): ${error.message}`);
-    return invalidLink();
+  const route = authLinkRoute(query.data);
+  if (route.verify) {
+    const { error } = await supabase.auth.verifyOtp(query.data);
+    if (error) {
+      console.error(`auth confirm: verifyOtp failed (${query.data.type}): ${error.message}`);
+      return invalidLink();
+    }
   }
 
-  return context.redirect(AUTH_LINK_DESTINATION);
+  return context.redirect(route.location);
 };

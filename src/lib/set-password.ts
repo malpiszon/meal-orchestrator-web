@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MIN_PASSWORD_LENGTH } from "@/lib/password-rules";
+import { MIN_PASSWORD_LENGTH, SET_PASSWORD_PATH } from "@/lib/password-rules";
 
 /**
  * Server-side rules shared by the password-reset request and the set-a-new-password page and
@@ -13,16 +13,41 @@ export const resetRequestSchema = z.object({
   email: z.string().trim().pipe(z.email()),
 });
 
-/** Link types the set-password page accepts. S-04 adds `"invite"`. */
-const setPasswordLinkType = z.enum(["recovery"]);
+/** The `token_hash` of an emailed link. Shared with `authLinkQuerySchema` (`@/lib/auth-link`). */
+export const tokenHashSchema = z.string().min(1);
+
+/**
+ * Link types the set-password page accepts. S-04 adds `"invite"`; `@/lib/auth-link` builds its
+ * accepted types from this list, so the two can't drift.
+ */
+export const SET_PASSWORD_LINK_TYPES = ["recovery"] as const;
+
+const setPasswordLinkType = z.enum(SET_PASSWORD_LINK_TYPES);
+
+export type SetPasswordLinkType = z.infer<typeof setPasswordLinkType>;
 
 /** Query of an emailed set-password link: `/auth/set-password?token_hash=…&type=recovery`. */
 export const setPasswordLinkSchema = z.object({
-  token_hash: z.string().min(1),
+  token_hash: tokenHashSchema,
   type: setPasswordLinkType,
 });
 
 export type SetPasswordLink = z.infer<typeof setPasswordLinkSchema>;
+
+/**
+ * URL of the set-password page, optionally carrying an emailed link's token (so it stays usable)
+ * and an error to show.
+ */
+export function setPasswordUrl({ link, error }: { link?: SetPasswordLink; error?: string } = {}): string {
+  const params = new URLSearchParams();
+  if (link) {
+    params.set("token_hash", link.token_hash);
+    params.set("type", link.type);
+  }
+  if (error) params.set("error", error);
+  const query = params.toString();
+  return query ? `${SET_PASSWORD_PATH}?${query}` : SET_PASSWORD_PATH;
+}
 
 /**
  * Body of the set-password form (`POST /api/auth/set-password`). The token fields are present
@@ -32,7 +57,7 @@ export type SetPasswordLink = z.infer<typeof setPasswordLinkSchema>;
 export const setPasswordFormSchema = z
   .object({
     password: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`),
-    token_hash: z.string().min(1).optional(),
+    token_hash: tokenHashSchema.optional(),
     type: setPasswordLinkType.optional(),
   })
   .refine((form) => (form.token_hash === undefined) === (form.type === undefined), {

@@ -5,6 +5,7 @@ import {
   resetRequestSchema,
   setPasswordFormSchema,
   setPasswordLinkSchema,
+  setPasswordUrl,
 } from "@/lib/set-password";
 
 describe("MIN_PASSWORD_LENGTH", () => {
@@ -100,4 +101,27 @@ describe("passwordErrorMessage", () => {
       expect(passwordErrorMessage(error)).toBe("Something went wrong. Please try again.");
     },
   );
+});
+
+describe("setPasswordUrl", () => {
+  it("is the bare page without a link or error", () => {
+    expect(setPasswordUrl()).toBe("/auth/set-password");
+  });
+
+  it("carries the link's token and an error", () => {
+    const url = new URL(
+      setPasswordUrl({ link: { token_hash: "abc 123", type: "recovery" }, error: "Too short" }),
+      "http://localhost",
+    );
+    expect(url.pathname).toBe("/auth/set-password");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      token_hash: "abc 123",
+      type: "recovery",
+      error: "Too short",
+    });
+  });
+
+  it("carries only an error for a signed-in retry", () => {
+    expect(setPasswordUrl({ error: "Too weak" })).toBe("/auth/set-password?error=Too+weak");
+  });
 });
