@@ -153,13 +153,21 @@ Users can then sign in immediately after sign-up without clicking a confirmation
 
 ### Auth routes
 
-| Route                 | Description                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------- |
-| `/auth/signin`        | Email/password sign-in form                                                                         |
-| `/auth/signup`        | Email/password sign-up form                                                                         |
-| `/auth/confirm-email` | Post-signup "check your inbox" page                                                                 |
-| `/api/auth/confirm`   | Invitation and password-reset email links land here; signs the user in and forwards to `/dashboard` |
-| `/dashboard`          | Example protected page (redirects to `/auth/signin` if unauthenticated)                             |
+| Route                   | Description                                                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/auth/signin`          | Email/password sign-in form, with a "Forgot or never set a password?" link to `/auth/forgot-password`                                        |
+| `/auth/signup`          | Email/password sign-up form                                                                                                                  |
+| `/auth/confirm-email`   | Post-signup "check your inbox" page                                                                                                          |
+| `/auth/forgot-password` | Asks for an email and sends a link to set a new password; answers the same whether or not the account exists                                 |
+| `/auth/set-password`    | Where a password-reset email links (`?token_hash=…&type=recovery`): a new-password form (8+ characters); saving signs the user in            |
+| `/api/auth/confirm`     | Invitation links land here, are verified and forward to `/dashboard`; old-style reset links are forwarded unverified to `/auth/set-password` |
+| `/dashboard`            | Example protected page (redirects to `/auth/signin` if unauthenticated)                                                                      |
+
+Opening a reset link never uses its single-use token, so mail scanners that prefetch links can't burn it: the token is verified only when the new-password form is posted (`POST /api/auth/set-password`). A too-short password is refused before that, with the link still usable; a used, expired or made-up link ends on `/auth/forgot-password` with "This link is invalid or has expired". If Supabase refuses the password after the token was used (for example the current password again), the user keeps the session and, for 10 minutes, can retry on `/auth/set-password` without a token (the `mo-password-retry` cookie); a signed-in session alone can't change the password.
+
+Until invitations exist (roadmap item S-04), "Forgot or never set a password?" is how an account created by an MO delivery gets its password: the reset email goes to that address, and setting a password confirms and claims the account.
+
+**Known risk:** Cloudflare Workers request logs record the full URLs of `/auth/set-password` and `/api/auth/confirm`, so a reset token that hasn't been used yet (valid for up to 1 hour) sits in logs readable by the Cloudflare account's admins.
 
 Route protection is handled in `src/middleware.ts`. Add paths to the `PROTECTED_ROUTES` array there to require authentication.
 
@@ -286,16 +294,14 @@ After the merge, the post-deploy smoke expects `POST /api/mo/deliveries` without
 
 ### Production setup for email links (one-time)
 
-Invitation and password-reset emails link to `/api/auth/confirm` only if the production project uses the repo's templates; Supabase's default templates link elsewhere and the user never gets signed in. `supabase/config.toml` sets them for local Supabase only, so production needs them set by hand.
+Invitation and password-reset emails link to the app only if the production project uses the repo's templates; Supabase's default templates link elsewhere and the user never gets signed in. `supabase/config.toml` sets them, and the 8-character password minimum, for local Supabase only, so production needs them set by hand in the Supabase dashboard of the production project.
 
-**Timing:** as with the migrations above, do it **after the PR's CI is green and before merging it**.
+1. **Minimum password length.** Go to **Authentication → Providers → Email** and set **Minimum password length** to `8`. **Timing:** after the PR's CI is green and before merging it, as with the migrations above. Existing shorter passwords keep working until they are changed.
+2. **Templates.** Go to **Authentication → Emails → Templates** and replace the message body of:
+   - **Invite user** with the contents of `supabase/templates/invite.html` (subject: `You have been invited to Meal Orchestrator`)
+   - **Reset password** with the contents of `supabase/templates/recovery.html` (subject: `Set a new Meal Orchestrator password`)
 
-In the Supabase dashboard of the production project, go to **Authentication → Emails → Templates** and replace the message body of:
-
-- **Invite user** with the contents of `supabase/templates/invite.html` (subject: `You have been invited to Meal Orchestrator`)
-- **Reset password** with the contents of `supabase/templates/recovery.html` (subject: `Reset your Meal Orchestrator password`)
-
-The links use `{{ .SiteURL }}`, so they always point to the production Site URL. Repeat this step only when those template files change.
+The links use `{{ .SiteURL }}`, so they always point to the production Site URL. Repeat a template's step whenever its file changes. **Timing:** a template change that only rewords the email can be pasted after the PR's CI is green and before merging it. A change that moves the link to a new page must be pasted only **after the deploy**: until then the old Worker doesn't have that page. The **Reset password** template of the password-reset change is such a case. It now links to `/auth/set-password`; until it is re-pasted, the production template still links to `/api/auth/confirm`, which the new code forwards to `/auth/set-password`, so resets keep working in between.
 
 ### Keep-alive Cron Trigger
 
@@ -325,11 +331,13 @@ npm run dev            # or: npm run build && npm run preview
 BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> npm run smoke
 ```
 
-It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both. With `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set, it also checks the email links (see below); CI sets it too.
+It needs a reachable Supabase instance (local or cloud) with email confirmation disabled, and a server configured with `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN`. `MO_INGEST_TOKEN` must be set for the script too (it must match the server's); the script exits immediately without it. With `SUPABASE_URL` and `SUPABASE_KEY` (the anon key) also set, it checks that the anon key can't execute `ingest_weekly_plan` directly; CI sets both. With `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set, it also checks the email links and the password reset (see below); CI sets it too. With `MAILPIT_URL` also set (local Supabase's Mailpit, `http://127.0.0.1:54324`), it reads one real reset email; without it the script prints `SKIP  real reset email (set MAILPIT_URL)`.
 
 The delivery steps load `scripts/fixtures/mo-delivery.sample.json`, move it to the first Monday at least 7 days ahead (and, for the history, to the current week's Monday) and check that: the signed-in user's dashboard starts at "No upcoming plan yet"; a delivery without a token gets 401; a delivery for a new email creates the account; a delivery of the same sample for the current week (Europe/Warsaw), with one meal renamed, shows the "This week" tab with that meal; a delivery of the upcoming week for the smoke user shows its recommended meal on the dashboard; the upcoming week then shows a recency note ("In your plan N days earlier (…"), N being the days between the two Mondays; that `POST /api/plans/choose` without a session gets 401; that swapping an upcoming meal to a non-recommended option returns 200, and the dashboard then shows that option `checked` and "Saved "; that choosing an option of the current week gets 409 `plan_locked`, an unknown option 404 `not_found` and a non-JSON body 400 `invalid_request`; and that a re-delivery of the same week with a renamed meal replaces it and resets the swap ("Not saved yet").
 
-The email-link steps open `/api/auth/confirm` the way a click in an invitation or password-reset email does, without sending any email: they generate the link's token through the Admin API (`generate_link`) with the service-role key. They check that: an invitation for a new email signs that user in and lands on a dashboard with "No upcoming plan yet"; a password-reset link for the smoke user signs them in and the dashboard shows their re-delivered week (so the session is theirs); and a reused password-reset link or a made-up token is sent back to `/auth/signin` with an error.
+The email-link and password-reset steps open links the way a click in an invitation or password-reset email does, without sending any email: they generate the link's token through the Admin API (`generate_link`) with the service-role key. They check that: an invitation for a new email, opened through `/api/auth/confirm`, signs that user in and lands on a dashboard with "No upcoming plan yet"; `POST /api/auth/forgot-password` answers `?sent=1` for an unknown email and an error for `not-an-email`; an old-style reset link through `/api/auth/confirm` is forwarded to `/auth/set-password?token_hash=…`; that page shows the form; a 7-character password is sent back to the page with the same token and an error; a valid password then lands on `/dashboard` with the smoke user's re-delivered week (so the token survived the page's GET and the rejected password, and the session is theirs); while signed in without the `mo-password-retry` cookie, the page without a token shows the invalid-link message and a token-less save is sent to `/auth/forgot-password`, as it is after sign-out; the old password no longer signs in and the new one does; reusing the used token or posting a made-up one ends on `/auth/forgot-password` with an error; posting the current password with a fresh token is refused by Supabase but leaves a token-less retry open, which saves a new password and clears the retry cookie; the account created by the delivery for a new email claims itself with a reset link and sees its delivered week; and a garbage invitation link is sent back to `/auth/signin` with an error.
+
+With `MAILPIT_URL` set, the script then asks for a reset of the smoke user through `/api/auth/forgot-password`, reads the newest email to that address from Mailpit's API (`/api/v1/search`, `/api/v1/message/<id>`), checks that its link is `/auth/set-password?…type=recovery` (only the path and query are used, as the link's host is Supabase's `site_url`) and posts a new password with it, which must land on `/dashboard`. Local Supabase sends at most 2 auth emails per hour (`email_sent` in `supabase/config.toml`), so more frequent local runs with `MAILPIT_URL` can fail that step.
 
 The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects it to succeed. With `KEEPALIVE_EXPECT_FAILURE=1` it runs only that check (no `MO_INGEST_TOKEN` needed) and expects a non-2xx response instead; CI uses this mode against a preview pointed at an unreachable `SUPABASE_URL`, proving failed pings are reported.
 
@@ -340,7 +348,7 @@ The script also fires the keep-alive Cron Trigger (`/cdn-cgi/handler/scheduled`)
 GitHub Actions runs two jobs on every push and PR to `master`:
 
 - **ci** — lint, unit tests (`npm test`), `astro check` and build. Configure `SUPABASE_URL` and `SUPABASE_KEY` as repository secrets for the build step.
-- **smoke** — starts a local Supabase via the Supabase CLI (its `SERVICE_ROLE_KEY` included), runs the pgTAP database tests in `supabase/tests/` (`npx supabase test db` locally), builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN` and runs `npm run smoke` against it. No secrets required.
+- **smoke** — starts a local Supabase via the Supabase CLI (its `SERVICE_ROLE_KEY` and Mailpit included), runs the pgTAP database tests in `supabase/tests/` (`npx supabase test db` locally), builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN` and runs `npm run smoke` against it, with `MAILPIT_URL` set. No secrets required.
 
 On pushes to `master`, a **deploy** job then runs `npx wrangler deploy` and a post-deploy smoke against production, including a token-less `POST /api/mo/deliveries` that must return 401 (503 means the Worker secrets are missing; 403 or a challenge page means Cloudflare bot protection is blocking MO).
 

@@ -33,3 +33,17 @@ export function createServiceClient(): SupabaseClient | null {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * Cookie-less anon client for auth calls that must not touch the requester's cookies (the
+ * password-reset request). Implicit flow, so the emailed link carries a token hash that
+ * `verifyOtp({ token_hash, type })` accepts in any browser, with no PKCE code-verifier cookie.
+ */
+export function createStatelessClient(): SupabaseClient | null {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    return null;
+  }
+  return createSupabaseClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" },
+  });
+}
