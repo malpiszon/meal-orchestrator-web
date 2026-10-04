@@ -286,10 +286,10 @@ None. The invite call replaces the existing `createUser` call; it adds one SMTP 
 
 #### Automated
 
-- [x] 3.1 Prettier passes on the edited docs: `npx prettier --check README.md context/foundation/roadmap.md context/foundation/infrastructure.md`
-- [x] 3.2 No stale references to the removed routes: `grep -rn "auth/signup" README.md context/foundation` returns only historical notes that say the routes were removed
+- [x] 3.1 Prettier passes on the edited docs: `npx prettier --check README.md context/foundation/roadmap.md context/foundation/infrastructure.md` — f8d2228
+- [x] 3.2 No stale references to the removed routes: `grep -rn "auth/signup" README.md context/foundation` returns only historical notes that say the routes were removed — f8d2228
 
 #### Manual
 
-- [x] 3.3 The README's invitation and rollout text reads correctly end to end, and the contract link opens the file
-- [x] 3.4 The roadmap Parked list contains the invite-failure follow-up
+- [x] 3.3 The README's invitation and rollout text reads correctly end to end, and the contract link opens the file — f8d2228
+- [x] 3.4 The roadmap Parked list contains the invite-failure follow-up — f8d2228

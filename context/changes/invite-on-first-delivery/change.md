@@ -1,7 +1,7 @@
 ---
 change_id: invite-on-first-delivery
 title: Invite new MO users on their first delivery
-status: implementing
+status: implemented
 created: 2026-10-04
 updated: 2026-10-04
 archived_at: null
