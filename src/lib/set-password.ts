@@ -17,16 +17,16 @@ export const resetRequestSchema = z.object({
 export const tokenHashSchema = z.string().min(1);
 
 /**
- * Link types the set-password page accepts. S-04 adds `"invite"`; `@/lib/auth-link` builds its
- * accepted types from this list, so the two can't drift.
+ * Link types the set-password page accepts: password resets and invitations. `@/lib/auth-link`
+ * builds its accepted types from this list, so the two can't drift.
  */
-export const SET_PASSWORD_LINK_TYPES = ["recovery"] as const;
+export const SET_PASSWORD_LINK_TYPES = ["recovery", "invite"] as const;
 
 const setPasswordLinkType = z.enum(SET_PASSWORD_LINK_TYPES);
 
 export type SetPasswordLinkType = z.infer<typeof setPasswordLinkType>;
 
-/** Query of an emailed set-password link: `/auth/set-password?token_hash=…&type=recovery`. */
+/** Query of an emailed set-password link: `/auth/set-password?token_hash=…&type=recovery|invite`. */
 export const setPasswordLinkSchema = z.object({
   token_hash: tokenHashSchema,
   type: setPasswordLinkType,

@@ -1,7 +1,8 @@
 // Smoke test: proves the built app, the Cloudflare adapter and the Supabase auth and MO delivery flows still work together.
 // Zero dependencies on purpose. Run against a live server:
 //   BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> node scripts/smoke.mjs
-// Optional: SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY and MAILPIT_URL enable more checks (see README).
+// Required: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (the smoke user is created through the Admin API).
+// Optional: SUPABASE_KEY and MAILPIT_URL enable more checks (see README).
 
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -163,7 +164,7 @@ const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
 // Optional: the Supabase instance the server uses, to check its grants directly (CI sets both).
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
-// Optional: the same instance's service-role key, to generate invitation and password-reset link tokens (CI sets it).
+// The same instance's service-role key, to create the smoke user and generate invitation and password-reset link tokens.
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Optional: the same instance's Mailpit (local Supabase's email catcher), to read a real reset email (CI sets it).
 const MAILPIT_URL = process.env.MAILPIT_URL?.replace(/\/$/, "");
@@ -180,7 +181,7 @@ const RETRY_PASSWORD = "Smoke-Retry-Passw0rd-2!";
 const EMAIL_RESET_PASSWORD = "Smoke-Email-Passw0rd-3!";
 const CLAIM_PASSWORD = "Smoke-Claim-Passw0rd!";
 // Tokens of the reset links the steps generate or read from Mailpit, kept for the steps that reuse them.
-let recoveryTokenHash, emailLink;
+let recoveryTokenHash, inviteTokenHash, emailLink;
 
 let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote, swapName;
 // Read from the dashboard HTML by the swap steps.
@@ -190,10 +191,14 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
     process.exit(1);
   }
-  if (!SUPABASE_URL || !SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_URL and SUPABASE_KEY)\n");
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
-    console.log("SKIP  email link checks (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)\n");
-  else if (!MAILPIT_URL) console.log("SKIP  real reset email (set MAILPIT_URL)\n");
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error(
+      "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set; the smoke user is created through the Admin API (sign-up is disabled).",
+    );
+    process.exit(1);
+  }
+  if (!SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_KEY)\n");
+  if (!MAILPIT_URL) console.log("SKIP  real reset email (set MAILPIT_URL)\n");
   const nextWeek = upcomingMonday();
   delivery = await loadDelivery(email, nextWeek);
   newUserDelivery = await loadDelivery(
@@ -253,6 +258,16 @@ async function anonIngestRpc() {
   return { status: response.status, location: "", body: await response.text() };
 }
 
+/** Tries a public sign-up with the anon key; invitations are the only way to get an account. */
+async function anonSignup() {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: `smoke-signup-${Date.now()}@example.com`, password: RESET_PASSWORD }),
+  });
+  return { status: response.status, location: "", body: await response.text() };
+}
+
 /**
  * Generates an email link through the Admin API, as Supabase does before sending the email, and returns its
  * `hashed_token` (the `token_hash` the email templates put in the link). Without one, `failure` is a result
@@ -274,6 +289,20 @@ async function generateLinkToken(type, linkEmail) {
   return hash ? { hash } : { failure: { status: response.status, location: "", body } };
 }
 
+/** Creates the smoke user through the Admin API with a password; public sign-up is disabled. */
+async function createSmokeUser() {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password, email_confirm: true }),
+  });
+  return { status: response.status, location: "", body: await response.text() };
+}
+
 /** Opens an old-style email link (`/api/auth/confirm`) the way a click in the email does. */
 const openEmailLink = (type, tokenHash) =>
   request(`/api/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${type}`);
@@ -292,7 +321,7 @@ const postSetPassword = (newPassword, link) =>
     form: { password: newPassword, ...(link ? { token_hash: link.tokenHash, type: link.type ?? "recovery" } : {}) },
   });
 
-/** Posts the reset request form ("Forgot or never set a password?"). */
+/** Posts the reset request form ("Forgot password?"). */
 const requestReset = (resetEmail) => request(FORGOT_PASSWORD, { method: "POST", form: { email: resetEmail } });
 
 /** Whether `body` renders the set-password form, with the emailed link's hidden token fields or without them. */
@@ -348,11 +377,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
   : [
       ["home renders", () => request("/"), { status: 200 }],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
-      [
-        "signup creates account",
-        () => request("/api/auth/signup", { method: "POST", form: { email, password } }),
-        { status: 302, location: "/auth/confirm-email" },
-      ],
+      ["admin creates the smoke user", createSmokeUser, { status: 200 }],
       [
         "signin rejects wrong password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
@@ -380,6 +405,14 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               anonIngestRpc,
               // 42501 = permission denied; a 404 (e.g. a signature mismatch) must not pass as "refused".
               { status: 401, body: ["code 42501", (body) => jsonField(body, "code") === "42501"] },
+            ],
+            [
+              "anon cannot sign up",
+              anonSignup,
+              {
+                status: 422,
+                body: ["code signup_disabled", (body) => jsonField(body, "error_code") === "signup_disabled"],
+              },
             ],
           ]
         : []),
@@ -521,12 +554,39 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       ...(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
         ? [
             [
-              "invitation link signs a new user in",
+              "invitation link is forwarded to the set-password page without signing in",
               async () => {
                 jar.clear();
                 const link = await generateLinkToken("invite", inviteEmail);
+                inviteTokenHash = link.hash;
                 return link.failure ?? openEmailLink("invite", link.hash);
               },
+              {
+                status: 302,
+                location: [
+                  "/auth/set-password?token_hash=…&type=invite",
+                  (location) => {
+                    const url = locationUrl(location);
+                    return (
+                      url.pathname === "/auth/set-password" &&
+                      Boolean(url.searchParams.get("token_hash")) &&
+                      url.searchParams.get("type") === "invite"
+                    );
+                  },
+                ],
+              },
+            ],
+            [
+              "dashboard still redirects after opening the invitation link",
+              () => request("/dashboard"),
+              { status: 302, location: "/auth/signin" },
+            ],
+            [
+              "new password from the invitation signs the user in",
+              () =>
+                inviteTokenHash
+                  ? postSetPassword(RESET_PASSWORD, { tokenHash: inviteTokenHash, type: "invite" })
+                  : stepFailure("no invitation token"),
               { status: 302, location: "/dashboard" },
             ],
             [
@@ -765,9 +825,17 @@ const steps = KEEPALIVE_EXPECT_FAILURE
                 ]
               : []),
             [
-              "garbage email link is rejected",
-              () => openEmailLink("invite", "not-a-real-token-hash"),
-              { status: 302, location: "/auth/signin?error=" },
+              "garbage invitation link is forwarded to the set-password page",
+              () => {
+                jar.clear();
+                return openEmailLink("invite", "not-a-real-token-hash");
+              },
+              { status: 302, location: "/auth/set-password?token_hash=" },
+            ],
+            [
+              "garbage invitation token is rejected on save",
+              () => postSetPassword(RESET_PASSWORD, { tokenHash: "not-a-real-token-hash", type: "invite" }),
+              { status: 302, location: "/auth/forgot-password?error=" },
             ],
           ]
         : []),

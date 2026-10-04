@@ -31,13 +31,13 @@ describe("resetRequestSchema", () => {
 });
 
 describe("setPasswordLinkSchema", () => {
-  it('accepts type "recovery"', () => {
-    const result = setPasswordLinkSchema.safeParse({ token_hash: "abc123", type: "recovery" });
+  it.each(["recovery", "invite"])('accepts type "%s"', (type) => {
+    const result = setPasswordLinkSchema.safeParse({ token_hash: "abc123", type });
     expect(result.error?.issues).toBeUndefined();
-    expect(result.data).toEqual({ token_hash: "abc123", type: "recovery" });
+    expect(result.data).toEqual({ token_hash: "abc123", type });
   });
 
-  it.each(["invite", "signup", "magiclink", "email"])('rejects type "%s"', (type) => {
+  it.each(["signup", "magiclink", "email"])('rejects type "%s"', (type) => {
     expect(setPasswordLinkSchema.safeParse({ token_hash: "abc123", type }).success).toBe(false);
   });
 
@@ -90,9 +90,15 @@ describe("setPasswordFormSchema", () => {
     expect(setPasswordFormSchema.safeParse({ password: "12345678", type: "recovery" }).success).toBe(false);
   });
 
-  it('rejects type "invite"', () => {
+  it('accepts type "invite"', () => {
+    const result = setPasswordFormSchema.safeParse({ password: "12345678", token_hash: "abc123", type: "invite" });
+    expect(result.error?.issues).toBeUndefined();
+    expect(result.data).toEqual({ password: "12345678", token_hash: "abc123", type: "invite" });
+  });
+
+  it("rejects an unsupported type", () => {
     expect(
-      setPasswordFormSchema.safeParse({ password: "12345678", token_hash: "abc123", type: "invite" }).success,
+      setPasswordFormSchema.safeParse({ password: "12345678", token_hash: "abc123", type: "signup" }).success,
     ).toBe(false);
   });
 });

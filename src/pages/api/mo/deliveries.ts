@@ -106,18 +106,31 @@ export const POST: APIRoute = async ({ request }) => {
   let accountCreated = false;
 
   if (result.error?.code === "P0002" && result.error.message === "unknown_user") {
-    const { error: createError } = await supabase.auth.admin.createUser({
-      email: delivery.user.email,
-      email_confirm: false,
-      app_metadata: { provisioned_by: PROVISIONED_BY },
-    });
-    if (createError && !EMAIL_EXISTS_CODES.has(createError.code ?? "")) {
-      // Not fatal: a concurrent delivery may have just created the account, and GoTrue reports that
-      // race as a generic 500 rather than email_exists. The retry below decides; if the user still
-      // doesn't exist it fails as storage_failed.
-      logStorageError("createUser", createError);
+    // Invite the account: GoTrue creates the user and emails the invitation link. `inviteUserByEmail`
+    // stores its `data` as user_metadata, so `provisioned_by` is set in app_metadata afterwards.
+    const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(delivery.user.email);
+    if (!inviteError) {
+      accountCreated = true;
+      const { error: metadataError } = await supabase.auth.admin.updateUserById(invited.user.id, {
+        app_metadata: { provisioned_by: PROVISIONED_BY },
+      });
+      if (metadataError) logStorageError("updateUserById", metadataError);
+    } else if (!EMAIL_EXISTS_CODES.has(inviteError.code ?? "")) {
+      // The invitation failed (e.g. the email couldn't be sent): still store the account and the week,
+      // without an invitation. A concurrent delivery may also have just created the account, and
+      // GoTrue reports that race as a generic 500 rather than email_exists; createUser then fails the
+      // same way and the retry below decides, failing as storage_failed if the user still doesn't exist.
+      logStorageError("inviteUserByEmail", inviteError);
+      const { error: createError } = await supabase.auth.admin.createUser({
+        email: delivery.user.email,
+        email_confirm: false,
+        app_metadata: { provisioned_by: PROVISIONED_BY },
+      });
+      if (createError && !EMAIL_EXISTS_CODES.has(createError.code ?? "")) {
+        logStorageError("createUser", createError);
+      }
+      accountCreated = !createError;
     }
-    accountCreated = !createError;
     result = await ingest();
   }
 

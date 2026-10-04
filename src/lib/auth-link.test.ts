@@ -27,15 +27,9 @@ describe("authLinkQuerySchema", () => {
 });
 
 describe("authLinkRoute", () => {
-  it("verifies an invitation and sends it to the dashboard", () => {
-    expect(authLinkRoute({ token_hash: "abc123", type: "invite" })).toEqual({ verify: true, location: "/dashboard" });
-  });
-
-  it("forwards a reset link to the set-password page without verifying it", () => {
-    const route = authLinkRoute({ token_hash: "abc 123+/", type: "recovery" });
-    expect(route.verify).toBe(false);
-    const url = new URL(route.location, "http://localhost");
+  it.each(["invite", "recovery"] as const)("forwards a %s link to the set-password page", (type) => {
+    const url = new URL(authLinkRoute({ token_hash: "abc 123+/", type }), "http://localhost");
     expect(url.pathname).toBe(SET_PASSWORD_PATH);
-    expect(Object.fromEntries(url.searchParams)).toEqual({ token_hash: "abc 123+/", type: "recovery" });
+    expect(Object.fromEntries(url.searchParams)).toEqual({ token_hash: "abc 123+/", type });
   });
 });
