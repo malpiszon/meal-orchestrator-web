@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "@/lib/plans";
+import { withPgrst303Retry } from "@/lib/postgrest-retry";
 import type { WeeklyPlan } from "@/types";
 
 // raw_payload is not needed for display and is the bulk of the row.
@@ -9,22 +10,25 @@ const PLAN_SELECT = "id, provider, week_start, week_end, received_at, saved_at, 
  * The signed-in user's upcoming plan: the latest `weekly_plans` row with `week_start > today`
  * (`today` from `todayInWarsaw`), with its options. Pass the user's cookie-session client, so RLS
  * limits the read to the user's own rows; the explicit `user_id` filter is defence in depth.
- * Returns `null` when there is none; throws on a query error.
+ * Returns `null` when there is none; throws on a query error. Retries PGRST303 "JWT issued at future"
+ * first (see `withPgrst303Retry`).
  */
 export async function getUpcomingPlan(
   supabase: SupabaseClient,
   userId: string,
   today: string,
 ): Promise<WeeklyPlan | null> {
-  const { data, error } = await supabase
-    .from("weekly_plans")
-    .select(PLAN_SELECT)
-    // Defence in depth on top of RLS.
-    .eq("user_id", userId)
-    .gt("week_start", today)
-    .order("week_start", { ascending: false })
-    .limit(1)
-    .maybeSingle<WeeklyPlan>();
+  const { data, error } = await withPgrst303Retry("weekly_plans query", () =>
+    supabase
+      .from("weekly_plans")
+      .select(PLAN_SELECT)
+      // Defence in depth on top of RLS.
+      .eq("user_id", userId)
+      .gt("week_start", today)
+      .order("week_start", { ascending: false })
+      .limit(1)
+      .maybeSingle<WeeklyPlan>(),
+  );
 
   if (error) {
     throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
@@ -35,23 +39,25 @@ export async function getUpcomingPlan(
 /**
  * The signed-in user's plan for the week in progress: the latest `weekly_plans` row with
  * `today - 7 days < week_start <= today` (`today` from `todayInWarsaw`), with its options. Same client,
- * defence-in-depth and error conventions as `getUpcomingPlan`. Returns `null` when there is none.
+ * defence-in-depth, error and retry conventions as `getUpcomingPlan`. Returns `null` when there is none.
  */
 export async function getCurrentPlan(
   supabase: SupabaseClient,
   userId: string,
   today: string,
 ): Promise<WeeklyPlan | null> {
-  const { data, error } = await supabase
-    .from("weekly_plans")
-    .select(PLAN_SELECT)
-    // Defence in depth on top of RLS.
-    .eq("user_id", userId)
-    .lte("week_start", today)
-    .gt("week_start", addDays(today, -7))
-    .order("week_start", { ascending: false })
-    .limit(1)
-    .maybeSingle<WeeklyPlan>();
+  const { data, error } = await withPgrst303Retry("weekly_plans query", () =>
+    supabase
+      .from("weekly_plans")
+      .select(PLAN_SELECT)
+      // Defence in depth on top of RLS.
+      .eq("user_id", userId)
+      .lte("week_start", today)
+      .gt("week_start", addDays(today, -7))
+      .order("week_start", { ascending: false })
+      .limit(1)
+      .maybeSingle<WeeklyPlan>(),
+  );
 
   if (error) {
     throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
@@ -69,10 +75,13 @@ interface PlanRecencyRow {
  * For each option of plan `planId` that was planned earlier, the most recent earlier planned date:
  * option id → `YYYY-MM-DD`. Computed by `public.get_plan_recency` (security invoker, so the user's
  * cookie-session client keeps RLS on both the plan and the history). Options without an earlier
- * planned occurrence are absent. Throws on an RPC error.
+ * planned occurrence are absent. Throws on an RPC error, after retrying PGRST303 "JWT issued at future"
+ * (see `withPgrst303Retry`).
  */
 export async function getPlanRecency(supabase: SupabaseClient, planId: string): Promise<Map<string, string>> {
-  const result = await supabase.rpc("get_plan_recency", { p_plan_id: planId });
+  const result = await withPgrst303Retry("get_plan_recency", () =>
+    supabase.rpc("get_plan_recency", { p_plan_id: planId }),
+  );
 
   if (result.error) {
     throw new Error(`get_plan_recency failed: ${result.error.code} ${result.error.message}`);
@@ -108,12 +117,17 @@ function planWriteErrorKind(error: RpcError): PlanWriteErrorKind {
   return "failed";
 }
 
+/**
+ * Runs `fn` and returns its new `saved_at`; throws a `PlanWriteError`. Retries PGRST303 "JWT issued
+ * at future" first (see `withPgrst303Retry`): PostgREST raises it before any SQL runs, so a retry
+ * can't apply the write twice.
+ */
 async function savePlan(
   supabase: SupabaseClient,
   fn: "choose_plan_option" | "confirm_plan",
   args: Record<string, string>,
 ): Promise<{ savedAt: string }> {
-  const result = await supabase.rpc(fn, args);
+  const result = await withPgrst303Retry(fn, () => supabase.rpc(fn, args));
 
   if (result.error) {
     throw new PlanWriteError(
