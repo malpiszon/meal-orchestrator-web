@@ -1,7 +1,7 @@
 ---
 change_id: dashboard-pgrst303-retry
 title: Retry the dashboard plan load once on PGRST303 (JWT issued at future)
-status: implemented
+status: impl_reviewed
 created: 2026-10-04
 updated: 2026-10-04
 archived_at: null

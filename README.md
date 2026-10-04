@@ -118,7 +118,7 @@ The local Studio UI is available at `http://localhost:54323`.
 
 `npx supabase start` applies the repo's migrations (the `keepalive` function pinged by the daily Cron Trigger, see [Deployment](#deployment), the weekly-plan tables with the `ingest_weekly_plan` function, and the `get_plan_recency` function behind the dashboard's recency notes) automatically. A hosted or production project needs them pushed explicitly — see below.
 
-After `npx supabase link`, the local stack runs the linked project's service versions, so locally, as in production, PostgREST is v14.5. Right after sign-in it can reject the new session once with `PGRST303 JWT issued at future`; the plan services retry that error and log `… PGRST303 JWT issued at future, retry n/2 …`.
+After `npx supabase link`, the local stack runs the linked project's service versions, so locally, as in production, PostgREST is currently v14.5. Right after sign-in it can reject the new session once with `PGRST303 JWT issued at future`; the plan services retry that error and log `… PGRST303 JWT issued at future, retry n/2 …`.
 
 ### Using a cloud Supabase project instead
 
