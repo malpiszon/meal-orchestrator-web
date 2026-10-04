@@ -321,16 +321,16 @@ Without `MAILPIT_URL` the script prints `SKIP  real reset email (set MAILPIT_URL
 
 #### Automated
 
-- [x] 1.1 Unit tests pass, including the new `src/lib/set-password.test.ts`: `npm test`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Type and Astro checks pass: `npx astro check`
-- [x] 1.4 Build succeeds: `npm run build`
+- [x] 1.1 Unit tests pass, including the new `src/lib/set-password.test.ts`: `npm test` — 882a8b6
+- [x] 1.2 Lint passes: `npm run lint` — 882a8b6
+- [x] 1.3 Type and Astro checks pass: `npx astro check` — 882a8b6
+- [x] 1.4 Build succeeds: `npm run build` — 882a8b6
 
 #### Manual
 
-- [x] 1.5 After restarting local Supabase (user), `/auth/signin` shows "Forgot or never set a password?", and submitting the smoke-style email on `/auth/forgot-password` shows the confirmation; the recovery email appears in Mailpit (`http://127.0.0.1:54324`)
-- [x] 1.6 Submitting an email with no account shows the same confirmation and no email arrives in Mailpit
-- [x] 1.7 Signing up locally with a 7-character password is rejected; the form says "Min. 8 characters"
+- [x] 1.5 After restarting local Supabase (user), `/auth/signin` shows "Forgot or never set a password?", and submitting the smoke-style email on `/auth/forgot-password` shows the confirmation; the recovery email appears in Mailpit (`http://127.0.0.1:54324`) — 882a8b6
+- [x] 1.6 Submitting an email with no account shows the same confirmation and no email arrives in Mailpit — 882a8b6
+- [x] 1.7 Signing up locally with a 7-character password is rejected; the form says "Min. 8 characters" — 882a8b6
 
 ### Phase 2: Set the new password from the link
 

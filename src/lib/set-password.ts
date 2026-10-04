@@ -1,14 +1,12 @@
 import { z } from "zod";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-rules";
 
 /**
- * Rules shared by the password-reset request, the set-a-new-password page and route, and the
- * sign-up form, so the minimum length and accepted link types can't drift. Supabase enforces the
- * same minimum (`minimum_password_length` in `supabase/config.toml`).
+ * Server-side rules shared by the password-reset request and the set-a-new-password page and
+ * route, so the minimum length and accepted link types can't drift. Client components import the
+ * plain constants from `@/lib/password-rules` instead, which keeps zod out of their bundles.
  */
-export const MIN_PASSWORD_LENGTH = 8;
-
-export const FORGOT_PASSWORD_PATH = "/auth/forgot-password";
-export const SET_PASSWORD_PATH = "/auth/set-password";
+export { FORGOT_PASSWORD_PATH, MIN_PASSWORD_LENGTH, SET_PASSWORD_PATH } from "@/lib/password-rules";
 
 /** Body of the reset request form (`POST /api/auth/forgot-password`). */
 export const resetRequestSchema = z.object({

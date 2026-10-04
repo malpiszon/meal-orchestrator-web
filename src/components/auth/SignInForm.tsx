@@ -5,7 +5,7 @@ import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/auth/SubmitButton";
 import { ServerError } from "@/components/auth/ServerError";
 import { buttonVariants } from "@/components/ui/button";
-import { FORGOT_PASSWORD_PATH } from "@/lib/set-password";
+import { FORGOT_PASSWORD_PATH } from "@/lib/password-rules";
 
 interface Props {
   serverError?: string | null;

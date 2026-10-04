@@ -4,7 +4,7 @@ import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/auth/SubmitButton";
 import { ServerError } from "@/components/auth/ServerError";
-import { MIN_PASSWORD_LENGTH } from "@/lib/set-password";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-rules";
 
 interface Props {
   serverError?: string | null;

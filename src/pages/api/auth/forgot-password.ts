@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { FORGOT_PASSWORD_PATH, passwordErrorMessage, resetRequestSchema } from "@/lib/set-password";
+import { FORGOT_PASSWORD_PATH, resetRequestSchema } from "@/lib/set-password";
 import { createStatelessClient } from "@/lib/supabase";
 
 export const prerender = false;
@@ -12,7 +12,10 @@ export const POST: APIRoute = async (context) => {
   const backWithError = (message: string) =>
     context.redirect(`${FORGOT_PASSWORD_PATH}?error=${encodeURIComponent(message)}`);
 
-  const form = await context.request.formData();
+  const form = await context.request.formData().catch(() => null);
+  if (!form) {
+    return backWithError("Enter a valid email address");
+  }
   const parsed = resetRequestSchema.safeParse({ email: form.get("email") ?? undefined });
   if (!parsed.success) {
     return backWithError("Enter a valid email address");
@@ -26,9 +29,10 @@ export const POST: APIRoute = async (context) => {
 
   // No redirectTo: the recovery template builds the link from {{ .SiteURL }}.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email);
+  // Errors are logged but answered like a success: GoTrue only rate-limits (429) or fails to send
+  // for existing accounts, so showing them would reveal which emails have one.
   if (error) {
     console.error(`auth forgot-password: resetPasswordForEmail failed: ${error.code ?? error.status} ${error.message}`);
-    return backWithError(passwordErrorMessage(error));
   }
 
   return context.redirect(`${FORGOT_PASSWORD_PATH}?sent=1`);
