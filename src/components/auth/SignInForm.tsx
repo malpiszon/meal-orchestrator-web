@@ -4,6 +4,8 @@ import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/auth/SubmitButton";
 import { ServerError } from "@/components/auth/ServerError";
+import { buttonVariants } from "@/components/ui/button";
+import { FORGOT_PASSWORD_PATH } from "@/lib/set-password";
 
 interface Props {
   serverError?: string | null;
@@ -82,6 +84,12 @@ export default function SignInForm({ serverError }: Props) {
       <SubmitButton pendingText="Signing in..." icon={<LogIn className="size-4" />}>
         Sign in
       </SubmitButton>
+
+      <div className="text-center">
+        <a href={FORGOT_PASSWORD_PATH} className={buttonVariants({ variant: "link" })}>
+          Forgot or never set a password?
+        </a>
+      </div>
     </form>
   );
 }

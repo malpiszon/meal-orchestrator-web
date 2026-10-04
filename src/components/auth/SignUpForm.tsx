@@ -4,8 +4,7 @@ import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/auth/SubmitButton";
 import { ServerError } from "@/components/auth/ServerError";
-
-const MIN_PASSWORD_LENGTH = 6;
+import { MIN_PASSWORD_LENGTH } from "@/lib/set-password";
 
 interface Props {
   serverError?: string | null;
@@ -87,7 +86,7 @@ export default function SignUpForm({ serverError }: Props) {
           setPassword(v);
           clearError("password");
         }}
-        placeholder="Min. 6 characters"
+        placeholder={`Min. ${MIN_PASSWORD_LENGTH} characters`}
         error={errors.password}
         hint={passwordHint}
         icon={<Lock className="size-4" />}
