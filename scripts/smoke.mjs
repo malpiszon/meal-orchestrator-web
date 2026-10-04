@@ -258,6 +258,16 @@ async function anonIngestRpc() {
   return { status: response.status, location: "", body: await response.text() };
 }
 
+/** Tries a public sign-up with the anon key; invitations are the only way to get an account. */
+async function anonSignup() {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: `smoke-signup-${Date.now()}@example.com`, password: RESET_PASSWORD }),
+  });
+  return { status: response.status, location: "", body: await response.text() };
+}
+
 /**
  * Generates an email link through the Admin API, as Supabase does before sending the email, and returns its
  * `hashed_token` (the `token_hash` the email templates put in the link). Without one, `failure` is a result
@@ -395,6 +405,14 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               anonIngestRpc,
               // 42501 = permission denied; a 404 (e.g. a signature mismatch) must not pass as "refused".
               { status: 401, body: ["code 42501", (body) => jsonField(body, "code") === "42501"] },
+            ],
+            [
+              "anon cannot sign up",
+              anonSignup,
+              {
+                status: 422,
+                body: ["code signup_disabled", (body) => jsonField(body, "error_code") === "signup_disabled"],
+              },
             ],
           ]
         : []),
