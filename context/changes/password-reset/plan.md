@@ -358,6 +358,6 @@ Without `MAILPIT_URL` the script prints `SKIP  real reset email (set MAILPIT_URL
 
 #### Manual
 
-- [ ] 3.4 Before merging: minimum password length set to 8 in the production Supabase dashboard; after the deploy: production **Reset password** template re-pasted from `recovery.html`
-- [ ] 3.5 After that: a real production reset email (to a throwaway or your own account) arrives through Resend, links to `/auth/set-password`, and the new password works for sign-in (issue #5 Definition of done)
+- [x] 3.4 Before merging: minimum password length set to 8 in the production Supabase dashboard; after the deploy: production **Reset password** template re-pasted from `recovery.html` — 6483fa2
+- [x] 3.5 After that: a real production reset email (to a throwaway or your own account) arrives through Resend, links to `/auth/set-password`, and the new password works for sign-in (issue #5 Definition of done) — 6483fa2
 - [x] 3.6 S-04 handoff is in the roadmap's S-04 block and on #8 — 6483fa2
