@@ -203,11 +203,11 @@ None: no schema, route or secret changes. The PR needs no pre-merge production s
 
 #### Automated
 
-- [x] 2.1 Prettier passes on the README: `npx prettier --check README.md`
-- [x] 2.2 Smoke passes against the local 14.5 stack
-- [x] 2.3 Issue #55 shows the new title, cause and DoD text: `gh issue view 55`
+- [x] 2.1 Prettier passes on the README: `npx prettier --check README.md` — 3867c42
+- [x] 2.2 Smoke passes against the local 14.5 stack — 3867c42
+- [x] 2.3 Issue #55 shows the new title, cause and DoD text: `gh issue view 55` — 3867c42
 
 #### Manual
 
-- [x] 2.4 After an idle period, signing in on :4322 renders the dashboard, not "Couldn't load your plan"
-- [x] 2.5 README note reads correctly next to the local setup steps
+- [x] 2.4 After an idle period, signing in on :4322 renders the dashboard, not "Couldn't load your plan" — 3867c42
+- [x] 2.5 README note reads correctly next to the local setup steps — 3867c42
