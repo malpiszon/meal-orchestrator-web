@@ -4,7 +4,7 @@ import { FormField } from "@/components/auth/FormField";
 import { PasswordToggle } from "@/components/auth/PasswordToggle";
 import { SubmitButton } from "@/components/auth/SubmitButton";
 import { ServerError } from "@/components/auth/ServerError";
-import { MIN_PASSWORD_LENGTH } from "@/lib/password-rules";
+import { MAX_PASSWORD_BYTES, MIN_PASSWORD_LENGTH, passwordBytes } from "@/lib/password-rules";
 
 interface Props {
   serverError?: string | null;
@@ -24,6 +24,8 @@ export default function SetPasswordForm({ serverError, tokenHash, type }: Props)
       next = "Password is required";
     } else if (password.length < MIN_PASSWORD_LENGTH) {
       next = `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    } else if (passwordBytes(password) > MAX_PASSWORD_BYTES) {
+      next = `Password must be at most ${MAX_PASSWORD_BYTES} characters`;
     }
     setError(next);
     return next === undefined;

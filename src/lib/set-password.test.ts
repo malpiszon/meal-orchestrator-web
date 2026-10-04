@@ -64,6 +64,18 @@ describe("setPasswordFormSchema", () => {
     expect(result.data).toEqual({ password: "12345678", ...token });
   });
 
+  it("accepts a 72-byte password and rejects 73 bytes", () => {
+    expect(setPasswordFormSchema.safeParse({ password: "a".repeat(72), ...token }).success).toBe(true);
+    const result = setPasswordFormSchema.safeParse({ password: "a".repeat(73), ...token });
+    expect(result.error?.issues[0]?.message).toBe("Password must be at most 72 characters");
+  });
+
+  it("counts the maximum in UTF-8 bytes, as GoTrue does", () => {
+    // 36 two-byte characters fit; 37 do not.
+    expect(setPasswordFormSchema.safeParse({ password: "ż".repeat(36), ...token }).success).toBe(true);
+    expect(setPasswordFormSchema.safeParse({ password: "ż".repeat(37), ...token }).success).toBe(false);
+  });
+
   it("accepts a password without token fields (signed-in retry)", () => {
     const result = setPasswordFormSchema.safeParse({ password: "12345678" });
     expect(result.error?.issues).toBeUndefined();

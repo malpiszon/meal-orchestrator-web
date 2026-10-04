@@ -2,6 +2,8 @@ import type { APIRoute } from "astro";
 import {
   FORGOT_PASSWORD_PATH,
   MIN_PASSWORD_LENGTH,
+  PASSWORD_RETRY_COOKIE,
+  PASSWORD_RETRY_MAX_AGE_SECONDS,
   passwordErrorMessage,
   setPasswordFormSchema,
   setPasswordLinkSchema,
@@ -16,8 +18,8 @@ const INVALID_LINK_MESSAGE = "This link is invalid or has expired. Ask for a new
 /**
  * Saves a new password from the set-password page. The emailed token is verified only here, on
  * the POST, and only after the password passed validation, so a rejected password never uses it.
- * If saving fails after the token was used, the user keeps the session it created and can retry
- * from the page without a token.
+ * If saving fails after the token was used, the user keeps the session it created and, for a
+ * short while (`PASSWORD_RETRY_COOKIE`), can retry from the page without a token.
  */
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
@@ -47,25 +49,30 @@ export const POST: APIRoute = async (context) => {
     return context.redirect(
       setPasswordUrl({
         link: link.success ? link.data : undefined,
-        error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+        error:
+          parsed.error.issues.find((issue) => issue.path[0] === "password")?.message ??
+          `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
       }),
     );
   }
   const { password, token_hash, type } = parsed.data;
 
+  // Set when this request used the emailed token, so a rejected password can be retried without it.
+  let verifiedUserId: string | undefined;
   if (token_hash !== undefined && type !== undefined) {
     // 2. Verify the emailed token; on success the cookie-bound client holds the user's session.
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type });
+    const { data, error } = await supabase.auth.verifyOtp({ token_hash, type });
     if (error) {
       console.error(`auth set-password: verifyOtp failed (${type}): ${error.message}`);
       return invalidLink();
     }
+    verifiedUserId = data.user?.id;
   } else {
-    // 3. No token: only a signed-in user retrying after a rejected password may continue.
+    // 3. No token: only the user whose save was just rejected may retry, not any signed-in session.
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
+    if (!user || context.cookies.get(PASSWORD_RETRY_COOKIE)?.value !== user.id) {
       return invalidLink();
     }
   }
@@ -74,8 +81,18 @@ export const POST: APIRoute = async (context) => {
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
     console.error(`auth set-password: updateUser failed: ${error.code ?? error.status} ${error.message}`);
+    if (verifiedUserId) {
+      context.cookies.set(PASSWORD_RETRY_COOKIE, verifiedUserId, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        secure: context.url.protocol === "https:",
+        maxAge: PASSWORD_RETRY_MAX_AGE_SECONDS,
+      });
+    }
     return context.redirect(setPasswordUrl({ error: passwordErrorMessage(error) }));
   }
 
+  context.cookies.delete(PASSWORD_RETRY_COOKIE, { path: "/" });
   return context.redirect("/dashboard");
 };

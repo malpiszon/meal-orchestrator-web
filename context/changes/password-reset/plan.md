@@ -336,17 +336,17 @@ Without `MAILPIT_URL` the script prints `SKIP  real reset email (set MAILPIT_URL
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Type and Astro checks pass: `npx astro check`
-- [x] 2.4 Build succeeds: `npm run build`
+- [x] 2.1 Unit tests pass: `npm test` — cd652c4
+- [x] 2.2 Lint passes: `npm run lint` — cd652c4
+- [x] 2.3 Type and Astro checks pass: `npx astro check` — cd652c4
+- [x] 2.4 Build succeeds: `npm run build` — cd652c4
 
 #### Manual
 
-- [x] 2.5 After restarting local Supabase (user), the Mailpit reset email links to `/auth/set-password?…&type=recovery`; opening it shows the form, and opening it a second time still shows the form (token not used)
-- [x] 2.6 A 7-character password is rejected with the token kept; an 8+ character password lands on `/dashboard`; signing out and in with the new password works and the old one fails
-- [x] 2.7 Opening the same link after a successful reset and posting a password ends on `/auth/forgot-password` with the invalid-link message
-- [x] 2.8 A delivery-created account (README walkthrough step 1, without step 2's Admin API call) can request a reset, set a password, and sees its delivered week
+- [x] 2.5 After restarting local Supabase (user), the Mailpit reset email links to `/auth/set-password?…&type=recovery`; opening it shows the form, and opening it a second time still shows the form (token not used) — cd652c4
+- [x] 2.6 A 7-character password is rejected with the token kept; an 8+ character password lands on `/dashboard`; signing out and in with the new password works and the old one fails — cd652c4
+- [x] 2.7 Opening the same link after a successful reset and posting a password ends on `/auth/forgot-password` with the invalid-link message — cd652c4
+- [x] 2.8 A delivery-created account (README walkthrough step 1, without step 2's Admin API call) can request a reset, set a password, and sees its delivered week — cd652c4
 
 ### Phase 3: Smoke coverage, docs and production hand-off
 

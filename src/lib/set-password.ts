@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { MIN_PASSWORD_LENGTH, SET_PASSWORD_PATH } from "@/lib/password-rules";
+import { MAX_PASSWORD_BYTES, MIN_PASSWORD_LENGTH, passwordBytes, SET_PASSWORD_PATH } from "@/lib/password-rules";
 
 /**
  * Server-side rules shared by the password-reset request and the set-a-new-password page and
  * route, so the minimum length and accepted link types can't drift. Client components import the
  * plain constants from `@/lib/password-rules` instead, which keeps zod out of their bundles.
  */
-export { FORGOT_PASSWORD_PATH, MIN_PASSWORD_LENGTH, SET_PASSWORD_PATH } from "@/lib/password-rules";
+export { FORGOT_PASSWORD_PATH, MAX_PASSWORD_BYTES, MIN_PASSWORD_LENGTH, SET_PASSWORD_PATH } from "@/lib/password-rules";
 
 /** Body of the reset request form (`POST /api/auth/forgot-password`). */
 export const resetRequestSchema = z.object({
@@ -56,7 +56,12 @@ export function setPasswordUrl({ link, error }: { link?: SetPasswordLink; error?
  */
 export const setPasswordFormSchema = z
   .object({
-    password: z.string().min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`),
+    password: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+      .refine((password) => passwordBytes(password) <= MAX_PASSWORD_BYTES, {
+        message: `Password must be at most ${MAX_PASSWORD_BYTES} characters`,
+      }),
     token_hash: tokenHashSchema.optional(),
     type: setPasswordLinkType.optional(),
   })
@@ -66,6 +71,14 @@ export const setPasswordFormSchema = z
   });
 
 export type SetPasswordForm = z.infer<typeof setPasswordFormSchema>;
+
+/**
+ * Lets a user retry a rejected password without the emailed token, which the first attempt
+ * already used. Set only when saving fails right after the token was verified; holds that user's
+ * id and expires quickly, so a signed-in session alone can never change the password.
+ */
+export const PASSWORD_RETRY_COOKIE = "mo-password-retry";
+export const PASSWORD_RETRY_MAX_AGE_SECONDS = 10 * 60;
 
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 const RATE_LIMIT_MESSAGE = "Too many requests. Please try again later.";
