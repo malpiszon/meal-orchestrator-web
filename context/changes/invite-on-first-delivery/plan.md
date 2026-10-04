@@ -269,27 +269,27 @@ None. The invite call replaces the existing `createUser` call; it adds one SMTP 
 
 #### Automated
 
-- [x] 2.1 Lint passes: `npm run lint`
-- [x] 2.2 Unit tests pass: `npm test`
-- [x] 2.3 Type and Astro check passes: `npx astro check`
-- [x] 2.4 Production build succeeds: `npm run build`
-- [x] 2.5 Smoke passes against the local preview on port 4322: `BASE_URL=http://localhost:4322 npm run smoke`
-- [x] 2.6 No code references the removed routes: `grep -rn "auth/signup\|api/auth/signup\|confirm-email" src scripts` returns nothing
+- [x] 2.1 Lint passes: `npm run lint` — c36e2f4
+- [x] 2.2 Unit tests pass: `npm test` — c36e2f4
+- [x] 2.3 Type and Astro check passes: `npx astro check` — c36e2f4
+- [x] 2.4 Production build succeeds: `npm run build` — c36e2f4
+- [x] 2.5 Smoke passes against the local preview on port 4322: `BASE_URL=http://localhost:4322 npm run smoke` — c36e2f4
+- [x] 2.6 No code references the removed routes: `grep -rn "auth/signup\|api/auth/signup\|confirm-email" src scripts` returns nothing — c36e2f4
 
 #### Manual
 
-- [x] 2.7 `/auth/signup`, `/api/auth/signup` and `/auth/confirm-email` return 404 in the dev server
-- [x] 2.8 The Topbar, Welcome page and sign-in page render with no dead links
-- [x] 2.9 A direct sign-up attempt against local Supabase is rejected ("Signups not allowed")
+- [x] 2.7 `/auth/signup`, `/api/auth/signup` and `/auth/confirm-email` return 404 in the dev server — c36e2f4
+- [x] 2.8 The Topbar, Welcome page and sign-in page render with no dead links — c36e2f4
+- [x] 2.9 A direct sign-up attempt against local Supabase is rejected ("Signups not allowed") — c36e2f4
 
 ### Phase 3: Docs and follow-up
 
 #### Automated
 
-- [ ] 3.1 Prettier passes on the edited docs: `npx prettier --check README.md context/foundation/roadmap.md context/foundation/infrastructure.md`
-- [ ] 3.2 No stale references to the removed routes: `grep -rn "auth/signup" README.md context/foundation` returns only historical notes that say the routes were removed
+- [x] 3.1 Prettier passes on the edited docs: `npx prettier --check README.md context/foundation/roadmap.md context/foundation/infrastructure.md`
+- [x] 3.2 No stale references to the removed routes: `grep -rn "auth/signup" README.md context/foundation` returns only historical notes that say the routes were removed
 
 #### Manual
 
-- [ ] 3.3 The README's invitation and rollout text reads correctly end to end, and the contract link opens the file
-- [ ] 3.4 The roadmap Parked list contains the invite-failure follow-up
+- [x] 3.3 The README's invitation and rollout text reads correctly end to end, and the contract link opens the file
+- [x] 3.4 The roadmap Parked list contains the invite-failure follow-up
