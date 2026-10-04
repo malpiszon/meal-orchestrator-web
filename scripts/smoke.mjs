@@ -1,13 +1,17 @@
 // Smoke test: proves the built app, the Cloudflare adapter and the Supabase auth and MO delivery flows still work together.
 // Zero dependencies on purpose. Run against a live server:
 //   BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> node scripts/smoke.mjs
+// Optional: SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY and MAILPIT_URL enable more checks (see README).
 
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { setTimeout as sleep } from "node:timers/promises";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:4321";
 const email = `smoke-${Date.now()}@example.com`;
 const password = "Smoke-Test-Passw0rd!";
+// The smoke user's password changes during the password-reset steps; they sign in with this one.
+let smokePassword = password;
 const jar = new Map();
 
 function cookieHeader() {
@@ -18,7 +22,13 @@ function storeCookies(response) {
   for (const raw of response.headers.getSetCookie()) {
     const [pair, ...attrs] = raw.split(";");
     const [name, ...rest] = pair.split("=");
-    const expired = attrs.some((a) => /max-age=0/i.test(a.trim()));
+    // Supabase deletes cookies with Max-Age=0, Astro with an Expires date in the past.
+    const expired = attrs.some((a) => {
+      const attr = a.trim();
+      if (/^max-age=0$/i.test(attr)) return true;
+      const expires = /^expires=(.*)$/i.exec(attr)?.[1];
+      return expires !== undefined && Date.parse(expires) <= Date.now();
+    });
     if (expired) jar.delete(name.trim());
     else jar.set(name.trim(), rest.join("="));
   }
@@ -152,8 +162,22 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 // Optional: the same instance's service-role key, to generate invitation and password-reset link tokens (CI sets it).
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Optional: the same instance's Mailpit (local Supabase's email catcher), to read a real reset email (CI sets it).
+const MAILPIT_URL = process.env.MAILPIT_URL?.replace(/\/$/, "");
 const inviteEmail = `smoke-invite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
-let recoveryTokenHash;
+const unknownEmail = `smoke-unknown-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
+const FORGOT_PASSWORD = "/api/auth/forgot-password";
+const SET_PASSWORD = "/api/auth/set-password";
+// Set by src/pages/api/auth/set-password.ts when a save fails after the emailed token was used.
+const PASSWORD_RETRY_COOKIE = "mo-password-retry";
+// 7 characters: one short of the minimum (MIN_PASSWORD_LENGTH in src/lib/password-rules.ts).
+const SHORT_PASSWORD = "Short7!";
+const RESET_PASSWORD = "Smoke-Reset-Passw0rd-1!";
+const RETRY_PASSWORD = "Smoke-Retry-Passw0rd-2!";
+const EMAIL_RESET_PASSWORD = "Smoke-Email-Passw0rd-3!";
+const CLAIM_PASSWORD = "Smoke-Claim-Passw0rd!";
+// Tokens of the reset links the steps generate or read from Mailpit, kept for the steps that reuse them.
+let recoveryTokenHash, emailLink;
 
 let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote, swapName;
 // Read from the dashboard HTML by the swap steps.
@@ -166,6 +190,7 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   if (!SUPABASE_URL || !SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_URL and SUPABASE_KEY)\n");
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
     console.log("SKIP  email link checks (set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)\n");
+  else if (!MAILPIT_URL) console.log("SKIP  real reset email (set MAILPIT_URL)\n");
   const nextWeek = upcomingMonday();
   delivery = await loadDelivery(email, nextWeek);
   newUserDelivery = await loadDelivery(
@@ -246,9 +271,70 @@ async function generateLinkToken(type, linkEmail) {
   return hash ? { hash } : { failure: { status: response.status, location: "", body } };
 }
 
-/** Opens an email link the way a click in the email does. */
+/** Opens an old-style email link (`/api/auth/confirm`) the way a click in the email does. */
 const openEmailLink = (type, tokenHash) =>
   request(`/api/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${type}`);
+
+/** Opens the set-password page a reset email links to. The page only reads the token; it never uses it. */
+const openSetPasswordPage = (tokenHash, type = "recovery") =>
+  request(`/auth/set-password?token_hash=${encodeURIComponent(tokenHash)}&type=${type}`);
+
+/**
+ * Posts the set-password form with `newPassword`. With `link` (`{ tokenHash, type }`) it is the form of an
+ * emailed link; without it, the token-less retry after a rejected save.
+ */
+const postSetPassword = (newPassword, link) =>
+  request(SET_PASSWORD, {
+    method: "POST",
+    form: { password: newPassword, ...(link ? { token_hash: link.tokenHash, type: link.type ?? "recovery" } : {}) },
+  });
+
+/** Posts the reset request form ("Forgot or never set a password?"). */
+const requestReset = (resetEmail) => request(FORGOT_PASSWORD, { method: "POST", form: { email: resetEmail } });
+
+/** Whether `body` renders the set-password form, with the emailed link's hidden token fields or without them. */
+function hasSetPasswordForm(body, withToken) {
+  return body.includes(`action="${SET_PASSWORD}"`) && body.includes('name="token_hash"') === withToken;
+}
+
+/** `location` parsed against BASE_URL, so relative and absolute redirects read the same. */
+const locationUrl = (location) => new URL(location || "/", BASE_URL);
+
+/** A step result for a step that failed before reaching the server; JSON so the run prints it. */
+const stepFailure = (message) => ({ status: 0, location: "", body: JSON.stringify({ error: message }) });
+
+/**
+ * Reads the newest email to `to` from Mailpit and returns its set-password link's path and query as
+ * `location` (the link's host is Supabase's `site_url`, not BASE_URL). Every run's smoke user has a new
+ * address and Mailpit lists messages newest first, so older emails can't be picked. Polls for up to 10 s,
+ * as the email is sent asynchronously.
+ */
+async function newestResetEmailLink(to) {
+  try {
+    return await pollResetEmailLink(to);
+  } catch (error) {
+    return stepFailure(`Mailpit at ${MAILPIT_URL} is unreachable: ${error.message}`);
+  }
+}
+
+async function pollResetEmailLink(to) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const search = await fetch(`${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+    if (!search.ok) return stepFailure(`Mailpit search answered ${search.status}: ${await search.text()}`);
+    const [newest] = (await search.json()).messages ?? [];
+    if (newest) {
+      const message = await (await fetch(`${MAILPIT_URL}/api/v1/message/${newest.ID}`)).json();
+      const href =
+        /href="([^"]*\/auth\/set-password[^"]*)"/.exec(message.HTML ?? "")?.[1] ??
+        /(https?:\/\/[^\s"<>]*\/auth\/set-password[^\s"<>]*)/.exec(message.Text ?? "")?.[1];
+      if (!href) return stepFailure(`no /auth/set-password link in the email "${message.Subject}"`);
+      const url = new URL(href.replaceAll("&amp;", "&"));
+      return { status: 200, location: url.pathname + url.search, body: "" };
+    }
+    await sleep(500);
+  }
+  return stepFailure(`no email to ${to} arrived in Mailpit`);
+}
 
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
@@ -445,32 +531,230 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               },
             ],
             [
-              "password-reset link signs the smoke user in",
+              "reset request for an unknown email looks like a success",
+              () => requestReset(unknownEmail),
+              { status: 302, location: "/auth/forgot-password?sent=1" },
+            ],
+            [
+              "reset request with an invalid email is rejected",
+              () => requestReset("not-an-email"),
+              { status: 302, location: "/auth/forgot-password?error=" },
+            ],
+            [
+              "old-style password-reset link is forwarded to the set-password page",
               async () => {
                 jar.clear();
                 const link = await generateLinkToken("recovery", email);
                 recoveryTokenHash = link.hash;
                 return link.failure ?? openEmailLink("recovery", link.hash);
               },
+              { status: 302, location: "/auth/set-password?token_hash=" },
+            ],
+            [
+              "set-password page shows the form for the link",
+              () => (recoveryTokenHash ? openSetPasswordPage(recoveryTokenHash) : stepFailure("no reset token")),
+              {
+                status: 200,
+                body: ["contains the form with the link's token", (body) => hasSetPasswordForm(body, true)],
+              },
+            ],
+            [
+              "too-short password is rejected and keeps the token",
+              () =>
+                recoveryTokenHash
+                  ? postSetPassword(SHORT_PASSWORD, { tokenHash: recoveryTokenHash })
+                  : stepFailure("no reset token"),
+              {
+                status: 302,
+                location: [
+                  "/auth/set-password with the same token and an error",
+                  (location) => {
+                    const url = locationUrl(location);
+                    return (
+                      url.pathname === "/auth/set-password" &&
+                      url.searchParams.get("token_hash") === recoveryTokenHash &&
+                      url.searchParams.get("type") === "recovery" &&
+                      Boolean(url.searchParams.get("error"))
+                    );
+                  },
+                ],
+              },
+            ],
+            [
+              // The token survived the GET of the page and the rejected password above.
+              "new password from the link is saved and signs the user in",
+              async () => {
+                if (!recoveryTokenHash) return stepFailure("no reset token");
+                const result = await postSetPassword(RESET_PASSWORD, { tokenHash: recoveryTokenHash });
+                if (result.status === 302 && result.location.startsWith("/dashboard")) smokePassword = RESET_PASSWORD;
+                return result;
+              },
               { status: 302, location: "/dashboard" },
             ],
             [
               // The re-delivered week is the smoke user's, so this proves the session is theirs.
-              "dashboard shows the smoke user's plan after the password-reset link",
+              "dashboard shows the smoke user's plan after the reset",
               () => request("/dashboard"),
               { status: 200, body: [`contains "${newName}"`, (body) => body.includes(escapeHtml(newName ?? ""))] },
+            ],
+            [
+              "set-password page without a token refuses a signed-in session without the retry cookie",
+              () => request("/auth/set-password"),
+              {
+                status: 200,
+                body: [
+                  "shows the invalid-link message and no form",
+                  (body) =>
+                    body.includes("This link is invalid or has expired") && !body.includes(`action="${SET_PASSWORD}"`),
+                ],
+              },
+            ],
+            [
+              "token-less save from a signed-in session without the retry cookie is refused",
+              () => postSetPassword(RETRY_PASSWORD),
+              { status: 302, location: "/auth/forgot-password?error=" },
+            ],
+            [
+              "signout after the reset",
+              () => request("/api/auth/signout", { method: "POST" }),
+              { status: 302, location: "/" },
+            ],
+            [
+              "token-less save without a session is refused",
+              () => postSetPassword(RETRY_PASSWORD),
+              { status: 302, location: "/auth/forgot-password?error=" },
+            ],
+            [
+              "signin rejects the password from before the reset",
+              () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
+              { status: 302, location: "/auth/signin?error=" },
+            ],
+            [
+              "signin accepts the new password",
+              () => request("/api/auth/signin", { method: "POST", form: { email, password: smokePassword } }),
+              { status: 302, location: "/" },
             ],
             [
               "used password-reset link is rejected",
               () => {
                 jar.clear();
-                // Nothing to reuse if the step above got no token; fail rather than pass on a stand-in token.
-                if (!recoveryTokenHash)
-                  return { status: 0, location: "", body: "no password-reset token was generated" };
-                return openEmailLink("recovery", recoveryTokenHash);
+                // Nothing to reuse if no token was generated; fail rather than pass on a stand-in token.
+                if (!recoveryTokenHash) return stepFailure("no password-reset token was generated");
+                return postSetPassword(RETRY_PASSWORD, { tokenHash: recoveryTokenHash });
               },
-              { status: 302, location: "/auth/signin?error=" },
+              { status: 302, location: "/auth/forgot-password?error=" },
             ],
+            [
+              "made-up password-reset token is rejected",
+              () => postSetPassword(RETRY_PASSWORD, { tokenHash: "not-a-real-token-hash" }),
+              { status: 302, location: "/auth/forgot-password?error=" },
+            ],
+            [
+              // Supabase refuses the current password (same_password) after the token was already used.
+              "rejected save after the link opens a token-less retry",
+              async () => {
+                jar.clear();
+                const link = await generateLinkToken("recovery", email);
+                return link.failure ?? postSetPassword(smokePassword, { tokenHash: link.hash });
+              },
+              {
+                status: 302,
+                location: [
+                  "/auth/set-password with an error, no token, and the retry cookie set",
+                  (location) => {
+                    const url = locationUrl(location);
+                    return (
+                      url.pathname === "/auth/set-password" &&
+                      !url.searchParams.has("token_hash") &&
+                      Boolean(url.searchParams.get("error")) &&
+                      jar.has(PASSWORD_RETRY_COOKIE)
+                    );
+                  },
+                ],
+              },
+            ],
+            [
+              "set-password page offers the retry form without a token",
+              () => request("/auth/set-password"),
+              { status: 200, body: ["contains the form without a token", (body) => hasSetPasswordForm(body, false)] },
+            ],
+            [
+              "token-less retry saves the password",
+              async () => {
+                const result = await postSetPassword(RETRY_PASSWORD);
+                if (result.status === 302 && result.location.startsWith("/dashboard")) smokePassword = RETRY_PASSWORD;
+                return result;
+              },
+              {
+                status: 302,
+                location: [
+                  "/dashboard, and the retry cookie is cleared",
+                  (location) => location.startsWith("/dashboard") && !jar.has(PASSWORD_RETRY_COOKIE),
+                ],
+              },
+            ],
+            [
+              "account created by a delivery claims itself with a reset link",
+              async () => {
+                jar.clear();
+                const link = await generateLinkToken("recovery", newUserDelivery.user.email);
+                return link.failure ?? postSetPassword(CLAIM_PASSWORD, { tokenHash: link.hash });
+              },
+              { status: 302, location: "/dashboard" },
+            ],
+            [
+              "claimed account's dashboard shows its delivered week",
+              () => request("/dashboard"),
+              { status: 200, body: [`contains "${oldName}"`, (body) => body.includes(escapeHtml(oldName ?? ""))] },
+            ],
+            ...(MAILPIT_URL
+              ? [
+                  [
+                    "reset request for the smoke user is accepted",
+                    () => {
+                      jar.clear();
+                      return requestReset(email);
+                    },
+                    { status: 302, location: "/auth/forgot-password?sent=1" },
+                  ],
+                  [
+                    "reset email links to the set-password page",
+                    async () => {
+                      const result = await newestResetEmailLink(email);
+                      if (result.status === 200) {
+                        const params = locationUrl(result.location).searchParams;
+                        emailLink = { tokenHash: params.get("token_hash"), type: params.get("type") };
+                      }
+                      return result;
+                    },
+                    {
+                      status: 200,
+                      location: [
+                        "/auth/set-password?…type=recovery with a token",
+                        (location) => {
+                          const url = locationUrl(location);
+                          return (
+                            url.pathname === "/auth/set-password" &&
+                            url.searchParams.get("type") === "recovery" &&
+                            Boolean(url.searchParams.get("token_hash"))
+                          );
+                        },
+                      ],
+                    },
+                  ],
+                  [
+                    "password from the reset email is saved",
+                    async () => {
+                      if (!emailLink?.tokenHash) return stepFailure("no link was read from the reset email");
+                      const result = await postSetPassword(EMAIL_RESET_PASSWORD, emailLink);
+                      if (result.status === 302 && result.location.startsWith("/dashboard"))
+                        smokePassword = EMAIL_RESET_PASSWORD;
+                      return result;
+                    },
+                    { status: 302, location: "/dashboard" },
+                  ],
+                ]
+              : []),
             [
               "garbage email link is rejected",
               () => openEmailLink("invite", "not-a-real-token-hash"),
@@ -487,13 +771,19 @@ for (const [name, run, expected] of steps) {
   const statusOk =
     typeof expected.status === "function" ? expected.status(actual.status) : actual.status === expected.status;
   const bodyOk = expected.body === undefined || expected.body[1](actual.body);
-  const ok = statusOk && bodyOk && (expected.location === undefined || actual.location.startsWith(expected.location));
+  // `location` is a prefix, or a `[label, check]` pair like `body`.
+  const locationOk =
+    expected.location === undefined ||
+    (Array.isArray(expected.location)
+      ? expected.location[1](actual.location)
+      : actual.location.startsWith(expected.location));
+  const ok = statusOk && bodyOk && locationOk;
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}  -> ${actual.status} ${actual.location}`);
   if (!ok) {
     failed++;
     const expectedStatus = typeof expected.status === "function" ? "non-2xx" : expected.status;
     console.log(
-      `      expected ${expectedStatus} ${expected.location ?? ""}${expected.body ? `, body ${expected.body[0]}` : ""}`,
+      `      expected ${expectedStatus} ${(Array.isArray(expected.location) ? expected.location[0] : expected.location) ?? ""}${expected.body ? `, body ${expected.body[0]}` : ""}`,
     );
     // JSON error bodies (e.g. a delivery's validation issues) are short and worth seeing; HTML pages are not.
     if (actual.body.startsWith("{")) console.log(`      got ${actual.body.slice(0, 500)}`);

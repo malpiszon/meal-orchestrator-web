@@ -352,8 +352,8 @@ Without `MAILPIT_URL` the script prints `SKIP  real reset email (set MAILPIT_URL
 
 #### Automated
 
-- [ ] 3.1 Lint passes: `npm run lint`
-- [ ] 3.2 Smoke passes against the local production preview on :4322 with `MAILPIT_URL` set: `npm run build && npm run preview -- --port 4322`, then `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… SUPABASE_URL=… SUPABASE_KEY=… SUPABASE_SERVICE_ROLE_KEY=… MAILPIT_URL=http://127.0.0.1:54324 npm run smoke`
+- [x] 3.1 Lint passes: `npm run lint`
+- [x] 3.2 Smoke passes against the local production preview on :4322 with `MAILPIT_URL` set: `npm run build && npm run preview -- --port 4322`, then `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… SUPABASE_URL=… SUPABASE_KEY=… SUPABASE_SERVICE_ROLE_KEY=… MAILPIT_URL=http://127.0.0.1:54324 npm run smoke`
 - [ ] 3.3 CI `ci` and `smoke` jobs are green on the PR
 
 #### Manual
