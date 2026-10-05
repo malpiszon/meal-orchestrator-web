@@ -282,12 +282,12 @@ New function only; no data changes. Push to production after CI is green and bef
 
 #### Automated
 
-- [ ] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [ ] 1.2 pgTAP passes: `npx supabase test db`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
+- [x] 1.2 pgTAP passes: `npx supabase test db`
 
 #### Manual
 
-- [ ] 1.3 Local probe with real GoTrue rows: after Admin `generate_link` (recovery), `rpc('auth_link_is_valid')` with the service role returns true; after `POST /auth/v1/verify` with that hash it returns false
+- [x] 1.3 Local probe with real GoTrue rows: after Admin `generate_link` (recovery), `rpc('auth_link_is_valid')` with the service role returns true; after `POST /auth/v1/verify` with that hash it returns false
 
 ### Phase 2: Page shows the notice on open
 
