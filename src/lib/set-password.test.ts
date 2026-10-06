@@ -7,6 +7,7 @@ import {
   resetRequestSchema,
   setPasswordFormSchema,
   setPasswordLinkSchema,
+  TOKEN_HASH_MAX_LENGTH,
   setPasswordUrl,
 } from "@/lib/set-password";
 
@@ -50,6 +51,12 @@ describe("setPasswordLinkSchema", () => {
   it("rejects a missing or empty token_hash", () => {
     expect(setPasswordLinkSchema.safeParse({ type: "recovery" }).success).toBe(false);
     expect(setPasswordLinkSchema.safeParse({ token_hash: "", type: "recovery" }).success).toBe(false);
+  });
+
+  it("accepts a token_hash up to the cap and rejects a longer one", () => {
+    const atCap = "a".repeat(TOKEN_HASH_MAX_LENGTH);
+    expect(setPasswordLinkSchema.safeParse({ token_hash: atCap, type: "recovery" }).success).toBe(true);
+    expect(setPasswordLinkSchema.safeParse({ token_hash: `${atCap}a`, type: "recovery" }).success).toBe(false);
   });
 });
 

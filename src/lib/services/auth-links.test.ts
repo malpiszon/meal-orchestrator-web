@@ -26,9 +26,16 @@ describe("isSetPasswordLinkLive", () => {
     await expect(isSetPasswordLinkLive(supabase, link)).resolves.toBe(true);
   });
 
-  it("returns false when the database says the link is used or expired", async () => {
+  it("returns false when the database says the link is used or expired, and logs it without the token", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const { supabase } = clientReturning({ data: false, error: null });
+
     await expect(isSetPasswordLinkLive(supabase, link)).resolves.toBe(false);
+    expect(info).toHaveBeenCalledTimes(1);
+    const text = warnedText(info);
+    expect(text).toContain("link not live");
+    expect(text).toContain("recovery");
+    expect(text).not.toContain(TOKEN);
   });
 
   it("fails open on an RPC error and warns without the token", async () => {

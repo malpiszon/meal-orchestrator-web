@@ -33,7 +33,11 @@ export async function isSetPasswordLinkLive(supabase: SupabaseClient | null, lin
     }
     // The client is untyped (no generated database types); only an explicit `false` means dead.
     const live: unknown = result.data;
-    return live !== false;
+    if (live === false) {
+      console.info(`auth link check: link not live (type ${link.type})`);
+      return false;
+    }
+    return true;
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
     console.warn(`auth link check failed (type ${link.type}): ${message}`);

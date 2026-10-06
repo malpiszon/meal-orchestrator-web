@@ -13,8 +13,13 @@ export const resetRequestSchema = z.object({
   email: z.string().trim().pipe(z.email()),
 });
 
-/** The `token_hash` of an emailed link. Shared with `authLinkQuerySchema` (`@/lib/auth-link`). */
-export const tokenHashSchema = z.string().min(1);
+/**
+ * The `token_hash` of an emailed link. Shared with `authLinkQuerySchema` (`@/lib/auth-link`).
+ * GoTrue's hashes are 56 hex characters; the cap keeps junk from reaching the link check's database
+ * call, and is loose enough that a longer hash format still passes.
+ */
+export const TOKEN_HASH_MAX_LENGTH = 128;
+export const tokenHashSchema = z.string().min(1).max(TOKEN_HASH_MAX_LENGTH);
 
 /**
  * Link types the set-password page accepts: password resets and invitations. `@/lib/auth-link`

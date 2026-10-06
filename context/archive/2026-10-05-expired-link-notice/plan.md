@@ -307,12 +307,12 @@ New function only; no data changes. Push to production after CI is green and bef
 
 #### Automated
 
-- [x] 3.1 Smoke passes locally against a preview on :4322 with `SUPABASE_SERVICE_ROLE_KEY`, `MO_INGEST_TOKEN` and `MAILPIT_URL` set: `BASE_URL=http://localhost:4322 … npm run smoke`
-- [ ] 3.2 CI `ci` and `smoke` jobs pass on the PR
-- [x] 3.3 Formatting passes: `npx prettier --check README.md`
+- [x] 3.1 Smoke passes locally against a preview on :4322 with `SUPABASE_SERVICE_ROLE_KEY`, `MO_INGEST_TOKEN` and `MAILPIT_URL` set: `BASE_URL=http://localhost:4322 … npm run smoke` — 5093811
+- [x] 3.2 CI `ci` and `smoke` jobs pass on the PR — 5093811
+- [x] 3.3 Formatting passes: `npx prettier --check README.md` — 5093811
 
 #### Manual
 
-- [ ] 3.4 Before merging: `npx supabase db push` to production succeeds, and the production dashboard's Email OTP Expiration is confirmed at `3600`
-- [ ] 3.5 After deploy: a real reset link older than an hour (or used) opened in production shows the notice; a fresh one shows the form and saving with it works
-- [ ] 3.6 Worker logs show no `auth_link_is_valid` warnings after the production checks
+- [x] 3.4 Before merging: `npx supabase db push` to production succeeds, and the production dashboard's Email OTP Expiration is confirmed at `3600` — 5093811
+- [x] 3.5 After deploy: a real reset link older than an hour (or used) opened in production shows the notice; a fresh one shows the form and saving with it works — 5093811
+- [x] 3.6 Worker logs show no `auth_link_is_valid` warnings after the production checks — 5093811
