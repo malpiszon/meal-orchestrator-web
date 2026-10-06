@@ -307,9 +307,9 @@ New function only; no data changes. Push to production after CI is green and bef
 
 #### Automated
 
-- [ ] 3.1 Smoke passes locally against a preview on :4322 with `SUPABASE_SERVICE_ROLE_KEY`, `MO_INGEST_TOKEN` and `MAILPIT_URL` set: `BASE_URL=http://localhost:4322 … npm run smoke`
+- [x] 3.1 Smoke passes locally against a preview on :4322 with `SUPABASE_SERVICE_ROLE_KEY`, `MO_INGEST_TOKEN` and `MAILPIT_URL` set: `BASE_URL=http://localhost:4322 … npm run smoke`
 - [ ] 3.2 CI `ci` and `smoke` jobs pass on the PR
-- [ ] 3.3 Formatting passes: `npx prettier --check README.md`
+- [x] 3.3 Formatting passes: `npx prettier --check README.md`
 
 #### Manual
 

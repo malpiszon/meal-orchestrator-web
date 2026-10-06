@@ -329,6 +329,11 @@ function hasSetPasswordForm(body, withToken) {
   return body.includes(`action="${SET_PASSWORD}"`) && body.includes('name="token_hash"') === withToken;
 }
 
+/** Whether `body` shows the invalid-link notice ("Ask for a new link") instead of the set-password form. */
+function showsInvalidLinkNotice(body) {
+  return body.includes("This link is invalid or has expired") && !body.includes(`action="${SET_PASSWORD}"`);
+}
+
 /** `location` parsed against BASE_URL, so relative and absolute redirects read the same. */
 const locationUrl = (location) => new URL(location || "/", BASE_URL);
 
@@ -582,12 +587,28 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               { status: 302, location: "/auth/signin" },
             ],
             [
+              "set-password page shows the form for the invitation link",
+              () =>
+                inviteTokenHash ? openSetPasswordPage(inviteTokenHash, "invite") : stepFailure("no invitation token"),
+              {
+                status: 200,
+                body: ["contains the form with the link's token", (body) => hasSetPasswordForm(body, true)],
+              },
+            ],
+            [
+              // The token survived the GET of the page above.
               "new password from the invitation signs the user in",
               () =>
                 inviteTokenHash
                   ? postSetPassword(RESET_PASSWORD, { tokenHash: inviteTokenHash, type: "invite" })
                   : stepFailure("no invitation token"),
               { status: 302, location: "/dashboard" },
+            ],
+            [
+              "used invitation link opened on the page shows the notice",
+              () =>
+                inviteTokenHash ? openSetPasswordPage(inviteTokenHash, "invite") : stepFailure("no invitation token"),
+              { status: 200, body: ["shows the invalid-link message and no form", showsInvalidLinkNotice] },
             ],
             [
               "invited user's dashboard shows no upcoming plan yet",
@@ -669,11 +690,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               () => request("/auth/set-password"),
               {
                 status: 200,
-                body: [
-                  "shows the invalid-link message and no form",
-                  (body) =>
-                    body.includes("This link is invalid or has expired") && !body.includes(`action="${SET_PASSWORD}"`),
-                ],
+                body: ["shows the invalid-link message and no form", showsInvalidLinkNotice],
               },
             ],
             [
@@ -712,9 +729,40 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               { status: 302, location: "/auth/forgot-password?error=" },
             ],
             [
+              "used password-reset link opened on the page shows the notice",
+              () =>
+                recoveryTokenHash
+                  ? openSetPasswordPage(recoveryTokenHash)
+                  : stepFailure("no password-reset token was generated"),
+              { status: 200, body: ["shows the invalid-link message and no form", showsInvalidLinkNotice] },
+            ],
+            [
               "made-up password-reset token is rejected",
               () => postSetPassword(RETRY_PASSWORD, { tokenHash: "not-a-real-token-hash" }),
               { status: 302, location: "/auth/forgot-password?error=" },
+            ],
+            [
+              "made-up token opened on the page shows the notice",
+              () => openSetPasswordPage("not-a-real-token-hash"),
+              { status: 200, body: ["shows the invalid-link message and no form", showsInvalidLinkNotice] },
+            ],
+            [
+              // A second reset link replaces the first. Uses the invited user, whose links no later step needs.
+              "replaced password-reset link shows the notice and the newer one the form",
+              async () => {
+                const first = await generateLinkToken("recovery", inviteEmail);
+                if (first.failure) return first.failure;
+                const second = await generateLinkToken("recovery", inviteEmail);
+                if (second.failure) return second.failure;
+                const replaced = await openSetPasswordPage(first.hash);
+                if (!showsInvalidLinkNotice(replaced.body))
+                  return stepFailure("the replaced link did not show the invalid-link notice");
+                return openSetPasswordPage(second.hash);
+              },
+              {
+                status: 200,
+                body: ["the newer link shows the form with its token", (body) => hasSetPasswordForm(body, true)],
+              },
             ],
             [
               // Supabase refuses the current password (same_password) after the token was already used.
