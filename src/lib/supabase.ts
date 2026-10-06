@@ -23,7 +23,10 @@ export function createClient(requestHeaders: Headers, cookies: AstroCookies) {
 
 /**
  * Cookie-less service-role client for machine-to-machine writes (MO deliveries).
- * It bypasses RLS: never use it in a user-facing code path.
+ * It bypasses RLS: never use it for reads or writes of user data in a user-facing code path.
+ * The one exception is read-only RPCs executable only by `service_role`, such as the emailed-link
+ * check on `/auth/set-password` (`auth_link_is_valid`): a fresh link click has no session to
+ * call them with, and they return a yes/no, never user data.
  */
 export function createServiceClient(): SupabaseClient | null {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {

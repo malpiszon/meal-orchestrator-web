@@ -68,6 +68,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 - The recommendation is tied to the account matching the submitted email (FR-002).
 - There is no signup path that accepts an arbitrary email — the invitation is the only way to get an account.
 - A later submission for an email mo-web already knows is stored under the existing account; it does not create a second account.
+- Opening an invitation link that has expired or was already used tells the user so at once, before they choose a password, and points them to requesting a new link.
 
 ### US-03: Invited user logs in
 
@@ -89,6 +90,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 #### Acceptance Criteria
 
 - After resetting, the user can log in with the new password.
+- Opening a reset link that has expired or was already used tells the user so at once, before they choose a password, and offers to send a new one.
 
 ### US-05: User opens the dashboard before the week's recommendation arrives
 

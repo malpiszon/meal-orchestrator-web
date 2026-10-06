@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-10-04
+updated: 2026-10-05
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -39,30 +39,31 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 
 ## At a glance
 
-| ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status |
-| ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | ------ |
-| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | done   |
-| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done   |
-| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done   |
-| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done   |
-| S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | done   |
-| S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | done   |
-| S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | done   |
-| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | ready  |
-| S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready  |
-| S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready  |
-| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready  |
+| ID   | Change ID                 | Outcome (user can …)                                                                       | Prerequisites | PRD refs                                                 | Status      |
+| ---- | ------------------------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------------------------- | ----------- |
+| F-01 | email-link-callback       | (foundation) links in invite and reset emails turn into a signed-in session in mo-web      | —             | FR-003, FR-005, Access Control                           | done        |
+| F-02 | supabase-idle-keepalive   | (foundation) the database stays reachable after a week or more with no activity            | —             | NFR idle availability                                    | done        |
+| S-01 | mo-weekly-delivery        | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state | —             | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done        |
+| S-02 | recency-annotated-plan    | user sees last week's plan become history and recency notes on repeat meals                | S-01          | FR-008, FR-011, US-01, US-06                             | done        |
+| S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | done        |
+| S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | done        |
+| S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | done        |
+| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | ready       |
+| S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready       |
+| S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
+| S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready       |
+| S-10 | expired-link-notice       | user opening an expired or used invite/reset link is told at once and offered a new one    | S-04, S-05    | FR-003, FR-005, US-02, US-04                             | in-progress |
 
 ## Streams
 
 Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
 
-| Stream | Theme             | Chain                            | Note                                                                                     |
-| ------ | ----------------- | -------------------------------- | ---------------------------------------------------------------------------------------- |
-| A      | Delivery → memory | `S-01` → `S-02` → `S-07`, `S-08` | Critical path to the north star; speed goal puts every other stream behind or beside it. |
-| B      | Plan editing      | `S-03` → `S-06`                  | Joins Stream A at `S-01`; runs in parallel with `S-02`.                                  |
-| C      | Accounts & access | `F-01` → `S-04`, `S-05` → `S-09` | `S-04` joins Stream A at `S-01`; `F-01` and `S-05` can start immediately.                |
-| D      | Operations        | `F-02`                           | Standalone; must land before real users rely on weekly delivery.                         |
+| Stream | Theme             | Chain                                    | Note                                                                                     |
+| ------ | ----------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| A      | Delivery → memory | `S-01` → `S-02` → `S-07`, `S-08`         | Critical path to the north star; speed goal puts every other stream behind or beside it. |
+| B      | Plan editing      | `S-03` → `S-06`                          | Joins Stream A at `S-01`; runs in parallel with `S-02`.                                  |
+| C      | Accounts & access | `F-01` → `S-04`, `S-05` → `S-09`, `S-10` | `S-04` joins Stream A at `S-01`; `F-01` and `S-05` can start immediately.                |
+| D      | Operations        | `F-02`                                   | Standalone; must land before real users rely on weekly delivery.                         |
 
 ## Baseline
 
@@ -191,7 +192,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)
 - **PRD refs:** FR-017, US-07
 - **Prerequisites:** S-01, S-03
-- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09
+- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09, S-10
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Follows S-03 so the overwrite behaviour over saved/swapped plans is tested against real saved state rather than assumed.
@@ -205,7 +206,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10)
 - **PRD refs:** FR-012
 - **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08, S-09
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08, S-09, S-10
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have (secondary success criterion); scoped to a plain list with no filtering or search.
@@ -218,7 +219,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11)
 - **PRD refs:** FR-013, US-08
 - **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07, S-09
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07, S-09, S-10
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have, last in line under the speed goal; the rating window is governed by each meal's date, not the plan's state, which is easy to get wrong.
@@ -231,11 +232,25 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18)
 - **PRD refs:** FR-004, FR-005, US-03, US-04
 - **Prerequisites:** S-05
-- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08
+- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08, S-10
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Not a marketing page: no pitch or ad copy, just a pleasant entry point. Build it through the Core Skills Chain (`/10x-new` → `/10x-research` → `/10x-plan` → `/10x-implement`), then polish with `/10x-ui`. Must not link to `/auth/signup`, which S-04 removed. The login and reset paths from `/` need a test, not only a manual check.
 - **Status:** ready
+
+### S-10: Expired link notice on open
+
+- **Outcome:** user who opens an invitation or password-reset link that has expired or was already used sees "this link is invalid or has expired" straight away, before typing a password, with a way to get a new link; a valid link still shows the password form.
+- **Change ID:** expired-link-notice
+- **Issue:** [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67)
+- **PRD refs:** FR-003, FR-005, US-02, US-04
+- **Prerequisites:** S-04, S-05
+- **Parallel with:** F-02, S-06, S-07, S-08, S-09
+- **Blockers:** —
+- **Unknowns:**
+  - How to tell whether a link is still valid without using up its single-use token (Supabase Auth has no such call; candidate: a database function reading Supabase's own token records and the configured link lifetime, which couples the app to Supabase internals). Confirm on local Supabase while planning. — Owner: agent. Block: no.
+- **Risk:** Requirement change added 2026-10-05, not a bug: S-05/S-04 deliberately use the token only on the form post (mail-scanner prefetch, login CSRF), so expiry surfaced only after submitting. That rule must hold — the check on open must never use the token or sign anyone in — and the post-time error stays as the fallback for a link that expires while the form is open.
+- **Status:** in-progress
 
 ## Backlog Handoff
 
@@ -246,12 +261,13 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-01       | [#4](https://github.com/malpiszon/meal-orchestrator-web/issues/4)   | mo-weekly-delivery        | Accept MO's weekly delivery and show it on the dashboard     | done                  | Archived 2026-10-02                       |
 | S-02       | [#6](https://github.com/malpiszon/meal-orchestrator-web/issues/6)   | recency-annotated-plan    | Annotate upcoming meals with recency from history            | done                  | Archived 2026-10-03                       |
 | S-03       | [#7](https://github.com/malpiszon/meal-orchestrator-web/issues/7)   | swap-and-save-plan        | Swap meals within the week's menu and save the plan          | done                  | Archived 2026-10-03                       |
-| S-04       | [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)   | invite-on-first-delivery  | Invite new MO users on their first delivery                  | yes                   | Run `/10x-plan invite-on-first-delivery`  |
-| S-05       | [#5](https://github.com/malpiszon/meal-orchestrator-web/issues/5)   | password-reset            | Password reset by email                                      | yes                   | Run `/10x-plan password-reset`            |
+| S-04       | [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)   | invite-on-first-delivery  | Invite new MO users on their first delivery                  | done                  | Archived 2026-10-04                       |
+| S-05       | [#5](https://github.com/malpiszon/meal-orchestrator-web/issues/5)   | password-reset            | Password reset by email                                      | done                  | Archived 2026-10-04                       |
 | S-06       | [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)   | week-resubmission-replace | Replace a re-sent week's recommendation                      | yes                   | Run `/10x-plan week-resubmission-replace` |
 | S-07       | [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10) | plan-history-list         | Chronological list of past plans                             | yes                   | Nice-to-have                              |
 | S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals         | Rate meals from the last 7 days                              | yes                   | Nice-to-have                              |
 | S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page              | Sign-in landing page with login and password reset           | yes                   | Run `/10x-plan landing-page`              |
+| S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice       | Show an expired invite/reset link as soon as it's opened     | yes                   | Run `/10x-plan expired-link-notice`       |
 
 ## Open Roadmap Questions
 
