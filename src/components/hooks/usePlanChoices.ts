@@ -51,8 +51,9 @@ async function postSave(path: string, body: Record<string, string>): Promise<Sav
  * The upcoming week's choices, saved on every change through `/api/plans/choose` and `/api/plans/confirm`.
  * Choices update optimistically and revert on error. Only one request is in flight at a time (`pending`
  * disables every input), so two quick taps can't resolve out of order. A 409 means the week has started:
- * `locked` stays true and the inputs stay disabled. A 404 means MO re-delivered the week and its options
- * were re-created: the page asks for a reload but stays interactive.
+ * `locked` stays true and the inputs stay disabled. A 404 from a swap means MO re-delivered the week and its
+ * options were re-created: the page asks for a reload but stays interactive. A confirm on such a stale page
+ * isn't detected (the plan id survives a re-delivery) and saves the new delivery's choices.
  */
 export function usePlanChoices({ planId, initialChosen, initialSavedAtLabel, initialRecency }: UsePlanChoicesOptions) {
   const [chosen, setChosen] = useState(initialChosen);

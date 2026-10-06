@@ -128,7 +128,7 @@ mo-web checks in this order: configuration (503), token (401), body size (413), 
 
 **Idempotency:** a delivery for the same (email, `week_start`) is handled by these rules, in this order:
 
-- **Identical body: no-op.** "Identical" means the same body content as the stored delivery, `run_id` included. mo-web compares the parsed JSON, so key order and whitespace don't matter. mo-web answers 200 with the stored `plan_id` and changes nothing. Only an HTTP retry of the same request and a re-POST of the saved `mo_web_payload.json` are identical; a new MO run has a new `run_id`, so it never is.
+- **Identical body: no-op.** "Identical" means the same body content as the stored delivery, `run_id` included. mo-web compares the parsed JSON, so key order and whitespace don't matter. mo-web answers 200 with the stored `plan_id` and changes nothing. Only an HTTP retry of the same request and a re-POST of the saved `mo_web_payload.json` (the latest one sent for that week) are identical; a new MO run has a new `run_id`, so it never is.
 - **Started week: refused.** A different body for a week whose Monday is today or earlier (Europe/Warsaw) gets 409 `week_started`, and nothing is stored. So a new MO run for a started week always gets 409 `week_started`.
 - **Upcoming week: replaced.** A different body for an upcoming week replaces the stored week. If the user never saved it, the choices follow MO's new recommendations. If the user saved it (swapped a meal or kept the recommendations), each chosen dish (`provider_meal_id`) that the new delivery still offers in the same meal stays chosen, and the plan stays saved.
 

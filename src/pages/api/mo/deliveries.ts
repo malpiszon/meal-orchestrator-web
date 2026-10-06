@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
   if (result.error?.code === OBJECT_NOT_IN_PREREQUISITE_STATE && result.error.message === "week_started") {
     // MO re-sent a week that has started with a different body: refused, nothing stored, not a storage failure.
-    console.warn(`mo delivery refused: week_started ${delivery.week_start}`);
+    console.warn(`mo delivery refused: week_started ${delivery.week_start} run ${delivery.run_id ?? "-"}`);
     return json({ error: "week_started" }, 409);
   }
   if (result.error) {

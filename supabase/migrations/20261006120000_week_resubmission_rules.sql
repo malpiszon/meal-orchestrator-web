@@ -17,8 +17,8 @@
 --     the new delivery offers it there (the lowest variant_index if it is offered more than once),
 --     otherwise MO's new recommendation. A slot new in the re-send gets the recommendation.
 --
--- The plan row is now inserted or updated separately instead of upserted; the rest of the body is
--- unchanged from 20261003120000_plan_choices.sql.
+-- The plan row is now inserted or updated separately instead of upserted, and the option insert picks
+-- is_chosen by the carry-over; the rest of the body is unchanged from 20261003120000_plan_choices.sql.
 create or replace function public.ingest_weekly_plan(
   p_email text,
   p_provider text,

@@ -208,12 +208,13 @@ Both routes take a JSON body and use the signed-in user's cookie session. They a
 
 - **Responses:** 200 `{"saved_at","recency"}`, where `recency` maps option ids to the date the meal was last chosen earlier (`null` if that re-read failed; the save still stands); 400 `invalid_request` with the validation issues; 401 `unauthorized`; 404 `not_found` (no such option or plan, or someone else's); 409 `plan_locked`; 413 `payload_too_large` over 4 KiB; 503 `not_configured`; 500 `save_failed`.
 - **Cut-off:** a plan can be changed while its `week_start` is after today in Europe/Warsaw, so until Sunday 23:59 Warsaw time before the week starts, for every user. From Monday 00:00 it is "This week" and any save is answered 409. The `choose_plan_option` and `confirm_plan` Postgres functions enforce this and the ownership check, so a stale page can't bypass it.
-- **Re-delivery:** when MO re-sends an upcoming week with changes, the week's options are replaced.
+- **Re-delivery:** when MO re-sends a week:
+  - A changed re-send of an upcoming week replaces the week's options.
   - A plan that was never saved follows MO's new recommendations and stays "Not saved yet".
   - A saved plan (swapped or kept as recommended) keeps each chosen dish that the new delivery still offers in the same meal, and stays saved. Where the dish is gone, MO's new recommendation is chosen.
   - An identical re-send changes nothing.
   - A re-send of a week that has started is refused (409 `week_started`), so "This week" never changes.
-  - A page opened before the re-send can't save anymore (the option ids are new): a tap shows "This plan was updated. Reload to see the latest version."
+  - On a page opened before the re-send, swapping a meal no longer works (the option ids are new): the tap shows "This plan was updated. Reload to see the latest version." "Keep as recommended" is not caught: it still saves, with the new delivery's choices.
 - **Recency notes** count the meals the user chose, not the ones MO recommended.
 
 ### Dev walkthrough: sign in as an account a delivery created
