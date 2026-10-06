@@ -1,6 +1,7 @@
 -- S-03: pins the write rules of choose_plan_option and confirm_plan (ownership, one chosen option per
--- slot, the Europe/Warsaw cut-off) and ingest's reset of choices on re-delivery
--- (see context/changes/swap-and-save-plan/plan.md). Dates are relative to today in Europe/Warsaw,
+-- slot, the Europe/Warsaw cut-off) and what a changed re-delivery does to a swapped plan
+-- (see context/changes/swap-and-save-plan/plan.md; the re-send rules themselves, S-06, are pinned in
+-- week_resubmission.test.sql). Dates are relative to today in Europe/Warsaw,
 -- so the test never ages. Run with `npx supabase test db`.
 begin;
 select plan(29);
@@ -189,7 +190,8 @@ select ok(
   'user B''s plan and the locked plan stay unsaved'
 );
 
--- Re-delivery of tomorrow's week after a swap: choices and saved_at reset.
+-- Changed re-delivery of tomorrow's week after a swap: the plan stays saved (FR-018), and the swapped-to Y
+-- is also the new recommendation, so day 1 lunch keeps Y.
 set local role authenticated;
 select lives_ok(
   $$ select public.choose_plan_option('a1000000-0000-0000-0000-000000000002') $$,
@@ -202,7 +204,7 @@ select is(
   public.ingest_weekly_plan(
     'choices-a@test.local', 'ntfy',
     (now() at time zone 'Europe/Warsaw')::date + 1, (now() at time zone 'Europe/Warsaw')::date + 5,
-    'run-2', '{}'::jsonb,
+    'run-2', '{"run_id":"run-2"}'::jsonb,
     jsonb_build_array(
       jsonb_build_object('meal_date', (now() at time zone 'Europe/Warsaw')::date + 1, 'meal_type', 'lunch',
         'variant_index', 0, 'provider_meal_id', 'X', 'name', 'X', 'score', 6, 'is_recommended', false),
@@ -218,14 +220,14 @@ select is(
 reset role;
 
 select ok(
-  (select saved_at is null from public.weekly_plans where id = '10000000-0000-0000-0000-000000000001'),
-  're-delivery resets saved_at to null'
+  (select saved_at is not null from public.weekly_plans where id = '10000000-0000-0000-0000-000000000001'),
+  're-delivery keeps saved_at of a saved plan'
 );
 select results_eq(
   $$ select provider_meal_id, meal_type, is_chosen from public.plan_meal_options
       where plan_id = '10000000-0000-0000-0000-000000000001' order by meal_type, variant_index $$,
   $$ values ('Z', 'dinner', true), ('X', 'lunch', false), ('Y', 'lunch', true) $$,
-  're-delivery resets is_chosen to is_recommended'
+  're-delivery keeps the swapped Y chosen (also the new recommendation) and Z'
 );
 
 -- First delivery of a new week.

@@ -124,7 +124,7 @@ No secondary persona for MVP — mo-web has only one type of user (no roles/admi
 #### Acceptance Criteria
 
 - Only that week's recommendation is replaced; other weeks and history are unaffected.
-- (nice-to-have, FR-018) If the user has already saved their plan for that week, their saved choices are kept.
+- (FR-018) If the user has already saved their plan for that week, their saved choices are kept.
 
 ### US-08: User rates recently eaten meals (nice-to-have, FR-013)
 
@@ -190,7 +190,9 @@ A plan moves through three states, clarified during the FR Socrates round and re
 
 - FR-017: When MO submits data for a week it already sent (meals identical, but LLM-generated scoring/comments may differ), the latest submission overwrites the previously stored recommendation for that week. Priority: must-have
   > Update (2026-09-23): confirmed. Until FR-018 is built, this also overwrites a plan the user has already saved or swapped for that week. FR-018 adds the rules for when overwriting is not allowed.
+  > Update (2026-10-06): FR-018 is now built together with FR-017 (S-06), so a re-send no longer overwrites a saved or swapped plan's choices.
 - FR-018: If the user has already saved/swapped their plan for that week (FR-010) before a later re-submission arrives, the re-submission does not overwrite the user's saved choices. Priority: nice-to-have
+  > Update (2026-10-06): pulled into M-1 with S-06. The new scores and comments are stored; in each meal slot the user's chosen meal is kept when the re-sent week still offers it, otherwise MO's new recommendation is chosen, and the plan stays saved.
 
 ### Operations
 
