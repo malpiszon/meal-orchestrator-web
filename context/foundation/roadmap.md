@@ -267,7 +267,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-07       | [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10) | plan-history-list         | Chronological list of past plans                             | yes                   | Nice-to-have                              |
 | S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals         | Rate meals from the last 7 days                              | yes                   | Nice-to-have                              |
 | S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page              | Sign-in landing page with login and password reset           | yes                   | Run `/10x-plan landing-page`              |
-| S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice       | Show an expired invite/reset link as soon as it's opened     | yes                   | Run `/10x-plan expired-link-notice`       |
+| S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice       | Show an expired invite/reset link as soon as it's opened     | done                  | Archived 2026-10-06                       |
 
 ## Open Roadmap Questions
 
@@ -292,6 +292,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **FR-018 keep saved choices on re-submission** — Why parked: nice-to-have; speed goal. S-06 overwrites saved plans until this is picked up.
 - **Smarter tie-break between equally scored options** — Why parked: nice-to-have, outside the MVP (decided while planning S-01, 2026-09-30). S-01 recommends the highest-scored option and breaks ties by menu order (first listed wins); a later slice may resolve ties better (e.g. prefer the option not recently eaten, or let MO send an explicit pick).
 - **Invite email failure handling** — Why parked: nice-to-have, outside the MVP (decided while planning S-04, 2026-10-04). If the invitation email can't be sent (rate limit, SMTP down), the delivery still returns 200, the failure is only logged, and the account stays unconfirmed with no invitation; the user can use "Forgot password?". Revisit (retry, re-invite on a later delivery, or a visible state) if the user base grows beyond 2–4 people.
+- **Styled invitation and password-reset emails** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06). The templates in `supabase/templates/` are unstyled (a heading, one sentence and a link). When picked up, reuse the styling of MO's own emails rather than designing new styling. Traces to FR-003, FR-005. Email programs can't use the app's Tailwind classes or design tokens, so the styles must be inline. Production templates are pasted by hand into the Supabase dashboard (see README).
+- **General mo-web UI review (logo, visual identity)** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06). An app-wide pass that adds a logo and a consistent look across pages. Its scope differs from S-09, which only replaces the page at `/` with a sign-in page. When picked up, run it through `/10x-ui` one view at a time. It could also give the styled emails above a shared look.
 
 ## Milestone History
 
