@@ -1,10 +1,10 @@
 ---
 change_id: week-resubmission-replace
 title: Week resubmission replace
-status: impl_reviewed
+status: archived
 created: 2026-10-06
 updated: 2026-10-06
-archived_at: null
+archived_at: 2026-10-06T19:55:07Z
 ---
 
 ## Notes
