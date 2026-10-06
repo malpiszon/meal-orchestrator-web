@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-10-05
+updated: 2026-10-06
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -52,7 +52,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready       |
 | S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
 | S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready       |
-| S-10 | expired-link-notice       | user opening an expired or used invite/reset link is told at once and offered a new one    | S-04, S-05    | FR-003, FR-005, US-02, US-04                             | in-progress |
+| S-10 | expired-link-notice       | user opening an expired or used invite/reset link is told at once and offered a new one    | S-04, S-05    | FR-003, FR-005, US-02, US-04                             | done        |
 
 ## Streams
 
@@ -250,7 +250,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - How to tell whether a link is still valid without using up its single-use token (Supabase Auth has no such call; candidate: a database function reading Supabase's own token records and the configured link lifetime, which couples the app to Supabase internals). Confirm on local Supabase while planning. — Owner: agent. Block: no.
 - **Risk:** Requirement change added 2026-10-05, not a bug: S-05/S-04 deliberately use the token only on the form post (mail-scanner prefetch, login CSRF), so expiry surfaced only after submitting. That rule must hold — the check on open must never use the token or sign anyone in — and the post-time error stays as the fallback for a link that expires while the form is open.
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -304,3 +304,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-03: user can swap any meal for another option from that week's menu and save the plan as often as they like until its first day, after which it can no longer be changed.** — Archived 2026-10-03 → `context/archive/2026-10-03-swap-and-save-plan/`. Lesson: —.
 - **S-05: user can request a reset link by email, set a new password, and log in with it.** — Archived 2026-10-04 → `context/archive/2026-10-04-password-reset/`. Lesson: —.
 - **S-04: a user whose account was created by MO's first delivery for their email (S-01) gets an invitation email, sets a password, logs in, and sees only their own plan. This includes accounts S-01 created before this slice shipped. The public sign-up path is gone.** — Archived 2026-10-04 → `context/archive/2026-10-04-invite-on-first-delivery/`. Lesson: —.
+- **S-10: user who opens an invitation or password-reset link that has expired or was already used sees "this link is invalid or has expired" straight away, before typing a password, with a way to get a new link; a valid link still shows the password form.** — Archived 2026-10-06 → `context/archive/2026-10-05-expired-link-notice/`. Lesson: —.
