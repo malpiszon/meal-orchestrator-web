@@ -293,15 +293,15 @@ New function only; no data changes. Push to production after CI is green and bef
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Types check: `npx astro check`
-- [x] 2.4 Build succeeds: `npm run build`
+- [x] 2.1 Unit tests pass: `npm test` — 80a2aa5
+- [x] 2.2 Lint passes: `npm run lint` — 80a2aa5
+- [x] 2.3 Types check: `npx astro check` — 80a2aa5
+- [x] 2.4 Build succeeds: `npm run build` — 80a2aa5
 
 #### Manual
 
-- [x] 2.5 On `npm run dev`: a fresh reset link from Mailpit shows the form; after saving a password, reopening the same link shows the notice and "Ask for a new link"
-- [x] 2.6 Opening a fresh invite link shows "Set your password" with the form; reopening it after use shows the notice
+- [x] 2.5 On `npm run dev`: a fresh reset link from Mailpit shows the form; after saving a password, reopening the same link shows the notice and "Ask for a new link" — 80a2aa5
+- [x] 2.6 Opening a fresh invite link shows "Set your password" with the form; reopening it after use shows the notice — 80a2aa5
 
 ### Phase 3: Smoke, README and production
 

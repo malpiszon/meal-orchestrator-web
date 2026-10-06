@@ -1,14 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isSetPasswordLinkLive } from "@/lib/services/auth-links";
+import { AUTH_LINK_CHECK_TIMEOUT_MS, isSetPasswordLinkLive } from "@/lib/services/auth-links";
 import { AUTH_LINK_LIFETIME_SECONDS, type SetPasswordLink } from "@/lib/set-password";
 
 const TOKEN = "secret-token-hash";
 const link: SetPasswordLink = { token_hash: TOKEN, type: "recovery" };
 
 function clientReturning(result: { data: unknown; error: unknown }) {
-  const rpc = vi.fn(() => Promise.resolve(result));
-  return { rpc, supabase: { rpc } as unknown as SupabaseClient };
+  const abortSignal = vi.fn((_signal: AbortSignal) => Promise.resolve(result));
+  const rpc = vi.fn(() => ({ abortSignal }));
+  return { rpc, abortSignal, supabase: { rpc } as unknown as SupabaseClient };
 }
 
 function warnedText(warn: { mock: { calls: unknown[][] } }): string {
@@ -44,7 +45,7 @@ describe("isSetPasswordLinkLive", () => {
 
   it("fails open when the RPC throws, without logging the token", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const rpc = vi.fn(() => Promise.reject(new Error("fetch failed")));
+    const rpc = vi.fn(() => ({ abortSignal: () => Promise.reject(new Error("fetch failed")) }));
     const supabase = { rpc } as unknown as SupabaseClient;
 
     await expect(isSetPasswordLinkLive(supabase, link)).resolves.toBe(true);
@@ -70,5 +71,14 @@ describe("isSetPasswordLinkLive", () => {
       p_type: "recovery",
       p_lifetime_seconds: AUTH_LINK_LIFETIME_SECONDS,
     });
+  });
+
+  it("bounds the check with a timeout signal", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    const { abortSignal, supabase } = clientReturning({ data: true, error: null });
+
+    await isSetPasswordLinkLive(supabase, link);
+    expect(timeout).toHaveBeenCalledWith(AUTH_LINK_CHECK_TIMEOUT_MS);
+    expect(abortSignal).toHaveBeenCalledWith(timeout.mock.results[0]?.value);
   });
 });
