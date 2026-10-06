@@ -1,7 +1,8 @@
 -- S-06 (week-resubmission-replace): rules for a week MO delivers again. Covers FR-017 and FR-018.
 --
 -- Rules, checked in this order against the user's existing plan for p_week_start (locked first, so a
--- concurrent choose_plan_option or confirm_plan and a re-send serialize):
+-- concurrent choose_plan_option or confirm_plan and a re-send serialize; a week not stored yet is
+-- claimed with an insert that does nothing on conflict, so two concurrent first deliveries serialize too):
 -- - Identical: the stored raw_payload equals p_raw (jsonb equality, so whitespace and key order don't
 --   matter). Returns the existing plan id and writes nothing: received_at, saved_at, mo_run_id and the
 --   option rows stay as they are. An identical retry of a started week is therefore answered too.
@@ -16,7 +17,8 @@
 --     the new delivery offers it there (the lowest variant_index if it is offered more than once),
 --     otherwise MO's new recommendation. A slot new in the re-send gets the recommendation.
 --
--- Body otherwise unchanged from 20261003120000_plan_choices.sql.
+-- The plan row is now inserted or updated separately instead of upserted; the rest of the body is
+-- unchanged from 20261003120000_plan_choices.sql.
 create or replace function public.ingest_weekly_plan(
   p_email text,
   p_provider text,
@@ -37,6 +39,7 @@ declare
   v_existing_raw jsonb;
   v_saved_at timestamptz;
   v_kept jsonb := '[]'::jsonb;
+  v_first boolean := false;
 begin
   select u.id
     into v_user_id
@@ -49,14 +52,31 @@ begin
     raise exception using errcode = 'P0002', message = 'unknown_user';
   end if;
 
-  select p.id, p.raw_payload, p.saved_at
-    into v_plan_id, v_existing_raw, v_saved_at
-    from public.weekly_plans p
-   where p.user_id = v_user_id
-     and p.week_start = p_week_start
-     for update;
+  -- Lock the user's plan for the week. When there is none, claim the week with an insert that does
+  -- nothing on conflict: if a concurrent delivery stored it first, the loop reads it again, now locked,
+  -- so a delivery racing a first delivery still goes through the rules below.
+  loop
+    select p.id, p.raw_payload, p.saved_at
+      into v_plan_id, v_existing_raw, v_saved_at
+      from public.weekly_plans p
+     where p.user_id = v_user_id
+       and p.week_start = p_week_start
+       for update;
+    exit when found;
 
-  if v_plan_id is not null then
+    insert into public.weekly_plans as wp
+      (user_id, provider, week_start, week_end, mo_run_id, raw_payload, received_at)
+    values
+      (v_user_id, p_provider, p_week_start, p_week_end, p_run_id, p_raw, now())
+    on conflict (user_id, week_start) do nothing
+    returning wp.id into v_plan_id;
+    if found then
+      v_first := true;
+      exit;
+    end if;
+  end loop;
+
+  if not v_first then
     if v_existing_raw is not distinct from p_raw then
       return v_plan_id;
     end if;
@@ -76,22 +96,16 @@ begin
        where o.plan_id = v_plan_id
          and o.is_chosen;
     end if;
-  end if;
 
-  -- saved_at: v_saved_at is the locked row's value (kept when saved, null otherwise), or null for a
-  -- first delivery.
-  insert into public.weekly_plans as wp
-    (user_id, provider, week_start, week_end, mo_run_id, raw_payload, received_at)
-  values
-    (v_user_id, p_provider, p_week_start, p_week_end, p_run_id, p_raw, now())
-  on conflict (user_id, week_start) do update
-    set provider = excluded.provider,
-        week_end = excluded.week_end,
-        mo_run_id = excluded.mo_run_id,
-        raw_payload = excluded.raw_payload,
-        received_at = excluded.received_at,
-        saved_at = v_saved_at
-  returning wp.id into v_plan_id;
+    -- saved_at is left alone: kept when saved, and already null otherwise.
+    update public.weekly_plans
+       set provider = p_provider,
+           week_end = p_week_end,
+           mo_run_id = p_run_id,
+           raw_payload = p_raw,
+           received_at = now()
+     where id = v_plan_id;
+  end if;
 
   delete from public.plan_meal_options where plan_id = v_plan_id;
 

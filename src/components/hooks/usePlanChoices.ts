@@ -9,6 +9,8 @@ export function slotKey(date: string, mealType: string): string {
 const LOCKED_MESSAGE = "This plan has started and can't be changed anymore. Reload to see it as this week's plan.";
 const SIGNED_OUT_MESSAGE = "You're signed out. Reload the page and sign in again to save your plan.";
 const FAILED_MESSAGE = "Couldn't save your plan. Please try again.";
+// A 404 after a re-delivery: MO replaced the week's options, so the page's option ids no longer exist.
+const UPDATED_MESSAGE = "This plan was updated. Reload to see the latest version.";
 
 interface UsePlanChoicesOptions {
   planId: string;
@@ -49,7 +51,8 @@ async function postSave(path: string, body: Record<string, string>): Promise<Sav
  * The upcoming week's choices, saved on every change through `/api/plans/choose` and `/api/plans/confirm`.
  * Choices update optimistically and revert on error. Only one request is in flight at a time (`pending`
  * disables every input), so two quick taps can't resolve out of order. A 409 means the week has started:
- * `locked` stays true and the inputs stay disabled.
+ * `locked` stays true and the inputs stay disabled. A 404 means MO re-delivered the week and its options
+ * were re-created: the page asks for a reload but stays interactive.
  */
 export function usePlanChoices({ planId, initialChosen, initialSavedAtLabel, initialRecency }: UsePlanChoicesOptions) {
   const [chosen, setChosen] = useState(initialChosen);
@@ -76,6 +79,8 @@ export function usePlanChoices({ planId, initialChosen, initialSavedAtLabel, ini
       if (result.status === 409) {
         setLocked(true);
         setError(LOCKED_MESSAGE);
+      } else if (result.status === 404) {
+        setError(UPDATED_MESSAGE);
       } else {
         setError(result.status === 401 ? SIGNED_OUT_MESSAGE : FAILED_MESSAGE);
       }

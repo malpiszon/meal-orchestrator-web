@@ -10,6 +10,8 @@ const PROVISIONED_BY = "mo-delivery";
 const EMAIL_EXISTS_CODES = new Set(["email_exists", "user_already_exists"]);
 // Postgres "untranslatable_character": a string Postgres can't store (e.g. "\u0000" in jsonb/text).
 const UNTRANSLATABLE_CHARACTER = "22P05";
+// Postgres "object_not_in_prerequisite_state": ingest_weekly_plan refuses a changed re-send of a started week.
+const OBJECT_NOT_IN_PREREQUISITE_STATE = "55000";
 // A week is ~40 KB (see scripts/fixtures/mo-delivery.sample.json); anything far larger is a bug, not a menu.
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -143,6 +145,11 @@ export const POST: APIRoute = async ({ request }) => {
       },
       400,
     );
+  }
+  if (result.error?.code === OBJECT_NOT_IN_PREREQUISITE_STATE && result.error.message === "week_started") {
+    // MO re-sent a week that has started with a different body: refused, nothing stored, not a storage failure.
+    console.warn(`mo delivery refused: week_started ${delivery.week_start}`);
+    return json({ error: "week_started" }, 409);
   }
   if (result.error) {
     logStorageError("ingest_weekly_plan", result.error);

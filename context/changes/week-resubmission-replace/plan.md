@@ -279,25 +279,25 @@ Each delivery adds one indexed lookup (the unique `(user_id, week_start)`), a js
 
 #### Automated
 
-- [x] 1.1 Local Supabase applies the new migration cleanly: `npx supabase db reset`
-- [x] 1.2 All pgTAP tests pass, including the new file and the adjusted `plan_choices.test.sql`: `npx supabase test db`
+- [x] 1.1 Local Supabase applies the new migration cleanly: `npx supabase db reset` — efbd449
+- [x] 1.2 All pgTAP tests pass, including the new file and the adjusted `plan_choices.test.sql`: `npx supabase test db` — efbd449
 
 #### Manual
 
-- [x] 1.3 In Studio's SQL editor (as `service_role`), an `ingest_weekly_plan` call with a changed body for an already-delivered started week raises `week_started`, and the stored week is unchanged
+- [x] 1.3 In Studio's SQL editor (as `service_role`), an `ingest_weekly_plan` call with a changed body for an already-delivered started week raises `week_started`, and the stored week is unchanged — efbd449
 
 ### Phase 2: Endpoint, page and docs
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Unit tests pass: `npm test`
-- [ ] 2.3 Type check passes: `npx astro check`
-- [ ] 2.4 Build passes: `npm run build`
-- [ ] 2.5 Smoke passes against a preview on :4322 with Mailpit: `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… npm run smoke`
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Unit tests pass: `npm test`
+- [x] 2.3 Type check passes: `npx astro check`
+- [x] 2.4 Build passes: `npm run build`
+- [x] 2.5 Smoke passes against a preview on :4322 with Mailpit: `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… npm run smoke`
 
 #### Manual
 
-- [ ] 2.6 With "Next week" open in the browser, re-deliver that week with a renamed meal via curl, then tap an option: the tap reverts and the page shows "This plan was updated. Reload to see the latest version."; after reload the new meal is shown and a tap saves
-- [ ] 2.7 Re-send the same body via curl after swapping: the swap and "Saved <time>" survive a reload
-- [ ] 2.8 After swapping, re-send the week via curl with changed scores: the swap and the original "Saved <time>" survive a reload; on a never-saved week the same re-send keeps "Not saved yet" and follows the new recommendation
+- [x] 2.6 With "Next week" open in the browser, re-deliver that week with a renamed meal via curl, then tap an option: the tap reverts and the page shows "This plan was updated. Reload to see the latest version."; after reload the new meal is shown and a tap saves
+- [x] 2.7 Re-send the same body via curl after swapping: the swap and "Saved <time>" survive a reload
+- [x] 2.8 After swapping, re-send the week via curl with changed scores: the swap and the original "Saved <time>" survive a reload; on a never-saved week the same re-send keeps "Not saved yet" and follows the new recommendation
