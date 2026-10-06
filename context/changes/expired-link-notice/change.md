@@ -1,7 +1,7 @@
 ---
 change_id: expired-link-notice
 title: Expired link notice on open
-status: implemented
+status: impl_reviewed
 created: 2026-10-05
 updated: 2026-10-06
 archived_at: null
