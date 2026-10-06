@@ -26,6 +26,13 @@ const setPasswordLinkType = z.enum(SET_PASSWORD_LINK_TYPES);
 
 export type SetPasswordLinkType = z.infer<typeof setPasswordLinkType>;
 
+/**
+ * How long an emailed invitation or password-reset link stays usable, in seconds. Must equal
+ * `otp_expiry` under `[auth.email]` in `supabase/config.toml` and the production dashboard's
+ * Email OTP Expiration (Authentication → Providers → Email); a unit test guards the first.
+ */
+export const AUTH_LINK_LIFETIME_SECONDS = 3600;
+
 /** Query of an emailed set-password link: `/auth/set-password?token_hash=…&type=recovery|invite`. */
 export const setPasswordLinkSchema = z.object({
   token_hash: tokenHashSchema,

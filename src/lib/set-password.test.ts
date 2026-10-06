@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  AUTH_LINK_LIFETIME_SECONDS,
   MIN_PASSWORD_LENGTH,
   passwordErrorMessage,
   resetRequestSchema,
@@ -141,5 +143,15 @@ describe("setPasswordUrl", () => {
 
   it("carries only an error for a signed-in retry", () => {
     expect(setPasswordUrl({ error: "Too weak" })).toBe("/auth/set-password?error=Too+weak");
+  });
+});
+
+describe("AUTH_LINK_LIFETIME_SECONDS", () => {
+  it("equals otp_expiry under [auth.email] in supabase/config.toml", () => {
+    const config = readFileSync(new URL("../../supabase/config.toml", import.meta.url), "utf8");
+    const authEmail = /^\[auth\.email\]\n([\s\S]*?)(?=^\[)/m.exec(config)?.[1];
+    const otpExpiry = authEmail && /^otp_expiry\s*=\s*(\d+)/m.exec(authEmail)?.[1];
+    expect(otpExpiry).toBeDefined();
+    expect(Number(otpExpiry)).toBe(AUTH_LINK_LIFETIME_SECONDS);
   });
 });
