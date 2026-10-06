@@ -183,7 +183,8 @@ const CLAIM_PASSWORD = "Smoke-Claim-Passw0rd!";
 // Tokens of the reset links the steps generate or read from Mailpit, kept for the steps that reuse them.
 let recoveryTokenHash, inviteTokenHash, emailLink;
 
-let delivery, newUserDelivery, redelivery, oldName, newName, currentDelivery, currentName, recencyNote, swapName;
+let delivery, newUserDelivery, redelivery, oldName, newName, recencyNote, swapName;
+let currentDelivery, currentRedelivery, currentName;
 // Read from the dashboard HTML by the swap steps.
 let upcomingPlanId, swapOptionId;
 if (!KEEPALIVE_EXPECT_FAILURE) {
@@ -233,6 +234,9 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   currentDelivery = await loadDelivery(email, thisWeek);
   currentName = `Smoke current-week meal ${Date.now()}`;
   currentDelivery.days[0].meals[0].variants[index].name = currentName;
+  // A changed re-send of the current week, which has started, so it must be refused.
+  currentRedelivery = structuredClone(currentDelivery);
+  currentRedelivery.days[0].meals[0].variants[index].name = `Smoke refused current-week meal ${Date.now()}`;
   const gap = daysBetween(thisWeek, nextWeek);
   recencyNote = `In your plan ${gap} days earlier (`;
 }
@@ -520,6 +524,48 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         () => request(CHOOSE, { method: "POST", raw: "not json", headers: { "Content-Type": "application/json" } }),
         { status: 400, body: ["error: invalid_request", (body) => jsonField(body, "error") === "invalid_request"] },
       ],
+      [
+        // Same body as the stored one: a no-op that answers with the existing plan.
+        "identical re-delivery returns the same plan",
+        () => deliver(delivery),
+        {
+          status: 200,
+          body: [
+            "the same plan_id",
+            (body) => upcomingPlanId !== undefined && jsonField(body, "plan_id") === upcomingPlanId,
+          ],
+        },
+      ],
+      [
+        "identical re-delivery keeps the swap",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" has "${swapName}" checked and "Saved "`,
+            (body) => {
+              const { nextWeek } = panels(body);
+              return isRadioChecked(nextWeek, swapOptionId) && nextWeek.includes("Saved ");
+            },
+          ],
+        },
+      ],
+      [
+        "re-delivery of the current week is refused",
+        () => deliver(currentRedelivery),
+        { status: 409, body: ["error: week_started", (body) => jsonField(body, "error") === "week_started"] },
+      ],
+      [
+        "refused re-delivery leaves this week's plan",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"This week" contains "${currentName}"`,
+            (body) => panels(body).thisWeek.includes(escapeHtml(currentName ?? "")),
+          ],
+        },
+      ],
       ["re-delivery of the same week is stored", () => deliver(redelivery), { status: 200 }],
       [
         "dashboard shows the re-delivered week",
@@ -533,19 +579,34 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         },
       ],
       [
-        "re-delivery resets the swap",
+        // The re-sent week keeps its provider_meal_ids, so the saved swap is carried over to the new option rows.
+        "re-delivery keeps the swap",
         () => request("/dashboard"),
         {
           status: 200,
           body: [
-            `"Next week" reads "Not saved yet" and "${swapName}" is not checked`,
+            `"Next week" has "${swapName}" checked and "Saved ", not "Not saved yet"`,
             (body) => {
               const { nextWeek } = panels(body);
               const optionId = radioIdFor(nextWeek, swapName ?? "");
               return (
-                nextWeek.includes("Not saved yet") && optionId !== undefined && !isRadioChecked(nextWeek, optionId)
+                optionId !== undefined &&
+                isRadioChecked(nextWeek, optionId) &&
+                nextWeek.includes("Saved ") &&
+                !nextWeek.includes("Not saved yet")
               );
             },
+          ],
+        },
+      ],
+      [
+        "re-delivery leaves this week alone",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"This week" contains "${currentName}"`,
+            (body) => panels(body).thisWeek.includes(escapeHtml(currentName ?? "")),
           ],
         },
       ],

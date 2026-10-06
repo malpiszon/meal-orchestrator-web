@@ -27,7 +27,7 @@ gh_milestone: "M-1: Weekly plan loop with memory"
 - **Intent:** MO's weekly recommendation lands in mo-web alongside the existing email; invited users see it annotated with how recently each meal appeared in their own history, adjust it within that week's menu, and every plan becomes history automatically when the next week arrives.
 - **Source materials:** `context/foundation/prd.md` (v1)
 - **Done when:** every F-NN and S-NN below is `done`.
-- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-018, FR-019.
+- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017, FR-018; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-019.
 
 ## Vision recap
 
@@ -48,7 +48,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-03 | swap-and-save-plan        | user can swap meals within the week's menu and save the plan until its first day           | S-01          | FR-009, FR-010, US-01                                    | done        |
 | S-04 | invite-on-first-delivery  | a new MO user gets an invitation, sets a password and logs in to their own dashboard       | S-01, F-01    | FR-002, FR-003, FR-004, US-02, US-03                     | done        |
 | S-05 | password-reset            | user can reset a forgotten password from an emailed link and log in again                  | F-01          | FR-005, US-04                                            | done        |
-| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation                     | S-01, S-03    | FR-017, US-07                                            | ready       |
+| S-06 | week-resubmission-replace | a re-sent week from MO replaces only that week's stored recommendation, keeping saved choices | S-01, S-03    | FR-017, FR-018, US-07                                    | in-progress |
 | S-07 | plan-history-list         | user can browse all past plans as a simple chronological list                              | S-02          | FR-012                                                   | ready       |
 | S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
 | S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready       |
@@ -187,17 +187,17 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ### S-06: Re-sent week replaces the stored recommendation
 
-- **Outcome:** when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation (including a saved plan, until FR-018 is built) and leaves other weeks and history untouched.
+- **Outcome:** when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation and leaves other weeks and history untouched; if the user already saved or swapped that week, each chosen meal still offered is kept (FR-018, folded in 2026-10-06 while planning S-06).
 - **Change ID:** week-resubmission-replace
 - **Issue:** [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)
-- **PRD refs:** FR-017, US-07
+- **PRD refs:** FR-017, FR-018, US-07
 - **Prerequisites:** S-01, S-03
 - **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09, S-10
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Follows S-03 so the overwrite behaviour over saved/swapped plans is tested against real saved state rather than assumed.
 - **Handoff from S-03:** re-delivery already resets the week: `ingest_weekly_plan` re-creates the option rows with the user's choice back on MO's recommendation and sets `saved_at` to null (`supabase/migrations/20261003120000_plan_choices.sql`; pgTAP in `supabase/tests/plan_choices.test.sql`, smoke step "re-delivery resets the swap"). S-06 should confirm the remaining FR-017 / US-07 behaviour (other weeks and history untouched) rather than rebuild the reset.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-07: Browse plan history
 
@@ -289,7 +289,6 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **FR-006 multi-factor login** — Why parked: nice-to-have; speed goal.
 - **FR-014 / FR-015 nutritional summaries and comparison** — Why parked: nice-to-have; blocked by Open Roadmap Question 2.
 - **FR-016 import of MO's historical logs** — Why parked: nice-to-have, exploratory; blocked by Open Roadmap Question 3.
-- **FR-018 keep saved choices on re-submission** — Why parked: nice-to-have; speed goal. S-06 overwrites saved plans until this is picked up.
 - **Smarter tie-break between equally scored options** — Why parked: nice-to-have, outside the MVP (decided while planning S-01, 2026-09-30). S-01 recommends the highest-scored option and breaks ties by menu order (first listed wins); a later slice may resolve ties better (e.g. prefer the option not recently eaten, or let MO send an explicit pick).
 - **Invite email failure handling** — Why parked: nice-to-have, outside the MVP (decided while planning S-04, 2026-10-04). If the invitation email can't be sent (rate limit, SMTP down), the delivery still returns 200, the failure is only logged, and the account stays unconfirmed with no invitation; the user can use "Forgot password?". Revisit (retry, re-invite on a later delivery, or a visible state) if the user base grows beyond 2–4 people.
 - **Styled invitation and password-reset emails** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06). The templates in `supabase/templates/` are unstyled (a heading, one sentence and a link). When picked up, reuse the styling of MO's own emails rather than designing new styling. Traces to FR-003, FR-005. Email programs can't use the app's Tailwind classes or design tokens, so the styles must be inline. Production templates are pasted by hand into the Supabase dashboard (see README).
