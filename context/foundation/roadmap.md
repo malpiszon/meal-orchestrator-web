@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-10-06
+updated: 2026-10-07
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -53,6 +53,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
 | S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready       |
 | S-10 | expired-link-notice       | user opening an expired or used invite/reset link is told at once and offered a new one    | S-04, S-05    | FR-003, FR-005, US-02, US-04                             | done        |
+| S-11 | recency-from-saved-plans  | user sees recency notes only for meals from plans they saved, never from plans they ignored | S-02, S-03    | FR-008, FR-010, FR-011, US-01, US-06                     | in-progress |
 
 ## Streams
 
@@ -60,8 +61,8 @@ Navigation aid — groups items that share a Prerequisites chain. Canonical orde
 
 | Stream | Theme             | Chain                                    | Note                                                                                     |
 | ------ | ----------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
-| A      | Delivery → memory | `S-01` → `S-02` → `S-07`, `S-08`         | Critical path to the north star; speed goal puts every other stream behind or beside it. |
-| B      | Plan editing      | `S-03` → `S-06`                          | Joins Stream A at `S-01`; runs in parallel with `S-02`.                                  |
+| A      | Delivery → memory | `S-01` → `S-02` → `S-07`, `S-08`, `S-11` | Critical path to the north star; speed goal puts every other stream behind or beside it. |
+| B      | Plan editing      | `S-03` → `S-06`                          | Joins Stream A at `S-01`; runs in parallel with `S-02`; `S-11` (Stream A) needs `S-03`.  |
 | C      | Accounts & access | `F-01` → `S-04`, `S-05` → `S-09`, `S-10` | `S-04` joins Stream A at `S-01`; `F-01` and `S-05` can start immediately.                |
 | D      | Operations        | `F-02`                                   | Standalone; must land before real users rely on weekly delivery.                         |
 
@@ -206,7 +207,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10)
 - **PRD refs:** FR-012
 - **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08, S-09, S-10
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08, S-09, S-10, S-11
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have (secondary success criterion); scoped to a plain list with no filtering or search.
@@ -219,7 +220,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11)
 - **PRD refs:** FR-013, US-08
 - **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07, S-09, S-10
+- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07, S-09, S-10, S-11
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have, last in line under the speed goal; the rating window is governed by each meal's date, not the plan's state, which is easy to get wrong.
@@ -232,7 +233,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Issue:** [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18)
 - **PRD refs:** FR-004, FR-005, US-03, US-04
 - **Prerequisites:** S-05
-- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08, S-10
+- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08, S-10, S-11
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Not a marketing page: no pitch or ad copy, just a pleasant entry point. Build it through the Core Skills Chain (`/10x-new` → `/10x-research` → `/10x-plan` → `/10x-implement`), then polish with `/10x-ui`. Must not link to `/auth/signup`, which S-04 removed. The login and reset paths from `/` need a test, not only a manual check.
@@ -252,6 +253,20 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Risk:** Requirement change added 2026-10-05, not a bug: S-05/S-04 deliberately use the token only on the form post (mail-scanner prefetch, login CSRF), so expiry surfaced only after submitting. That rule must hold — the check on open must never use the token or sign anyone in — and the post-time error stays as the fallback for a link that expires while the form is open.
 - **Status:** done
 
+
+### S-11: Recency notes from saved plans only
+
+- **Outcome:** user sees "In your plan N days earlier" only for meals from plans they saved (swapped at least once or kept as recommended); a plan they never saved produces no recency notes. That includes past weeks the user never saved or never could (delivered before saving existed, or too late to edit) and the upcoming week before it is saved.
+- **Change ID:** recency-from-saved-plans
+- **Issue:** [#78](https://github.com/malpiszon/meal-orchestrator-web/issues/78)
+- **PRD refs:** FR-008, FR-010, FR-011, US-01, US-06
+- **Prerequisites:** S-02, S-03
+- **Parallel with:** S-07, S-08, S-09
+- **Blockers:** —
+- **Unknowns:** —
+- **Risk:** Requirement change from first user feedback (2026-10-06), not a bug: S-02 counted every past plan, so MO's top picks of an ignored week read as meals the user had. Better no reminder than a false one. The rule is the same everywhere, including earlier days of the upcoming week until it is saved. No hint on the dashboard (decided 2026-10-06; the status line already says "Not saved yet"). A never-saved plan still becomes history (FR-011) and still counts once the user saves it. Applies to all existing history at once, so history from before saving existed (S-03) stops producing notes. Sequenced before S-09 because it stops a wrong statement on the north-star screen.
+- **Status:** in-progress
+
 ## Backlog Handoff
 
 | Roadmap ID | Issue                                                               | Change ID                 | Suggested issue title                                        | Ready for `/10x-plan` | Notes                                     |
@@ -268,6 +283,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals         | Rate meals from the last 7 days                              | yes                   | Nice-to-have                              |
 | S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page              | Sign-in landing page with login and password reset           | yes                   | Run `/10x-plan landing-page`              |
 | S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice       | Show an expired invite/reset link as soon as it's opened     | done                  | Archived 2026-10-06                       |
+| S-11       | [#78](https://github.com/malpiszon/meal-orchestrator-web/issues/78) | recency-from-saved-plans  | Recency notes only from plans the user saved                 | yes                   | Run `/10x-plan recency-from-saved-plans` before S-09 |
 
 ## Open Roadmap Questions
 
