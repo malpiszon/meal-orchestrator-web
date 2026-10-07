@@ -171,23 +171,23 @@ Applied to production with `npx supabase db push` before merge. Behavior changes
 
 #### Automated
 
-- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [x] 1.2 pgTAP suite passes, including the updated recency test: `npx supabase test db`
-- [x] 1.3 Lint and type check pass: `npm run lint && npx astro check`
-- [x] 1.4 Unit tests pass: `npm test`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset` — c02ef72
+- [x] 1.2 pgTAP suite passes, including the updated recency test: `npx supabase test db` — c02ef72
+- [x] 1.3 Lint and type check pass: `npm run lint && npx astro check` — c02ef72
+- [x] 1.4 Unit tests pass: `npm test` — c02ef72
 
 #### Manual
 
-- [x] 1.5 In local Studio, `get_plan_recency` for a user with one saved and one unsaved earlier plan returns rows only for the saved one
+- [x] 1.5 In local Studio, `get_plan_recency` for a user with one saved and one unsaved earlier plan returns rows only for the saved one — c02ef72
 
 ### Phase 2: Smoke script, README and roadmap
 
 #### Automated
 
-- [ ] 2.1 Build and checks pass: `npm run lint && npx astro check && npm run build`
-- [ ] 2.2 Smoke passes against the production preview on port 4322 with the local Supabase stack
+- [x] 2.1 Build and checks pass: `npm run lint && npx astro check && npm run build`
+- [x] 2.2 Smoke passes against the production preview on port 4322 with the local Supabase stack
 
 #### Manual
 
-- [ ] 2.3 README walkthrough on a local stack: later week shows a note only after the earlier week is saved
-- [ ] 2.4 Saving an unsaved upcoming plan makes notes for its own repeated meals appear without reload
+- [x] 2.3 README walkthrough on a local stack: later week shows a note only after the earlier week is saved
+- [x] 2.4 Saving an unsaved upcoming plan makes notes for its own repeated meals appear without reload
