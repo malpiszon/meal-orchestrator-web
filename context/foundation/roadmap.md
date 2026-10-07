@@ -53,7 +53,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-08 | rate-recent-meals         | user can rate meals from today or the previous 7 days and see their rating in annotations  | S-02          | FR-013, US-08                                            | ready       |
 | S-09 | landing-page              | user lands on a styled sign-in page at `/` and can log in or start a password reset        | S-05          | FR-004, FR-005, US-03, US-04                             | ready       |
 | S-10 | expired-link-notice       | user opening an expired or used invite/reset link is told at once and offered a new one    | S-04, S-05    | FR-003, FR-005, US-02, US-04                             | done        |
-| S-11 | recency-from-saved-plans  | user sees recency notes only for meals from plans they saved, never from plans they ignored | S-02, S-03    | FR-008, FR-010, FR-011, US-01, US-06                     | in-progress |
+| S-11 | recency-from-saved-plans  | user sees recency notes only for meals from plans they saved, never from plans they ignored | S-02, S-03    | FR-008, FR-010, FR-011, US-01, US-06                     | done        |
 
 ## Streams
 
@@ -265,7 +265,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Requirement change from first user feedback (2026-10-06), not a bug: S-02 counted every past plan, so MO's top picks of an ignored week read as meals the user had. Better no reminder than a false one. The rule is the same everywhere, including earlier days of the upcoming week until it is saved. No hint on the dashboard (decided 2026-10-06; the status line already says "Not saved yet"). A never-saved plan still becomes history (FR-011) and still counts once the user saves it. Applies to all existing history at once, so history from before saving existed (S-03) stops producing notes. Sequenced before S-09 because it stops a wrong statement on the north-star screen.
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -324,3 +324,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-04: a user whose account was created by MO's first delivery for their email (S-01) gets an invitation email, sets a password, logs in, and sees only their own plan. This includes accounts S-01 created before this slice shipped. The public sign-up path is gone.** — Archived 2026-10-04 → `context/archive/2026-10-04-invite-on-first-delivery/`. Lesson: —.
 - **S-10: user who opens an invitation or password-reset link that has expired or was already used sees "this link is invalid or has expired" straight away, before typing a password, with a way to get a new link; a valid link still shows the password form.** — Archived 2026-10-06 → `context/archive/2026-10-05-expired-link-notice/`. Lesson: —.
 - **S-06: when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation and leaves other weeks and history untouched; if the user already saved or swapped that week, each chosen meal still offered is kept (FR-018, folded in 2026-10-06 while planning S-06).** — Archived 2026-10-06 → `context/archive/2026-10-06-week-resubmission-replace/`. Lesson: —.
+- **S-11: user sees "In your plan N days earlier" only for meals from plans they saved (swapped at least once or kept as recommended); a plan they never saved produces no recency notes. That includes past weeks the user never saved or never could (delivered before saving existed, or too late to edit) and the upcoming week before it is saved.** — Archived 2026-10-07 → `context/archive/2026-10-07-recency-from-saved-plans/`. Lesson: —.
