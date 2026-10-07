@@ -184,10 +184,10 @@ Applied to production with `npx supabase db push` before merge. Behavior changes
 
 #### Automated
 
-- [x] 2.1 Build and checks pass: `npm run lint && npx astro check && npm run build`
-- [x] 2.2 Smoke passes against the production preview on port 4322 with the local Supabase stack
+- [x] 2.1 Build and checks pass: `npm run lint && npx astro check && npm run build` — 9e3d9d0
+- [x] 2.2 Smoke passes against the production preview on port 4322 with the local Supabase stack — 9e3d9d0
 
 #### Manual
 
-- [x] 2.3 README walkthrough on a local stack: later week shows a note only after the earlier week is saved
-- [x] 2.4 Saving an unsaved upcoming plan makes notes for its own repeated meals appear without reload
+- [x] 2.3 README walkthrough on a local stack: later week shows a note only after the earlier week is saved — 9e3d9d0
+- [x] 2.4 Saving an unsaved upcoming plan makes notes for its own repeated meals appear without reload — 9e3d9d0
