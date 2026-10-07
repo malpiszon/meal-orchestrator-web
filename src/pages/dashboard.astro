@@ -5,7 +5,7 @@ import NothingThisWeek from "@/components/plan/NothingThisWeek.astro";
 import PlanTabs from "@/components/plan/PlanTabs";
 import UpcomingWeekEditor, { type EditorDay, type EditorOption } from "@/components/plan/UpcomingWeekEditor";
 import WeekPlan from "@/components/plan/WeekPlan.astro";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatDayLabel,
@@ -85,11 +85,16 @@ const upcomingDays: EditorDay[] = upcomingPlan
           <h1 class="text-2xl font-semibold">Your meals</h1>
           <p class="truncate text-sm text-muted-foreground">{user?.email}</p>
         </div>
-        <form method="POST" action="/api/auth/signout">
-          <Button type="submit" variant="outline" size="sm">
-            Sign out
-          </Button>
-        </form>
+        <div class="flex shrink-0 items-center gap-2">
+          <a href="/history" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+            History
+          </a>
+          <form method="POST" action="/api/auth/signout">
+            <Button type="submit" variant="outline" size="sm">
+              Sign out
+            </Button>
+          </form>
+        </div>
       </header>
 
       {loadFailed ? (

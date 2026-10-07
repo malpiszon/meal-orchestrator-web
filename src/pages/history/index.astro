@@ -1,0 +1,70 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatWeekRange, todayInWarsaw } from "@/lib/plans";
+import { getPastPlans } from "@/lib/services/plans";
+import { createClient } from "@/lib/supabase";
+import type { PastPlanSummary } from "@/types";
+
+const { user } = Astro.locals;
+
+// A week is past from the Monday after it ends, judged in Europe/Warsaw (see `getPastPlans`).
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+let pastPlans: PastPlanSummary[] = [];
+let loadFailed = false;
+if (supabase && user) {
+  try {
+    pastPlans = await getPastPlans(supabase, user.id, todayInWarsaw(new Date()));
+  } catch (error) {
+    // Code and message only (see the plan services); no user data.
+    console.error(`history load failed: ${error instanceof Error ? error.message : String(error)}`);
+    loadFailed = true;
+  }
+}
+---
+
+<Layout title="Past plans">
+  <main class="min-h-screen bg-background text-foreground">
+    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 sm:py-8">
+      <header class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">Past plans</h1>
+        <a href="/dashboard" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+          Back to your meals
+        </a>
+      </header>
+
+      {loadFailed ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>Couldn't load your history</h2>
+            </CardTitle>
+            <CardDescription>Something went wrong on our side. Please reload the page in a moment.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : pastPlans.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>No past plans yet</h2>
+            </CardTitle>
+            <CardDescription>Each week's plan shows up here once the week has ended.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        <ul class="flex flex-col divide-y rounded-xl border bg-card text-card-foreground">
+          {pastPlans.map((plan) => (
+            <li class="flex items-center justify-between gap-4 px-4 py-3">
+              <a href={`/history/${plan.id}`} class="font-medium underline-offset-4 hover:underline">
+                {formatWeekRange(plan.week_start, plan.week_end)}
+              </a>
+              {plan.saved_at ? <Badge>Saved</Badge> : <Badge variant="outline">Not saved</Badge>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </main>
+</Layout>

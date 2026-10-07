@@ -183,3 +183,8 @@ export function formatSavedAt(isoTimestamp: string): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${SHORT_WEEKDAYS[weekday]} ${day} ${SHORT_MONTHS[month - 1]}, ${pad(part("hour"))}:${pad(part("minute"))}`;
 }
+
+/** The eyebrow of a past week: e.g. "Saved Fri 9 Oct, 18:42", or "Not saved: MO's recommendation". */
+export function formatPlanSavedStatus(savedAt: string | null): string {
+  return savedAt ? `Saved ${formatSavedAt(savedAt)}` : "Not saved: MO's recommendation";
+}
