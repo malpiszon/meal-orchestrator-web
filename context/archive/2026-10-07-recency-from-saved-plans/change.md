@@ -1,9 +1,10 @@
 ---
 change_id: recency-from-saved-plans
 title: Recency notes from saved plans only
-status: impl_reviewed
+status: archived
 created: 2026-10-07
 updated: 2026-10-07
+archived_at: 2026-10-07T17:58:10Z
 ---
 
 ## Notes
