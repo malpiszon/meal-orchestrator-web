@@ -638,13 +638,13 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         {
           status: 200,
           body: [
-            `"Next week" contains "${recencyNote}", not on "${newName}", and "This week" has no note`,
+            `"Next week" has "${recencyNote}" on "${swapName}", not on "${newName}", and "This week" has no note`,
             (body) => {
               const { thisWeek, nextWeek } = panels(body);
               const swappedAway = optionLabelFor(nextWeek, newName ?? "");
               return (
                 !thisWeek.includes("In your plan") &&
-                nextWeek.includes(recencyNote ?? "") &&
+                optionLabelFor(nextWeek, swapName ?? "").includes(recencyNote ?? "") &&
                 swappedAway !== "" &&
                 !swappedAway.includes("In your plan")
               );

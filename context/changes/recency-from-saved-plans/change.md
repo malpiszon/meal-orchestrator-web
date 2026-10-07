@@ -1,7 +1,7 @@
 ---
 change_id: recency-from-saved-plans
 title: Recency notes from saved plans only
-status: implemented
+status: impl_reviewed
 created: 2026-10-07
 updated: 2026-10-07
 ---

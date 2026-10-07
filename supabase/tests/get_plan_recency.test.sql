@@ -9,14 +9,13 @@ insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@test.local'),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'b@test.local');
 
--- Plans 1, 2, 3 and B's are saved, so they count as history. Plans 4 and 5 are never saved: 4 is an earlier
--- week, 5 is a week that has already started (too late to edit) and was never saved.
+-- Plans 1, 2, 3 and B's are saved, so they count as history. Plan 4 is a never-saved earlier week (this
+-- includes a week that has already started, which can no longer be saved: the function only reads saved_at).
 insert into public.weekly_plans (id, user_id, provider, week_start, week_end, raw_payload, saved_at) values
   ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', 'ntfy', '2026-10-05', '2026-10-09', '{}', '2026-10-01 10:00:00+00'),
   ('10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', 'ntfy', '2026-10-12', '2026-10-16', '{}', '2026-10-02 10:00:00+00'),
   ('10000000-0000-0000-0000-000000000003', 'aaaaaaaa-0000-0000-0000-000000000001', 'other', '2026-09-28', '2026-10-02', '{}', '2026-09-25 10:00:00+00'),
   ('10000000-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', 'ntfy', '2026-09-21', '2026-09-25', '{}', null),
-  ('10000000-0000-0000-0000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000001', 'ntfy', '2026-09-14', '2026-09-18', '{}', null),
   ('20000000-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002', 'ntfy', '2026-10-05', '2026-10-09', '{}', '2026-10-01 10:00:00+00');
 
 insert into public.plan_meal_options
@@ -34,8 +33,6 @@ values
   ('b1000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002', '2026-10-10', 'lunch', 0, 'X', 'X', 8, true, true),
   -- User A, never-saved earlier week: N chosen (MO's recommendation), must not count.
   ('a4000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000004', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-09-21', 'lunch', 0, 'N', 'N', 8, true, true),
-  -- User A, started and never-saved week (too late to edit): T chosen, must not count.
-  ('a5000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000005', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-09-14', 'dinner', 0, 'T', 'T', 8, true, true),
   -- User A, the annotated week.
   ('a2000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-12', 'lunch', 0, 'Y', 'Y', 9, true, true),
   ('a2000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-12', 'lunch', 1, 'X', 'X', 7, false, false),
@@ -44,9 +41,8 @@ values
   ('a2000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-13', 'dinner', 0, 'Z', 'Z', 7, true, true),
   ('a2000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-14', 'lunch', 0, 'V', 'V', 9, true, true),
   ('a2000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-14', 'lunch', 1, 'W', 'W', 7, false, false),
-  -- Meals whose only earlier plans were never saved.
-  ('a2000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-15', 'lunch', 0, 'N', 'N', 9, true, true),
-  ('a2000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-15', 'dinner', 0, 'T', 'T', 9, true, true);
+  -- A meal whose only earlier plan was never saved.
+  ('a2000000-0000-0000-0000-000000000008', '10000000-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', '2026-10-15', 'lunch', 0, 'N', 'N', 9, true, true);
 
 select ok(
   not has_function_privilege('anon', 'public.get_plan_recency(uuid)', 'execute'),
@@ -89,8 +85,8 @@ select results_eq(
 
 select is_empty(
   $$ select 1 from public.get_plan_recency('10000000-0000-0000-0000-000000000002')
-      where option_id in ('a2000000-0000-0000-0000-000000000008', 'a2000000-0000-0000-0000-000000000009') $$,
-  'no note for meals chosen only in a never-saved plan, nor in a started plan that was never saved'
+      where option_id = 'a2000000-0000-0000-0000-000000000008' $$,
+  'no note for a meal chosen only in a never-saved plan'
 );
 
 -- Fixture changes run as the table owner: authenticated users cannot update weekly_plans directly.
