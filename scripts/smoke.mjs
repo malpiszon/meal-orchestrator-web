@@ -195,6 +195,11 @@ let recoveryTokenHash, inviteTokenHash, emailLink;
 
 let delivery, newUserDelivery, redelivery, laterDelivery, oldName, newName, recencyNote, swapName;
 let currentDelivery, currentRedelivery, currentName;
+// The week before the current one: past, so /history lists it. It is never saved, so it gives no recency notes.
+// The same week for the account a delivery creates, which the smoke user must not be able to open.
+let pastDelivery, otherPastDelivery, pastName;
+// From the delivery responses, for the history steps.
+let pastPlanId, otherPastPlanId, currentPlanId, upcomingDeliveryPlanId;
 // Read from the dashboard HTML by the swap steps.
 let upcomingPlanId, swapOptionId;
 if (!KEEPALIVE_EXPECT_FAILURE) {
@@ -246,6 +251,13 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   // A changed re-send of the current week, which has started, so it must be refused.
   currentRedelivery = structuredClone(currentDelivery);
   currentRedelivery.days[0].meals[0].variants[index].name = `Smoke refused current-week meal ${Date.now()}`;
+
+  // The past week, with the meal renamed there too, so its week page can only pass on its own data.
+  const pastWeek = isoDate(Date.parse(`${thisWeek}T00:00:00Z`) - 7 * MS_PER_DAY);
+  pastDelivery = await loadDelivery(email, pastWeek);
+  pastName = `Smoke past-week meal ${Date.now()}`;
+  pastDelivery.days[0].meals[0].variants[index].name = pastName;
+  otherPastDelivery = await loadDelivery(newUserDelivery.user.email, pastWeek);
 
   // History: the upcoming week, once the swap step has saved it. A week 7 days after it, with the same
   // meals (their ids repeat) and the re-delivered recommended meal's name, is annotated against it: each
@@ -353,6 +365,20 @@ function showsInvalidLinkNotice(body) {
   return body.includes("This link is invalid or has expired") && !body.includes(`action="${SET_PASSWORD}"`);
 }
 
+/** The `/history` list item that links to the past plan `planId`, or `""` if none does. */
+function historyItemFor(body, planId) {
+  const item = body
+    .split(/<li\b/)
+    .slice(1)
+    .find((part) => part.includes(`href="/history/${planId}"`));
+  return item?.slice(0, item.indexOf("</li>")) ?? "";
+}
+
+/** Whether `body` shows the label of a plan that was never saved; Astro may escape its `'` either way. */
+function showsNotSavedLabel(body) {
+  return ["MO&#39;s", "MO&#x27;s", "MO's"].some((mo) => body.includes(`Not saved: ${mo} recommendation`));
+}
+
 /** `location` parsed against BASE_URL, so relative and absolute redirects read the same. */
 const locationUrl = (location) => new URL(location || "/", BASE_URL);
 
@@ -401,6 +427,12 @@ const steps = KEEPALIVE_EXPECT_FAILURE
   : [
       ["home renders", () => request("/"), { status: 200 }],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+      ["history redirects anonymous user", () => request("/history"), { status: 302, location: "/auth/signin" }],
+      [
+        "history week page redirects anonymous user",
+        () => request("/history/not-a-uuid"),
+        { status: 302, location: "/auth/signin" },
+      ],
       ["admin creates the smoke user", createSmokeUser, { status: 200 }],
       [
         "signin rejects wrong password",
@@ -416,6 +448,12 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         "dashboard shows no upcoming plan yet",
         () => request("/dashboard"),
         { status: 200, body: ["contains 'No upcoming plan yet'", (body) => body.includes("No upcoming plan yet")] },
+      ],
+      [
+        // The smoke user is new on every run, so no earlier run's past weeks can show up here.
+        "history shows no past plans yet",
+        () => request("/history"),
+        { status: 200, body: ["contains 'No past plans yet'", (body) => body.includes("No past plans yet")] },
       ],
       [
         "delivery without a token is rejected",
@@ -447,7 +485,11 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       ],
       [
         "current-week delivery for the signed-in user is stored",
-        () => deliver(currentDelivery),
+        async () => {
+          const result = await deliver(currentDelivery);
+          currentPlanId = jsonField(result.body, "plan_id");
+          return result;
+        },
         { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
       ],
       [
@@ -463,7 +505,11 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       ],
       [
         "delivery for the signed-in user is stored",
-        () => deliver(delivery),
+        async () => {
+          const result = await deliver(delivery);
+          upcomingDeliveryPlanId = jsonField(result.body, "plan_id");
+          return result;
+        },
         { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
       ],
       [
@@ -485,6 +531,75 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             },
           ],
         },
+      ],
+      [
+        // A first delivery of a started week is stored; only a changed re-send of one is refused.
+        "past-week delivery for the signed-in user is stored",
+        async () => {
+          const result = await deliver(pastDelivery);
+          pastPlanId = jsonField(result.body, "plan_id");
+          return result;
+        },
+        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+      ],
+      [
+        "past-week delivery for another user is stored",
+        async () => {
+          const result = await deliver(otherPastDelivery);
+          otherPastPlanId = jsonField(result.body, "plan_id");
+          return result;
+        },
+        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+      ],
+      [
+        "history lists the past week as not saved",
+        () => request("/history"),
+        {
+          status: 200,
+          body: [
+            `links to /history/<plan_id> marked "Not saved", and not to the current week or the other user's week`,
+            (body) =>
+              pastPlanId !== undefined &&
+              currentPlanId !== undefined &&
+              otherPastPlanId !== undefined &&
+              historyItemFor(body, pastPlanId).includes("Not saved") &&
+              historyItemFor(body, currentPlanId) === "" &&
+              historyItemFor(body, otherPastPlanId) === "",
+          ],
+        },
+      ],
+      [
+        "history week page shows its meal",
+        () => (pastPlanId ? request(`/history/${pastPlanId}`) : stepFailure("no past plan_id")),
+        {
+          status: 200,
+          body: [
+            `contains "${pastName}" and "Not saved: MO's recommendation"`,
+            (body) => body.includes(escapeHtml(pastName ?? "")) && showsNotSavedLabel(body),
+          ],
+        },
+      ],
+      [
+        // The boundary week: "This week" until the Monday after it ends, so never in history before then.
+        "history hides the current week",
+        () => (currentPlanId ? request(`/history/${currentPlanId}`) : stepFailure("no current plan_id")),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
+      ],
+      [
+        "history hides another user's past week",
+        () => (otherPastPlanId ? request(`/history/${otherPastPlanId}`) : stepFailure("no other user's plan_id")),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
+      ],
+      [
+        "history hides the upcoming week",
+        () =>
+          upcomingDeliveryPlanId ? request(`/history/${upcomingDeliveryPlanId}`) : stepFailure("no upcoming plan_id"),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
+      ],
+      [
+        "history rejects a malformed id",
+        () => request("/history/not-a-uuid"),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
       ],
       [
         "choose without session is rejected",

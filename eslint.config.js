@@ -79,7 +79,7 @@ const scriptsConfig = defineConfig({
   rules: { "no-console": "off" },
 });
 
-// Cron logs, failed MO deliveries, failed dashboard plan loads, rejected email links, failed reset requests,
+// Cron logs, failed MO deliveries, failed dashboard and history loads, rejected email links, failed reset requests,
 // failed password saves, failed plan saves, PGRST303 retries and skipped email-link checks are only observable through
 // Workers Logs.
 const workerConfig = defineConfig({
@@ -87,6 +87,7 @@ const workerConfig = defineConfig({
     "src/worker.ts",
     "src/pages/api/mo/**/*.ts",
     "src/pages/dashboard.astro",
+    "src/pages/history/**/*.astro",
     "src/pages/api/auth/confirm.ts",
     "src/pages/api/auth/forgot-password.ts",
     "src/pages/api/auth/set-password.ts",

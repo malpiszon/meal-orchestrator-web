@@ -66,6 +66,15 @@ export interface WeeklyPlan {
   plan_meal_options: PlanMealOption[];
 }
 
+/** A `weekly_plans` row as the history list reads it: no options. */
+export interface PastPlanSummary {
+  id: string;
+  week_start: string;
+  week_end: string;
+  /** `null` when the plan was never saved. */
+  saved_at: string | null;
+}
+
 /** One meal slot of a day: the chosen option, the others and all options, best first. */
 export interface PlanSlot<T = PlanMealOption> {
   mealType: MealType;

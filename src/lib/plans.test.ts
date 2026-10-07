@@ -3,6 +3,7 @@ import {
   addDays,
   formatDayLabel,
   formatEditableUntil,
+  formatPlanSavedStatus,
   formatRecency,
   formatSavedAt,
   formatWeekRange,
@@ -264,5 +265,15 @@ describe("formatSavedAt", () => {
 
   it("moves to the next Warsaw day near midnight and pads the time", () => {
     expect(formatSavedAt("2026-12-31T23:05:00Z")).toBe("Fri 1 Jan, 00:05");
+  });
+});
+
+describe("formatPlanSavedStatus", () => {
+  it("shows the Warsaw save time for a saved plan", () => {
+    expect(formatPlanSavedStatus("2026-10-09T16:42:00Z")).toBe("Saved Fri 9 Oct, 18:42");
+  });
+
+  it("names MO's recommendation for a plan never saved", () => {
+    expect(formatPlanSavedStatus(null)).toBe("Not saved: MO's recommendation");
   });
 });

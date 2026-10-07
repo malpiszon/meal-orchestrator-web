@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "@/lib/plans";
 import { withPgrst303Retry } from "@/lib/postgrest-retry";
-import type { WeeklyPlan } from "@/types";
+import type { PastPlanSummary, WeeklyPlan } from "@/types";
 
 // raw_payload is not needed for display and is the bulk of the row.
 const PLAN_SELECT = "id, provider, week_start, week_end, received_at, saved_at, plan_meal_options(*)";
@@ -56,6 +56,62 @@ export async function getCurrentPlan(
       .gt("week_start", addDays(today, -7))
       .order("week_start", { ascending: false })
       .limit(1)
+      .maybeSingle<WeeklyPlan>(),
+  );
+
+  if (error) {
+    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
+  }
+  return data;
+}
+
+/**
+ * The signed-in user's past weeks, newest first: every `weekly_plans` row with
+ * `week_start <= today - 7 days` (`today` from `todayInWarsaw`, the complement of `getCurrentPlan`'s bound),
+ * without options. Same client, defence-in-depth, error and retry conventions as `getUpcomingPlan`.
+ * Returns `[]` when there are none.
+ */
+export async function getPastPlans(
+  supabase: SupabaseClient,
+  userId: string,
+  today: string,
+): Promise<PastPlanSummary[]> {
+  const { data, error } = await withPgrst303Retry("weekly_plans query", () =>
+    supabase
+      .from("weekly_plans")
+      .select("id, week_start, week_end, saved_at")
+      // Defence in depth on top of RLS.
+      .eq("user_id", userId)
+      .lte("week_start", addDays(today, -7))
+      .order("week_start", { ascending: false }),
+  );
+
+  if (error) {
+    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
+  }
+  // The client is untyped (no generated database types): the rows are the four selected columns.
+  return data;
+}
+
+/**
+ * One past week of the signed-in user, with its options: plan `planId` if it is the user's and its
+ * `week_start <= today - 7 days` (as `getPastPlans`). Same conventions as `getUpcomingPlan`. Returns
+ * `null` when no row matches, which covers unknown, someone else's, current and upcoming plans.
+ */
+export async function getPastPlan(
+  supabase: SupabaseClient,
+  userId: string,
+  planId: string,
+  today: string,
+): Promise<WeeklyPlan | null> {
+  const { data, error } = await withPgrst303Retry("weekly_plans query", () =>
+    supabase
+      .from("weekly_plans")
+      .select(PLAN_SELECT)
+      .eq("id", planId)
+      // Defence in depth on top of RLS.
+      .eq("user_id", userId)
+      .lte("week_start", addDays(today, -7))
       .maybeSingle<WeeklyPlan>(),
   );
 

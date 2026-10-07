@@ -1,0 +1,77 @@
+---
+import { z } from "zod";
+import Layout from "@/layouts/Layout.astro";
+import WeekPlan from "@/components/plan/WeekPlan.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatPlanSavedStatus, formatWeekRange, todayInWarsaw } from "@/lib/plans";
+import { getPastPlan } from "@/lib/services/plans";
+import { createClient } from "@/lib/supabase";
+import type { WeeklyPlan } from "@/types";
+
+const { user } = Astro.locals;
+
+// A malformed id is answered 404 without querying Postgres with it.
+const parsedId = z.uuid().safeParse(Astro.params.id);
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+let plan: WeeklyPlan | null = null;
+let loadFailed = false;
+if (parsedId.success && supabase && user) {
+  try {
+    // `null` for an unknown id, someone else's plan, or a week that hasn't ended (see `getPastPlan`).
+    plan = await getPastPlan(supabase, user.id, parsedId.data, todayInWarsaw(new Date()));
+  } catch (error) {
+    // Code and message only (see the plan services); no user data.
+    console.error(`history load failed: ${error instanceof Error ? error.message : String(error)}`);
+    loadFailed = true;
+  }
+}
+if (!loadFailed && !plan) {
+  Astro.response.status = 404;
+}
+---
+
+<Layout title={plan ? formatWeekRange(plan.week_start, plan.week_end) : "Past plan"}>
+  <main class="min-h-screen bg-background text-foreground">
+    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 sm:py-8">
+      <header class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">Past plan</h1>
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="/history" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+            Back to past plans
+          </a>
+          <a href="/dashboard" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+            Back to your meals
+          </a>
+        </div>
+      </header>
+
+      {loadFailed ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>Couldn't load your history</h2>
+            </CardTitle>
+            <CardDescription>Something went wrong on our side. Please reload the page in a moment.</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : plan ? (
+        <WeekPlan plan={plan} label={formatPlanSavedStatus(plan.saved_at)} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>Plan not found</h2>
+            </CardTitle>
+            <CardDescription>
+              This week isn't in your past plans.{" "}
+              <a href="/history" class="underline underline-offset-4">
+                See past plans
+              </a>
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+    </div>
+  </main>
+</Layout>
