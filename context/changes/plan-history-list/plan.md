@@ -232,10 +232,10 @@ None. There's no schema change and no production setup step.
 
 #### Automated
 
-- [x] 2.1 Smoke passes against a local preview on :4322 with local Supabase: `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npm run smoke`
-- [x] 2.2 Lint and format checks pass on the changed files: `npm run lint`
-- [ ] 2.3 CI `ci` and `smoke` jobs are green on the PR
+- [x] 2.1 Smoke passes against a local preview on :4322 with local Supabase: `BASE_URL=http://localhost:4322 MO_INGEST_TOKEN=… SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npm run smoke` — 29a489e
+- [x] 2.2 Lint and format checks pass on the changed files: `npm run lint` — 29a489e
+- [x] 2.3 CI `ci` and `smoke` jobs are green on the PR — 29a489e
 
 #### Manual
 
-- [x] 2.4 The README's new walkthrough step, followed on local dev, shows the past week in `/history`
+- [x] 2.4 The README's new walkthrough step, followed on local dev, shows the past week in `/history` — 29a489e
