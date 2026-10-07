@@ -217,16 +217,16 @@ None. There's no schema change and no production setup step.
 
 #### Automated
 
-- [x] 1.1 Unit tests pass, including `formatPlanSavedStatus` for saved and never-saved: `npm test`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Type and Astro checks pass: `npx astro check`
-- [x] 1.4 Build succeeds: `npm run build`
+- [x] 1.1 Unit tests pass, including `formatPlanSavedStatus` for saved and never-saved: `npm test` — 0128d1f
+- [x] 1.2 Lint passes: `npm run lint` — 0128d1f
+- [x] 1.3 Type and Astro checks pass: `npx astro check` — 0128d1f
+- [x] 1.4 Build succeeds: `npm run build` — 0128d1f
 
 #### Manual
 
-- [x] 1.5 On local dev with a past-week delivery, `/history` lists it with "Not saved", and its week page shows the chosen meals with "Other options" collapsed and the eyebrow "Not saved: MO's recommendation"
-- [x] 1.6 The dashboard's "History" link and both back links work, in light and dark mode and at phone width
-- [x] 1.7 `/history/<upcoming plan id>` and `/history/abc` show "Plan not found" with status 404
+- [x] 1.5 On local dev with a past-week delivery, `/history` lists it with "Not saved", and its week page shows the chosen meals with "Other options" collapsed and the eyebrow "Not saved: MO's recommendation" — 0128d1f
+- [x] 1.6 The dashboard's "History" link and both back links work, in light and dark mode and at phone width — 0128d1f
+- [x] 1.7 `/history/<upcoming plan id>` and `/history/abc` show "Plan not found" with status 404 — 0128d1f
 
 ### Phase 2: Smoke test, README and roadmap
 

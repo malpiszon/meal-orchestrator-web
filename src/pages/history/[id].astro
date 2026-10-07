@@ -4,7 +4,7 @@ import Layout from "@/layouts/Layout.astro";
 import WeekPlan from "@/components/plan/WeekPlan.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPlanSavedStatus, todayInWarsaw } from "@/lib/plans";
+import { formatPlanSavedStatus, formatWeekRange, todayInWarsaw } from "@/lib/plans";
 import { getPastPlan } from "@/lib/services/plans";
 import { createClient } from "@/lib/supabase";
 import type { WeeklyPlan } from "@/types";
@@ -31,10 +31,11 @@ if (!loadFailed && !plan) {
 }
 ---
 
-<Layout title="Past plan">
+<Layout title={plan ? formatWeekRange(plan.week_start, plan.week_end) : "Past plan"}>
   <main class="min-h-screen bg-background text-foreground">
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 sm:py-8">
-      <header>
+      <header class="flex items-center justify-between gap-4">
+        <h1 class="text-2xl font-semibold">Past plan</h1>
         <a href="/history" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
           Back to past plans
         </a>
@@ -44,7 +45,7 @@ if (!loadFailed && !plan) {
         <Card>
           <CardHeader>
             <CardTitle>
-              <h1>Couldn't load your history</h1>
+              <h2>Couldn't load your history</h2>
             </CardTitle>
             <CardDescription>Something went wrong on our side. Please reload the page in a moment.</CardDescription>
           </CardHeader>
@@ -55,7 +56,7 @@ if (!loadFailed && !plan) {
         <Card>
           <CardHeader>
             <CardTitle>
-              <h1>Plan not found</h1>
+              <h2>Plan not found</h2>
             </CardTitle>
             <CardDescription>
               This week isn't in your past plans.{" "}
