@@ -39,22 +39,22 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 
 ## At a glance
 
-| ID   | Change ID                  | Outcome (user can …)                                                                               | Prerequisites    | PRD refs                                                 | Status      |
-| ---- | -------------------------- | -------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------- | ----------- |
-| F-01 | email-link-callback        | (foundation) links in invite and reset emails turn into a signed-in session in mo-web              | —                | FR-003, FR-005, Access Control                           | done        |
-| F-02 | supabase-idle-keepalive    | (foundation) the database stays reachable after a week or more with no activity                    | —                | NFR idle availability                                    | done        |
-| S-01 | mo-weekly-delivery         | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state         | —                | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done        |
-| S-02 | recency-annotated-plan     | user sees last week's plan become history and recency notes on repeat meals                        | S-01             | FR-008, FR-011, US-01, US-06                             | done        |
-| S-03 | swap-and-save-plan         | user can swap meals within the week's menu and save the plan until its first day                   | S-01             | FR-009, FR-010, US-01                                    | done        |
-| S-04 | invite-on-first-delivery   | a new MO user gets an invitation, sets a password and logs in to their own dashboard               | S-01, F-01       | FR-002, FR-003, FR-004, US-02, US-03                     | done        |
-| S-05 | password-reset             | user can reset a forgotten password from an emailed link and log in again                          | F-01             | FR-005, US-04                                            | done        |
-| S-06 | week-resubmission-replace  | a re-sent week from MO replaces only that week's stored recommendation, keeping saved choices      | S-01, S-03       | FR-017, FR-018, US-07                                    | done        |
-| S-07 | plan-history-list          | user can browse all past plans as a simple chronological list                                      | S-02             | FR-012                                                   | in-progress |
-| S-08 | rate-recent-meals          | user can rate meals from today or the previous 7 days and see their rating in annotations          | S-02             | FR-013, US-08                                            | ready       |
-| S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                | S-05             | FR-004, FR-005, US-03, US-04                             | ready       |
-| S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one            | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done        |
-| S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored        | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done        |
-| S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | ready       |
+| ID   | Change ID                  | Outcome (user can …)                                                                               | Prerequisites    | PRD refs                                                 | Status |
+| ---- | -------------------------- | -------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------- | ------ |
+| F-01 | email-link-callback        | (foundation) links in invite and reset emails turn into a signed-in session in mo-web              | —                | FR-003, FR-005, Access Control                           | done   |
+| F-02 | supabase-idle-keepalive    | (foundation) the database stays reachable after a week or more with no activity                    | —                | NFR idle availability                                    | done   |
+| S-01 | mo-weekly-delivery         | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state         | —                | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done   |
+| S-02 | recency-annotated-plan     | user sees last week's plan become history and recency notes on repeat meals                        | S-01             | FR-008, FR-011, US-01, US-06                             | done   |
+| S-03 | swap-and-save-plan         | user can swap meals within the week's menu and save the plan until its first day                   | S-01             | FR-009, FR-010, US-01                                    | done   |
+| S-04 | invite-on-first-delivery   | a new MO user gets an invitation, sets a password and logs in to their own dashboard               | S-01, F-01       | FR-002, FR-003, FR-004, US-02, US-03                     | done   |
+| S-05 | password-reset             | user can reset a forgotten password from an emailed link and log in again                          | F-01             | FR-005, US-04                                            | done   |
+| S-06 | week-resubmission-replace  | a re-sent week from MO replaces only that week's stored recommendation, keeping saved choices      | S-01, S-03       | FR-017, FR-018, US-07                                    | done   |
+| S-07 | plan-history-list          | user can browse all past plans as a simple chronological list                                      | S-02             | FR-012                                                   | done   |
+| S-08 | rate-recent-meals          | user can rate meals from today or the previous 7 days and see their rating in annotations          | S-02             | FR-013, US-08                                            | ready  |
+| S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                | S-05             | FR-004, FR-005, US-03, US-04                             | ready  |
+| S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one            | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
+| S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored        | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
+| S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | ready  |
 
 ## Streams
 
@@ -212,7 +212,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have (secondary success criterion); scoped to a plain list with no filtering or search.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-08: Rate recently eaten meals
 
@@ -340,3 +340,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-10: user who opens an invitation or password-reset link that has expired or was already used sees "this link is invalid or has expired" straight away, before typing a password, with a way to get a new link; a valid link still shows the password form.** — Archived 2026-10-06 → `context/archive/2026-10-05-expired-link-notice/`. Lesson: —.
 - **S-06: when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation and leaves other weeks and history untouched; if the user already saved or swapped that week, each chosen meal still offered is kept (FR-018, folded in 2026-10-06 while planning S-06).** — Archived 2026-10-06 → `context/archive/2026-10-06-week-resubmission-replace/`. Lesson: —.
 - **S-11: user sees "In your plan N days earlier" only for meals from plans they saved (swapped at least once or kept as recommended); a plan they never saved produces no recency notes. That includes past weeks the user never saved or never could (delivered before saving existed, or too late to edit) and the upcoming week before it is saved.** — Archived 2026-10-07 → `context/archive/2026-10-07-recency-from-saved-plans/`. Lesson: —.
+- **S-07: user can browse their full history of past plans as a simple chronological list.** — Archived 2026-10-07 → `context/archive/2026-10-07-plan-history-list/`. Lesson: —.
