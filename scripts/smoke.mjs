@@ -88,6 +88,15 @@ function radioIdFor(html, name) {
   return undefined;
 }
 
+/** The option label (radio, name, score and note) in `html` that shows `name`, or `""` if none does. */
+function optionLabelFor(html, name) {
+  const label = html
+    .split("<label")
+    .slice(1)
+    .find((part) => part.includes(escapeHtml(name)));
+  return label?.slice(0, label.indexOf("</label>")) ?? "";
+}
+
 /** Whether the radio with option id `optionId` is rendered `checked` in `html`. */
 function isRadioChecked(html, optionId) {
   const tag = html.split("<input ").find((chunk) => chunk.slice(0, chunk.indexOf(">")).includes(`value="${optionId}"`));
@@ -113,7 +122,8 @@ function isoDate(epochMs) {
  * The first Monday at least 7 days after today (UTC), as `YYYY-MM-DD`. Today in Europe/Warsaw is at most
  * one day after today in UTC, so that Monday is always "upcoming". Except on Mondays it is two Mondays
  * ahead; the dashboard's "Next week" tab still shows it, because it shows the latest future plan (as in
- * S-01), and the recency gap is then 14 days instead of 7.
+ * S-01). The recency history is this week once it is saved, and the later week sits 7 days after it,
+ * wherever it falls.
  */
 function upcomingMonday() {
   const now = new Date();
@@ -183,7 +193,7 @@ const CLAIM_PASSWORD = "Smoke-Claim-Passw0rd!";
 // Tokens of the reset links the steps generate or read from Mailpit, kept for the steps that reuse them.
 let recoveryTokenHash, inviteTokenHash, emailLink;
 
-let delivery, newUserDelivery, redelivery, oldName, newName, recencyNote, swapName;
+let delivery, newUserDelivery, redelivery, laterDelivery, oldName, newName, recencyNote, swapName;
 let currentDelivery, currentRedelivery, currentName;
 // Read from the dashboard HTML by the swap steps.
 let upcomingPlanId, swapOptionId;
@@ -226,10 +236,9 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     process.exit(1);
   }
 
-  // History: the same sample in the current week, with the meal renamed there, so that its name is
-  // specific to "This week" and the upcoming week's old name still occurs only in the upcoming week.
-  // Its meals keep their ids, so every recommended meal of the upcoming week was planned on the same
-  // weekday of the current week, the number of days between the two Mondays earlier.
+  // The current week: the same sample, with the meal renamed there, so that its name is specific to
+  // "This week" and the upcoming week's old name still occurs only in the upcoming week. It is never
+  // saved (a started week can't be), so it must give the upcoming week no recency notes.
   const thisWeek = currentMonday();
   currentDelivery = await loadDelivery(email, thisWeek);
   currentName = `Smoke current-week meal ${Date.now()}`;
@@ -237,8 +246,14 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   // A changed re-send of the current week, which has started, so it must be refused.
   currentRedelivery = structuredClone(currentDelivery);
   currentRedelivery.days[0].meals[0].variants[index].name = `Smoke refused current-week meal ${Date.now()}`;
-  const gap = daysBetween(thisWeek, nextWeek);
-  recencyNote = `In your plan ${gap} days earlier (`;
+
+  // History: the upcoming week, once the swap step has saved it. A week 7 days after it, with the same
+  // meals (their ids repeat) and the re-delivered recommended meal's name, is annotated against it: each
+  // meal the user chose in the saved week carries a note, the number of days between the two Mondays earlier.
+  const laterWeek = isoDate(Date.parse(`${nextWeek}T00:00:00Z`) + 7 * MS_PER_DAY);
+  laterDelivery = await loadDelivery(email, laterWeek);
+  laterDelivery.days[0].meals[0].variants[index].name = newName;
+  recencyNote = `In your plan ${daysBetween(nextWeek, laterWeek)} days earlier (`;
 }
 
 const deliver = (payload) =>
@@ -457,15 +472,16 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 200, body: [`contains "${oldName}"`, (body) => body.includes(escapeHtml(oldName ?? ""))] },
       ],
       [
-        "dashboard shows recency notes on the upcoming week",
+        // The current week can never be saved and the upcoming one is not saved yet: neither counts as history.
+        "dashboard shows no recency notes while no earlier plan is saved",
         () => request("/dashboard"),
         {
           status: 200,
           body: [
-            `"Next week" contains "${recencyNote}" and "This week" has no note`,
+            `neither "This week" nor "Next week" contains "In your plan"`,
             (body) => {
               const { thisWeek, nextWeek } = panels(body);
-              return !thisWeek.includes("In your plan") && nextWeek.includes(recencyNote ?? "");
+              return thisWeek.length > 0 && nextWeek.length > 0 && !body.includes("In your plan");
             },
           ],
         },
@@ -607,6 +623,32 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           body: [
             `"This week" contains "${currentName}"`,
             (body) => panels(body).thisWeek.includes(escapeHtml(currentName ?? "")),
+          ],
+        },
+      ],
+      [
+        // The upcoming week is saved with a swap by now, so it counts as history for a week 7 days later.
+        "delivery of a later week for the signed-in user is stored",
+        () => deliver(laterDelivery),
+        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+      ],
+      [
+        "later week shows recency notes from the saved week, none for the swapped-away meal",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" has "${recencyNote}" on "${swapName}", not on "${newName}", and "This week" has no note`,
+            (body) => {
+              const { thisWeek, nextWeek } = panels(body);
+              const swappedAway = optionLabelFor(nextWeek, newName ?? "");
+              return (
+                !thisWeek.includes("In your plan") &&
+                optionLabelFor(nextWeek, swapName ?? "").includes(recencyNote ?? "") &&
+                swappedAway !== "" &&
+                !swappedAway.includes("In your plan")
+              );
+            },
           ],
         },
       ],
