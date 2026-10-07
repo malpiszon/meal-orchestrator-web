@@ -195,6 +195,10 @@ let recoveryTokenHash, inviteTokenHash, emailLink;
 
 let delivery, newUserDelivery, redelivery, laterDelivery, oldName, newName, recencyNote, swapName;
 let currentDelivery, currentRedelivery, currentName;
+// The week before the current one: past, so /history lists it. It is never saved, so it gives no recency notes.
+let pastDelivery;
+// From the delivery responses, for the history steps.
+let pastPlanId, upcomingDeliveryPlanId;
 // Read from the dashboard HTML by the swap steps.
 let upcomingPlanId, swapOptionId;
 if (!KEEPALIVE_EXPECT_FAILURE) {
@@ -246,6 +250,8 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   // A changed re-send of the current week, which has started, so it must be refused.
   currentRedelivery = structuredClone(currentDelivery);
   currentRedelivery.days[0].meals[0].variants[index].name = `Smoke refused current-week meal ${Date.now()}`;
+
+  pastDelivery = await loadDelivery(email, isoDate(Date.parse(`${thisWeek}T00:00:00Z`) - 7 * MS_PER_DAY));
 
   // History: the upcoming week, once the swap step has saved it. A week 7 days after it, with the same
   // meals (their ids repeat) and the re-delivered recommended meal's name, is annotated against it: each
@@ -353,6 +359,20 @@ function showsInvalidLinkNotice(body) {
   return body.includes("This link is invalid or has expired") && !body.includes(`action="${SET_PASSWORD}"`);
 }
 
+/** The `/history` list item that links to the past plan `planId`, or `""` if none does. */
+function historyItemFor(body, planId) {
+  const item = body
+    .split("<li")
+    .slice(1)
+    .find((part) => part.includes(`href="/history/${planId}"`));
+  return item?.slice(0, item.indexOf("</li>")) ?? "";
+}
+
+/** Whether `body` shows the label of a plan that was never saved; Astro may escape its `'` either way. */
+function showsNotSavedLabel(body) {
+  return ["MO&#39;s", "MO&#x27;s", "MO's"].some((mo) => body.includes(`Not saved: ${mo} recommendation`));
+}
+
 /** `location` parsed against BASE_URL, so relative and absolute redirects read the same. */
 const locationUrl = (location) => new URL(location || "/", BASE_URL);
 
@@ -401,6 +421,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
   : [
       ["home renders", () => request("/"), { status: 200 }],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
+      ["history redirects anonymous user", () => request("/history"), { status: 302, location: "/auth/signin" }],
       ["admin creates the smoke user", createSmokeUser, { status: 200 }],
       [
         "signin rejects wrong password",
@@ -416,6 +437,12 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         "dashboard shows no upcoming plan yet",
         () => request("/dashboard"),
         { status: 200, body: ["contains 'No upcoming plan yet'", (body) => body.includes("No upcoming plan yet")] },
+      ],
+      [
+        // The smoke user is new on every run, so no earlier run's past weeks can show up here.
+        "history shows no past plans yet",
+        () => request("/history"),
+        { status: 200, body: ["contains 'No past plans yet'", (body) => body.includes("No past plans yet")] },
       ],
       [
         "delivery without a token is rejected",
@@ -463,7 +490,11 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       ],
       [
         "delivery for the signed-in user is stored",
-        () => deliver(delivery),
+        async () => {
+          const result = await deliver(delivery);
+          upcomingDeliveryPlanId = jsonField(result.body, "plan_id");
+          return result;
+        },
         { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
       ],
       [
@@ -485,6 +516,49 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             },
           ],
         },
+      ],
+      [
+        // A first delivery of a started week is stored; only a changed re-send of one is refused.
+        "past-week delivery for the signed-in user is stored",
+        async () => {
+          const result = await deliver(pastDelivery);
+          pastPlanId = jsonField(result.body, "plan_id");
+          return result;
+        },
+        { status: 200, body: ["plan_id is set", (body) => typeof jsonField(body, "plan_id") === "string"] },
+      ],
+      [
+        "history lists the past week as not saved",
+        () => request("/history"),
+        {
+          status: 200,
+          body: [
+            `links to /history/<plan_id> marked "Not saved"`,
+            (body) => pastPlanId !== undefined && historyItemFor(body, pastPlanId).includes("Not saved"),
+          ],
+        },
+      ],
+      [
+        "history week page shows its meal",
+        () => (pastPlanId ? request(`/history/${pastPlanId}`) : stepFailure("no past plan_id")),
+        {
+          status: 200,
+          body: [
+            `contains "${oldName}" and "Not saved: MO's recommendation"`,
+            (body) => body.includes(escapeHtml(oldName ?? "")) && showsNotSavedLabel(body),
+          ],
+        },
+      ],
+      [
+        "history hides the upcoming week",
+        () =>
+          upcomingDeliveryPlanId ? request(`/history/${upcomingDeliveryPlanId}`) : stepFailure("no upcoming plan_id"),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
+      ],
+      [
+        "history rejects a malformed id",
+        () => request("/history/not-a-uuid"),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
       ],
       [
         "choose without session is rejected",

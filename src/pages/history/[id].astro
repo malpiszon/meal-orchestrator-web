@@ -34,11 +34,16 @@ if (!loadFailed && !plan) {
 <Layout title={plan ? formatWeekRange(plan.week_start, plan.week_end) : "Past plan"}>
   <main class="min-h-screen bg-background text-foreground">
     <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4 sm:py-8">
-      <header class="flex items-center justify-between gap-4">
+      <header class="flex flex-wrap items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold">Past plan</h1>
-        <a href="/history" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
-          Back to past plans
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+          <a href="/history" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+            Back to past plans
+          </a>
+          <a href="/dashboard" class:list={buttonVariants({ variant: "outline", size: "sm" })}>
+            Back to your meals
+          </a>
+        </div>
       </header>
 
       {loadFailed ? (
