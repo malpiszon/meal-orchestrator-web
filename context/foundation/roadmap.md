@@ -54,7 +54,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                  | S-05             | FR-004, FR-005, US-03, US-04                             | ready  |
 | S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one              | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
 | S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored          | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
-| S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered   | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | ready  |
+| S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered   | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | in-progress |
 | S-13 | rating-ordered-options     | user sees each meal's options ordered by their own ratings: 5/5 first, 1/5 last, whatever MO's score | S-03, S-08       | FR-009, FR-013, US-08                                    | ready  |
 
 ## Streams
@@ -280,7 +280,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Unknowns:**
   - Is a second future week hidden until the nearer one starts, or shown too (e.g. its own tab)? Settle with `/10x-frame` before planning. — Owner: user. Block: no.
 - **Risk:** Low probability (MO normally delivers only the following week); nice-to-have. Today "Next week" shows the latest future week, S-01's choice, kept by S-02's implementation review. Changing it means reworking the smoke's recency step and the README walkthrough, which rely on a later week replacing the saved upcoming one on the dashboard. Found while testing S-07 (2026-10-07).
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-13: Order meal options by the user's ratings
 
