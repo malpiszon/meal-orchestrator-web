@@ -14,12 +14,13 @@ const { user } = Astro.locals;
 // A malformed id is answered 404 without querying Postgres with it.
 const parsedId = z.uuid().safeParse(Astro.params.id);
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const today = todayInWarsaw(new Date());
 let plan: WeeklyPlan | null = null;
 let loadFailed = false;
 if (parsedId.success && supabase && user) {
   try {
     // `null` for an unknown id, someone else's plan, or a week that hasn't ended (see `getPastPlan`).
-    plan = await getPastPlan(supabase, user.id, parsedId.data, todayInWarsaw(new Date()));
+    plan = await getPastPlan(supabase, user.id, parsedId.data, today);
   } catch (error) {
     // Code and message only (see the plan services); no user data.
     console.error(`history load failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -56,7 +57,7 @@ if (!loadFailed && !plan) {
           </CardHeader>
         </Card>
       ) : plan ? (
-        <WeekPlan plan={plan} label={formatPlanSavedStatus(plan.saved_at)} />
+        <WeekPlan plan={plan} label={formatPlanSavedStatus(plan.saved_at)} today={today} />
       ) : (
         <Card>
           <CardHeader>

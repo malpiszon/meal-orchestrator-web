@@ -52,6 +52,8 @@ export interface PlanMealOption {
   is_recommended: boolean;
   /** The user's choice for the slot; MO's recommendation until the user swaps. */
   is_chosen: boolean;
+  /** The user's rating of this option (1-5), embedded from `meal_ratings`; `null` when not rated. */
+  meal_ratings: { rating: number } | null;
 }
 
 /** A `weekly_plans` row with its embedded options (raw payload not selected). */

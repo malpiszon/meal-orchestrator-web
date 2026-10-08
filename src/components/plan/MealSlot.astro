@@ -1,16 +1,21 @@
 ---
+import MealRating from "@/components/plan/MealRating";
+import RatingNote from "@/components/plan/RatingNote.astro";
 import RecencyNote from "@/components/plan/RecencyNote.astro";
 import { Badge } from "@/components/ui/badge";
 import { formatRecency, mealTypeLabel } from "@/lib/plans";
+import { isRateable, ratingFace } from "@/lib/ratings";
 import type { PlanMealOption, PlanSlot } from "@/types";
 
 interface Props {
   meal: PlanSlot;
   /** Option id → the date that meal was last planned earlier (`getPlanRecency`). Absent: no notes. */
   recency?: Map<string, string>;
+  /** Today in Europe/Warsaw (`todayInWarsaw`): the chosen meal gets the faces while `isRateable`. */
+  today: string;
 }
 
-const { meal, recency } = Astro.props;
+const { meal, recency, today } = Astro.props;
 const { chosen, others } = meal;
 
 /** The recency note for an option, or `null` when it was not planned earlier. */
@@ -19,6 +24,10 @@ function recencyNote(option: PlanMealOption): string | null {
   return lastPlannedOn ? formatRecency(option.meal_date, lastPlannedOn) : null;
 }
 const chosenNote = recencyNote(chosen);
+const chosenRating = chosen.meal_ratings?.rating ?? null;
+const rateable = isRateable(chosen.meal_date, today);
+// Outside the window, a stored rating is shown read-only.
+const storedFace = !rateable && chosenRating !== null ? ratingFace(chosenRating) : undefined;
 ---
 
 <div class="flex flex-col gap-2 border-t pt-4 first:border-t-0 first:pt-0">
@@ -42,6 +51,8 @@ const chosenNote = recencyNote(chosen);
       ))}
     </ul>
   )}
+  {rateable && <MealRating client:visible optionId={chosen.id} mealName={chosen.name} initialRating={chosenRating} />}
+  {storedFace && <RatingNote face={storedFace} />}
   {others.length > 0 && (
     <details class="text-sm">
       <summary class="cursor-pointer text-muted-foreground">Other options ({others.length})</summary>

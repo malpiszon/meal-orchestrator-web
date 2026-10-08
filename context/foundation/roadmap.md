@@ -50,7 +50,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-05 | password-reset             | user can reset a forgotten password from an emailed link and log in again                          | F-01             | FR-005, US-04                                            | done   |
 | S-06 | week-resubmission-replace  | a re-sent week from MO replaces only that week's stored recommendation, keeping saved choices      | S-01, S-03       | FR-017, FR-018, US-07                                    | done   |
 | S-07 | plan-history-list          | user can browse all past plans as a simple chronological list                                      | S-02             | FR-012                                                   | done   |
-| S-08 | rate-recent-meals          | user can rate meals from today or the previous 7 days and see their rating in annotations          | S-02             | FR-013, US-08                                            | ready  |
+| S-08 | rate-recent-meals          | user can rate meals from today or the previous 7 days and see their rating in annotations          | S-02             | FR-013, US-08                                            | in-progress |
 | S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                | S-05             | FR-004, FR-005, US-03, US-04                             | ready  |
 | S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one            | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
 | S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored        | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
@@ -225,7 +225,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Nice-to-have, last in line under the speed goal; the rating window is governed by each meal's date, not the plan's state, which is easy to get wrong.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-09: Landing page
 

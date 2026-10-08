@@ -1,0 +1,16 @@
+---
+import type { RatingFace } from "@/lib/ratings";
+
+interface Props {
+  /** The face of the user's stored rating (`ratingFace`). */
+  face: RatingFace;
+}
+
+const { face } = Astro.props;
+---
+
+<p class="text-sm text-muted-foreground">
+  <span class="sr-only">Your rating: </span>
+  <span aria-hidden="true">{face.emoji}</span>
+  {face.label}
+</p>
