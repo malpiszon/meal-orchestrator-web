@@ -470,7 +470,7 @@ async function pollResetEmailLink(to) {
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
   : [
-      ["home renders", () => request("/"), { status: 200 }],
+      ["home redirects anonymous user to sign-in", () => request("/"), { status: 302, location: "/auth/signin" }],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
       ["history redirects anonymous user", () => request("/history"), { status: 302, location: "/auth/signin" }],
       [
@@ -487,7 +487,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       [
         "signin accepts correct password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
-        { status: 302, location: "/" },
+        { status: 302, location: "/dashboard" },
       ],
       [
         "dashboard shows no upcoming plan yet",

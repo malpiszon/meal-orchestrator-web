@@ -3,11 +3,16 @@ import Layout from "@/layouts/Layout.astro";
 import SignInForm from "@/components/auth/SignInForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+if (Astro.locals.user) {
+  return Astro.redirect("/dashboard");
+}
+
 const error = Astro.url.searchParams.get("error");
 ---
 
 <Layout title="Sign in">
-  <div class="flex min-h-screen items-center justify-center bg-background p-4">
+  <div class="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-4">
+    <img src="/logo.png" alt="Meal Orchestrator" width="128" height="128" />
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle className="text-center text-2xl">
