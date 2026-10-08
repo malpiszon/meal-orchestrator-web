@@ -10,9 +10,11 @@ interface Props {
   label: string;
   /** Option id → last earlier planned date (`getPlanRecency`); omit to show no recency notes. */
   recency?: Map<string, string>;
+  /** Today in Europe/Warsaw (`todayInWarsaw`): which chosen meals can be rated. */
+  today: string;
 }
 
-const { plan, label, recency } = Astro.props;
+const { plan, label, recency, today } = Astro.props;
 const days = groupPlanOptions(plan.plan_meal_options);
 // Per plan, so two weeks on one page don't share a heading id.
 const headingId = `week-heading-${plan.id}`;
@@ -35,7 +37,7 @@ const headingId = `week-heading-${plan.id}`;
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {day.slots.map((slot) => (
-          <MealSlot meal={slot} recency={recency} />
+          <MealSlot meal={slot} recency={recency} today={today} />
         ))}
       </CardContent>
     </Card>

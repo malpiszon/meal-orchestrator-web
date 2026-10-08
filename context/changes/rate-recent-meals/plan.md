@@ -310,16 +310,16 @@ New table and functions only; no backfill. Push the migration to production (`np
 
 #### Automated
 
-- [ ] 3.1 Unit tests pass: `npm test`
-- [ ] 3.2 Lint passes: `npm run lint`
-- [ ] 3.3 Type check and build pass: `npx astro check && npm run build`
+- [x] 3.1 Unit tests pass: `npm test`
+- [x] 3.2 Lint passes: `npm run lint`
+- [x] 3.3 Type check and build pass: `npx astro check && npm run build`
 
 #### Manual
 
-- [ ] 3.4 On "This week", the faces appear only on meals dated today or earlier; tapping saves, survives a reload, tapping the selected face clears
-- [ ] 3.5 The faces hydrate on the dashboard while "This week" is a hidden tab and when it is opened (nested island inside `PlanTabs`)
-- [ ] 3.6 On the previous week's `/history/<id>`, only meals dated `today-7` or later have faces; an older week shows ratings read-only
-- [ ] 3.7 Light and dark mode look right; the buttons fit at phone width (375px) without horizontal scroll
+- [x] 3.4 On "This week", the faces appear only on meals dated today or earlier; tapping saves, survives a reload, tapping the selected face clears
+- [x] 3.5 The faces hydrate on the dashboard while "This week" is a hidden tab and when it is opened (nested island inside `PlanTabs`)
+- [x] 3.6 On the previous week's `/history/<id>`, only meals dated `today-7` or later have faces; an older week shows ratings read-only
+- [x] 3.7 Light and dark mode look right; the buttons fit at phone width (375px) without horizontal scroll
 
 ### Phase 4: Rating on later plans, smoke test and docs
 

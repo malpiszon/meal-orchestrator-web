@@ -3,8 +3,10 @@ import { addDays } from "@/lib/plans";
 import { withPgrst303Retry } from "@/lib/postgrest-retry";
 import type { PastPlanSummary, WeeklyPlan } from "@/types";
 
-// raw_payload is not needed for display and is the bulk of the row.
-const PLAN_SELECT = "id, provider, week_start, week_end, received_at, saved_at, plan_meal_options(*)";
+// raw_payload is not needed for display and is the bulk of the row. Each option embeds the user's own
+// rating (RLS on `meal_ratings`); `option_id` is its primary key, so PostgREST returns an object or `null`.
+const PLAN_SELECT =
+  "id, provider, week_start, week_end, received_at, saved_at, plan_meal_options(*, meal_ratings(rating))";
 
 /**
  * The signed-in user's upcoming plan: the latest `weekly_plans` row with `week_start > today`

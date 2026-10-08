@@ -23,13 +23,13 @@ const { user } = Astro.locals;
 
 // "This week" and "upcoming" are judged against today's date in Europe/Warsaw (MO's timezone), not UTC.
 const supabase = createClient(Astro.request.headers, Astro.cookies);
+const today = todayInWarsaw(new Date());
 let currentPlan: WeeklyPlan | null = null;
 let upcomingPlan: WeeklyPlan | null = null;
 let upcomingRecency: Map<string, string> | undefined;
 let loadFailed = false;
 if (supabase && user) {
   try {
-    const today = todayInWarsaw(new Date());
     [currentPlan, upcomingPlan] = await Promise.all([
       getCurrentPlan(supabase, user.id, today),
       getUpcomingPlan(supabase, user.id, today),
@@ -109,7 +109,7 @@ const upcomingDays: EditorDay[] = upcomingPlan
       ) : currentPlan || upcomingPlan ? (
         <PlanTabs client:load defaultTab={upcomingPlan ? "upcoming" : "current"}>
           <Fragment slot="current">
-            {currentPlan ? <WeekPlan plan={currentPlan} label="This week" /> : <NothingThisWeek />}
+            {currentPlan ? <WeekPlan plan={currentPlan} label="This week" today={today} /> : <NothingThisWeek />}
           </Fragment>
           <Fragment slot="upcoming">
             {upcomingPlan ? (
