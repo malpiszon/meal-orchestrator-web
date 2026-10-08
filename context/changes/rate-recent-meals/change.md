@@ -1,7 +1,7 @@
 ---
 change_id: rate-recent-meals
 title: Rate recent meals
-status: impl_reviewed
+status: implemented
 created: 2026-10-07
 updated: 2026-10-08
 archived_at: null

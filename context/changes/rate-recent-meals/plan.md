@@ -325,13 +325,13 @@ New table and functions only; no backfill. Push the migration to production (`np
 
 #### Automated
 
-- [x] 4.1 Unit tests pass: `npm test`
-- [x] 4.2 Lint passes: `npm run lint`
-- [x] 4.3 Type check and build pass: `npx astro check && npm run build`
-- [x] 4.4 Database tests pass: `npx supabase test db`
-- [x] 4.5 Smoke passes against the preview on :4322
+- [x] 4.1 Unit tests pass: `npm test` — 5533d96
+- [x] 4.2 Lint passes: `npm run lint` — 5533d96
+- [x] 4.3 Type check and build pass: `npx astro check && npm run build` — 5533d96
+- [x] 4.4 Database tests pass: `npx supabase test db` — 5533d96
+- [x] 4.5 Smoke passes against the preview on :4322 — 5533d96
 
 #### Manual
 
-- [x] 4.6 Following the dev walkthrough, a meal rated on "This week" shows its face on the same meal in "Next week", with and without a recency note
-- [x] 4.7 Re-rating an older occurrence doesn't change what "Next week" shows when a newer occurrence is rated
+- [x] 4.6 Following the dev walkthrough, a meal rated on "This week" shows its face on the same meal in "Next week", with and without a recency note — 5533d96
+- [x] 4.7 Re-rating an older occurrence doesn't change what "Next week" shows when a newer occurrence is rated — 5533d96
