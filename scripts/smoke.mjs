@@ -481,6 +481,13 @@ const SIGN_IN_MESSAGE_MARKERS = [
   "This link is invalid or has expired.",
 ];
 
+// Fragments of the fixed `/auth/forgot-password?error=` messages (src/lib/forgot-password-errors.ts).
+const FORGOT_PASSWORD_MESSAGE_MARKERS = [
+  "Enter a valid email address",
+  "configured on this server.",
+  "This link is invalid or has expired.",
+];
+
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
   : [
@@ -535,6 +542,12 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 302, location: "/auth/signin?error=invalid_credentials" },
       ],
       [
+        "signin rejects a body that isn't a form",
+        () =>
+          request("/api/auth/signin", { method: "POST", raw: "not a form", headers: { "Content-Type": "text/plain" } }),
+        { status: 302, location: "/auth/signin?error=invalid_credentials" },
+      ],
+      [
         // Still anonymous here: the sign-in page redirects a signed-in visitor to /dashboard.
         "signin page never renders error text from the URL",
         () => request(`/auth/signin?error=${encodeURIComponent("<script>spoof</script>")}`),
@@ -552,6 +565,29 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         {
           status: 200,
           body: ["contains 'Wrong email or password.'", (body) => body.includes("Wrong email or password.")],
+        },
+      ],
+      [
+        "forgot-password page never renders error text from the URL",
+        () => request(`/auth/forgot-password?error=${encodeURIComponent("<script>spoof</script>")}`),
+        {
+          status: 200,
+          body: [
+            "contains neither 'spoof' nor any fixed reset message",
+            (body) =>
+              !body.includes("spoof") && !FORGOT_PASSWORD_MESSAGE_MARKERS.some((marker) => body.includes(marker)),
+          ],
+        },
+      ],
+      [
+        "forgot-password page shows the fixed message for a known code",
+        () => request("/auth/forgot-password?error=invalid_link"),
+        {
+          status: 200,
+          body: [
+            "contains 'This link is invalid or has expired.'",
+            (body) => body.includes("This link is invalid or has expired."),
+          ],
         },
       ],
       [
@@ -1051,7 +1087,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "reset request with an invalid email is rejected",
               () => requestReset("not-an-email"),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_email" },
             ],
             [
               "old-style password-reset link is forwarded to the set-password page",
@@ -1121,7 +1157,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "token-less save from a signed-in session without the retry cookie is refused",
               () => postSetPassword(RETRY_PASSWORD),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "signout after the reset",
@@ -1131,7 +1167,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "token-less save without a session is refused",
               () => postSetPassword(RETRY_PASSWORD),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "signin rejects the password from before the reset",
@@ -1151,7 +1187,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
                 if (!recoveryTokenHash) return stepFailure("no password-reset token was generated");
                 return postSetPassword(RETRY_PASSWORD, { tokenHash: recoveryTokenHash });
               },
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "used password-reset link opened on the page shows the notice",
@@ -1164,7 +1200,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "made-up password-reset token is rejected",
               () => postSetPassword(RETRY_PASSWORD, { tokenHash: "not-a-real-token-hash" }),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "made-up token opened on the page shows the notice",
@@ -1308,7 +1344,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "garbage invitation token is rejected on save",
               () => postSetPassword(RESET_PASSWORD, { tokenHash: "not-a-real-token-hash", type: "invite" }),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
           ]
         : []),

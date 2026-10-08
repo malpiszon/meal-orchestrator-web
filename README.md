@@ -159,7 +159,7 @@ Users can then sign in immediately after setting a password without a separate c
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/`                     | Redirects to `/dashboard` when signed in, otherwise to `/auth/signin`                                                                         |
 | `/auth/signin`          | Sign-in form under the logo, with a "Forgot or never set a password?" link; signed in, redirects to `/dashboard`; fixed error messages only   |
-| `/auth/forgot-password` | Asks for an email and sends a link to set a new password; answers the same whether or not the account exists                                  |
+| `/auth/forgot-password` | Asks for an email and sends a link to set a new password; answers the same whether or not the account exists; fixed error messages only       |
 | `/auth/set-password`    | Where invitation and password-reset emails link (`?token_hash=…&type=invite` or `recovery`): a password form (8+ characters); saving signs in |
 | `/api/auth/confirm`     | Forwards old-style invitation and reset links, unverified, to `/auth/set-password`; it verifies nothing itself                                |
 | `/dashboard`            | Example protected page (redirects to `/auth/signin` if unauthenticated)                                                                       |

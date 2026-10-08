@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { FORGOT_PASSWORD_PATH, resetRequestSchema } from "@/lib/set-password";
 import { createStatelessClient } from "@/lib/supabase";
+import type { ForgotPasswordErrorCode } from "@/lib/forgot-password-errors";
 
 export const prerender = false;
 
@@ -9,22 +10,21 @@ export const prerender = false;
  * emails, so the form never reveals which accounts exist.
  */
 export const POST: APIRoute = async (context) => {
-  const backWithError = (message: string) =>
-    context.redirect(`${FORGOT_PASSWORD_PATH}?error=${encodeURIComponent(message)}`);
+  const backWithError = (code: ForgotPasswordErrorCode) => context.redirect(`${FORGOT_PASSWORD_PATH}?error=${code}`);
 
   const form = await context.request.formData().catch(() => null);
   if (!form) {
-    return backWithError("Enter a valid email address");
+    return backWithError("invalid_email");
   }
   const parsed = resetRequestSchema.safeParse({ email: form.get("email") ?? undefined });
   if (!parsed.success) {
-    return backWithError("Enter a valid email address");
+    return backWithError("invalid_email");
   }
 
   // Cookie-less client: the reset is often finished in another browser, so no PKCE verifier cookie.
   const supabase = createStatelessClient();
   if (!supabase) {
-    return backWithError("Supabase is not configured");
+    return backWithError("not_configured");
   }
 
   // No redirectTo: the recovery template builds the link from {{ .SiteURL }}.

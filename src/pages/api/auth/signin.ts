@@ -1,11 +1,25 @@
 import type { APIRoute } from "astro";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase";
 import { signInErrorCode } from "@/lib/signin-errors";
 
+export const prerender = false;
+
+const signInSchema = z.object({
+  email: z.string().trim().min(1),
+  password: z.string().min(1),
+});
+
 export const POST: APIRoute = async (context) => {
-  const form = await context.request.formData();
-  const email = form.get("email") as string;
-  const password = form.get("password") as string;
+  const form = await context.request.formData().catch(() => null);
+  const parsed = signInSchema.safeParse({
+    email: form?.get("email") ?? undefined,
+    password: form?.get("password") ?? undefined,
+  });
+  if (!parsed.success) {
+    return context.redirect("/auth/signin?error=invalid_credentials");
+  }
+  const { email, password } = parsed.data;
 
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {

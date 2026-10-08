@@ -1,7 +1,7 @@
 ---
 change_id: landing-page
 title: Landing page
-status: implemented
+status: impl_reviewed
 created: 2026-10-08
 updated: 2026-10-08
 archived_at: null
@@ -20,3 +20,8 @@ archived_at: null
 ### 2026-10-08 — Phase 2 review fixes (agreed with the user)
 
 - A fifth sign-in code, `invalid_link` ("This link is invalid or has expired. Ask for a new one."). `/api/auth/confirm` redirects a malformed link with it and `POST /api/auth/set-password` without Supabase with `not_configured`, so no route puts free text in `/auth/signin?error=` (impl-review-phase-2 F1). Smoke checks the confirm redirect.
+
+### 2026-10-08 — Full-plan review fixes (agreed with the user)
+
+- `POST /api/auth/signin` exports `prerender = false`, parses `{email, password}` with zod and catches a non-form body; invalid input redirects with `invalid_credentials` (impl-review F1).
+- `/auth/forgot-password?error=` uses fixed codes too (`src/lib/forgot-password-errors.ts`: `invalid_email`, `not_configured`, `invalid_link`), so no auth page renders text from the URL (impl-review F2). This goes past the plan's "no change to the forgot-password or set-password flows' error handling"; the user asked for it in S-09.
