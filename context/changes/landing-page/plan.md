@@ -331,10 +331,10 @@ None: no database change, no secrets. Deploy is the usual merge to `master`. The
 
 #### Automated
 
-- [ ] 3.1 Smoke passes with the new path steps, Mailpit step included
-- [ ] 3.2 Lint passes
+- [x] 3.1 Smoke passes with the new path steps, Mailpit step included
+- [x] 3.2 Lint passes
 
 #### Manual
 
-- [ ] 3.3 Browser: `/` → forgot password → reset request message
-- [ ] 3.4 Browser: `/` → sign in → dashboard
+- [x] 3.3 Browser: `/` → forgot password → reset request message
+- [x] 3.4 Browser: `/` → sign in → dashboard

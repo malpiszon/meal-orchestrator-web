@@ -202,6 +202,8 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MAILPIT_URL = process.env.MAILPIT_URL?.replace(/\/$/, "");
 const inviteEmail = `smoke-invite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 const unknownEmail = `smoke-unknown-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
+// The landing path's reset request: unknown on purpose, so no email is sent.
+const landingEmail = `smoke-landing-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 const FORGOT_PASSWORD = "/api/auth/forgot-password";
 const SET_PASSWORD = "/api/auth/set-password";
 // Set by src/pages/api/auth/set-password.ts when a save fails after the emailed token was used.
@@ -482,7 +484,43 @@ const SIGN_IN_MESSAGE_MARKERS = [
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
   : [
-      ["home redirects anonymous user to sign-in", () => request("/"), { status: 302, location: "/auth/signin" }],
+      // The landing paths (S-09): from `/`, an anonymous visitor reaches sign-in and can start a password reset.
+      [
+        "landing: home redirects anonymous user to sign-in",
+        () => request("/"),
+        { status: 302, location: "/auth/signin" },
+      ],
+      [
+        "landing: signin page shows the logo, the form and the reset link",
+        () => request("/auth/signin"),
+        {
+          status: 200,
+          body: [
+            "contains the logo, the sign-in form and the reset link, and no starter leftovers",
+            (body) =>
+              body.includes('src="/logo.png"') &&
+              body.includes('action="/api/auth/signin"') &&
+              body.includes('href="/auth/forgot-password"') &&
+              !body.includes("10x Astro Starter") &&
+              !body.includes("/auth/signup"),
+          ],
+        },
+      ],
+      [
+        "landing: forgot-password page shows the email form",
+        () => request("/auth/forgot-password"),
+        {
+          status: 200,
+          body: ["contains the reset request form", (body) => body.includes(`action="${FORGOT_PASSWORD}"`)],
+        },
+      ],
+      [
+        // An unknown email gets the same answer as a real account and sends no email, which keeps local
+        // Supabase's email budget for the Mailpit step.
+        "landing: reset request from the forgot-password page looks like a success",
+        () => requestReset(landingEmail),
+        { status: 302, location: "/auth/forgot-password?sent=1" },
+      ],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
       ["history redirects anonymous user", () => request("/history"), { status: 302, location: "/auth/signin" }],
       [
@@ -522,14 +560,24 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 302, location: "/auth/signin?error=invalid_link" },
       ],
       [
-        "signin accepts correct password",
+        "landing: signin accepts correct password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
         { status: 302, location: "/dashboard" },
       ],
       [
-        "dashboard shows no upcoming plan yet",
+        "landing: dashboard shows no upcoming plan yet",
         () => request("/dashboard"),
         { status: 200, body: ["contains 'No upcoming plan yet'", (body) => body.includes("No upcoming plan yet")] },
+      ],
+      [
+        "landing: home redirects signed-in user to dashboard",
+        () => request("/"),
+        { status: 302, location: "/dashboard" },
+      ],
+      [
+        "landing: signin page redirects signed-in user to dashboard",
+        () => request("/auth/signin"),
+        { status: 302, location: "/dashboard" },
       ],
       [
         // The smoke user is new on every run, so no earlier run's past weeks can show up here.
