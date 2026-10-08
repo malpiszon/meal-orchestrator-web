@@ -299,33 +299,33 @@ None: no database change, no secrets. Deploy is the usual merge to `master`. The
 
 #### Automated
 
-- [x] 1.1 Lint passes
-- [x] 1.2 Unit tests pass
-- [x] 1.3 Type and template check passes
-- [x] 1.4 Build passes
-- [x] 1.5 No starter leftovers
-- [x] 1.6 Smoke passes against the preview on :4322
+- [x] 1.1 Lint passes — 39d861e
+- [x] 1.2 Unit tests pass — 39d861e
+- [x] 1.3 Type and template check passes — 39d861e
+- [x] 1.4 Build passes — 39d861e
+- [x] 1.5 No starter leftovers — 39d861e
+- [x] 1.6 Smoke passes against the preview on :4322 — 39d861e
 
 #### Manual
 
-- [x] 1.7 `/` signed out lands on sign-in with the logo, legible in light and dark
-- [x] 1.8 Sign-in lands on dashboard; `/` and `/auth/signin` signed in go to dashboard
-- [x] 1.9 Favicon and title are the product's
-- [x] 1.10 Page reads well at phone width
+- [x] 1.7 `/` signed out lands on sign-in with the logo, legible in light and dark — 39d861e
+- [x] 1.8 Sign-in lands on dashboard; `/` and `/auth/signin` signed in go to dashboard — 39d861e
+- [x] 1.9 Favicon and title are the product's — 39d861e
+- [x] 1.10 Page reads well at phone width — 39d861e
 
 ### Phase 2: Fixed sign-in error messages (F9)
 
 #### Automated
 
-- [ ] 2.1 New unit tests pass
-- [ ] 2.2 Lint, check and build pass
-- [ ] 2.3 Smoke passes including the new error-message steps
-- [ ] 2.4 CI workflow still parses
+- [x] 2.1 New unit tests pass
+- [x] 2.2 Lint, check and build pass
+- [x] 2.3 Smoke passes including the new error-message steps
+- [x] 2.4 CI workflow still parses
 
 #### Manual
 
-- [ ] 2.5 Wrong password shows the fixed message with only a code in the URL
-- [ ] 2.6 An arbitrary `?error=` shows no alert
+- [x] 2.5 Wrong password shows the fixed message with only a code in the URL
+- [x] 2.6 An arbitrary `?error=` shows no alert
 
 ### Phase 3: DoD smoke coverage and docs
 

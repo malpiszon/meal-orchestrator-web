@@ -467,6 +467,17 @@ async function pollResetEmailLink(to) {
   );
 }
 
+/**
+ * Apostrophe-free parts of the four fixed sign-in messages (src/lib/signin-errors.ts), so a match
+ * doesn't depend on how the SSR output escapes "'".
+ */
+const SIGN_IN_MESSAGE_MARKERS = [
+  "Wrong email or password.",
+  "Too many sign-in attempts.",
+  "configured on this server.",
+  "sign you in. Try again in a moment.",
+];
+
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
   : [
@@ -482,7 +493,27 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       [
         "signin rejects wrong password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
-        { status: 302, location: "/auth/signin?error=" },
+        { status: 302, location: "/auth/signin?error=invalid_credentials" },
+      ],
+      [
+        // Still anonymous here: the sign-in page redirects a signed-in visitor to /dashboard.
+        "signin page never renders error text from the URL",
+        () => request(`/auth/signin?error=${encodeURIComponent("<script>spoof</script>")}`),
+        {
+          status: 200,
+          body: [
+            "contains neither 'spoof' nor any fixed sign-in message",
+            (body) => !body.includes("spoof") && !SIGN_IN_MESSAGE_MARKERS.some((marker) => body.includes(marker)),
+          ],
+        },
+      ],
+      [
+        "signin page shows the fixed message for a known code",
+        () => request("/auth/signin?error=invalid_credentials"),
+        {
+          status: 200,
+          body: ["contains 'Wrong email or password.'", (body) => body.includes("Wrong email or password.")],
+        },
       ],
       [
         "signin accepts correct password",
@@ -1051,7 +1082,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "signin rejects the password from before the reset",
               () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
-              { status: 302, location: "/auth/signin?error=" },
+              { status: 302, location: "/auth/signin?error=invalid_credentials" },
             ],
             [
               "signin accepts the new password",
