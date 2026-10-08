@@ -3,7 +3,7 @@ import type { RatingValue } from "@/lib/ratings";
 
 const CLOSED_MESSAGE = "Rating for this meal has closed.";
 const SIGNED_OUT_MESSAGE = "You're signed out. Reload the page and sign in again to rate your meal.";
-const FAILED_MESSAGE = "Couldn't save your rating.";
+const FAILED_MESSAGE = "Couldn't save your rating. Please try again.";
 
 type RateResult = { ok: true; rating: number | null } | { ok: false; status: number };
 

@@ -1,5 +1,6 @@
 ---
 import MealRating from "@/components/plan/MealRating";
+import RatingNote from "@/components/plan/RatingNote.astro";
 import RecencyNote from "@/components/plan/RecencyNote.astro";
 import { Badge } from "@/components/ui/badge";
 import { formatRecency, mealTypeLabel } from "@/lib/plans";
@@ -50,13 +51,8 @@ const storedFace = !rateable && chosenRating !== null ? ratingFace(chosenRating)
       ))}
     </ul>
   )}
-  {rateable && <MealRating client:visible optionId={chosen.id} initialRating={chosenRating} />}
-  {storedFace && (
-    <p class="text-sm text-muted-foreground">
-      <span class="sr-only">Your rating: </span>
-      <span aria-hidden="true">{storedFace.emoji}</span> {storedFace.label}
-    </p>
-  )}
+  {rateable && <MealRating client:visible optionId={chosen.id} mealName={chosen.name} initialRating={chosenRating} />}
+  {storedFace && <RatingNote face={storedFace} />}
   {others.length > 0 && (
     <details class="text-sm">
       <summary class="cursor-pointer text-muted-foreground">Other options ({others.length})</summary>
