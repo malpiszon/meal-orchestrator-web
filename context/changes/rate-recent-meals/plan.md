@@ -298,13 +298,13 @@ New table and functions only; no backfill. Push the migration to production (`np
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Type check and build pass: `npx astro check && npm run build`
+- [x] 2.1 Unit tests pass: `npm test` — bbdf424
+- [x] 2.2 Lint passes: `npm run lint` — bbdf424
+- [x] 2.3 Type check and build pass: `npx astro check && npm run build` — bbdf424
 
 #### Manual
 
-- [x] 2.4 With `npm run dev`, a `curl` with a signed-in session cookie rates this week's Monday meal (200) and an upcoming meal (409 `not_rateable`)
+- [x] 2.4 With `npm run dev`, a `curl` with a signed-in session cookie rates this week's Monday meal (200) and an upcoming meal (409 `not_rateable`) — bbdf424
 
 ### Phase 3: Rating on the week views
 
