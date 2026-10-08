@@ -31,7 +31,7 @@ async function postRating(optionId: string, rating: RatingValue | null): Promise
 /**
  * One meal's rating, saved on every tap through `/api/ratings`. The rating updates optimistically and
  * reverts on error; tapping the selected face clears it. Only one request is in flight at a time
- * (`pending` disables the faces). A 409 means the rating window has closed: `locked` stays true and the
+ * (`pending` marks the faces aria-disabled; the in-flight ref ignores further taps). A 409 means the rating window has closed: `locked` stays true and the
  * faces stay disabled.
  */
 export function useMealRating(optionId: string, initialRating: number | null) {
