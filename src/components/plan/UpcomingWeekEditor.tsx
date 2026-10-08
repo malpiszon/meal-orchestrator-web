@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRecency, mealTypeLabel } from "@/lib/plans";
+import { ratingFace } from "@/lib/ratings";
 import { cn } from "@/lib/utils";
 import type { PlanMealOption, PlanSlot } from "@/types";
 
@@ -44,6 +45,8 @@ interface UpcomingWeekEditorProps {
   days: EditorDay[];
   /** Option id → last earlier planned date (`getPlanRecency`). */
   recency: Record<string, string>;
+  /** Option id → the latest earlier rating of its meal, 1-5 (`getPlanRatings`). Static: swaps don't change it. */
+  ratings: Record<string, number>;
 }
 
 interface SlotFieldsetProps {
@@ -51,12 +54,13 @@ interface SlotFieldsetProps {
   name: string;
   chosenId: string | undefined;
   recency: Record<string, string>;
+  ratings: Record<string, number>;
   disabled: boolean;
   onChoose: (optionId: string) => void;
 }
 
 /** One meal slot: a native radio group with every option, best first. */
-function SlotFieldset({ slot, name, chosenId, recency, disabled, onChoose }: SlotFieldsetProps) {
+function SlotFieldset({ slot, name, chosenId, recency, ratings, disabled, onChoose }: SlotFieldsetProps) {
   return (
     <div className="border-t pt-4 first:border-t-0 first:pt-0">
       {/* min-w-0: a fieldset's default min-width is its content, which would overflow on a phone. */}
@@ -67,6 +71,7 @@ function SlotFieldset({ slot, name, chosenId, recency, disabled, onChoose }: Slo
         {slot.options.map((option) => {
           const selected = option.id === chosenId;
           const lastPlannedOn = recency[option.id];
+          const lastRating = option.id in ratings ? ratingFace(ratings[option.id]) : undefined;
           return (
             <label
               key={option.id}
@@ -107,6 +112,11 @@ function SlotFieldset({ slot, name, chosenId, recency, disabled, onChoose }: Slo
                     {formatRecency(option.meal_date, lastPlannedOn)}
                   </span>
                 )}
+                {lastRating && (
+                  <span className="text-muted-foreground text-sm">
+                    Last rated <span aria-hidden="true">{lastRating.emoji}</span> {lastRating.label}
+                  </span>
+                )}
                 {option.justifications.length > 0 && (
                   <ul className="text-muted-foreground flex flex-col gap-1 text-sm">
                     {option.justifications.map((justification, index) => (
@@ -137,6 +147,7 @@ export default function UpcomingWeekEditor({
   savedAtLabel: initialSavedAtLabel,
   days,
   recency: initialRecency,
+  ratings,
 }: UpcomingWeekEditorProps) {
   // Per plan, as in WeekPlan.astro; useId would restart per island and could clash with PlanTabs.
   const headingId = `week-heading-${planId}`;
@@ -202,6 +213,7 @@ export default function UpcomingWeekEditor({
                   name={key}
                   chosenId={chosen[key]}
                   recency={recency}
+                  ratings={ratings}
                   disabled={disabled}
                   onChoose={(optionId) => {
                     choose(key, optionId);

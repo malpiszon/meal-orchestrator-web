@@ -307,7 +307,7 @@ select is_empty(
 reset role;
 
 select results_eq(
-  $$ select option_id, rating from public.meal_ratings where user_id <> 'cccccccc-0000-0000-0000-000000000003' order by option_id $$,
+  $$ select option_id, rating from public.meal_ratings where user_id in ('aaaaaaaa-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002') order by option_id $$,
   $$ values
        ('a2000000-0000-0000-0000-000000000001'::uuid, 3::smallint),
        ('b1000000-0000-0000-0000-000000000001'::uuid, 1::smallint) $$,

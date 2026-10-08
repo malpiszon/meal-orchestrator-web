@@ -112,6 +112,24 @@ function optionIdFor(html, name) {
   return chunk?.slice(0, chunk.indexOf('"'));
 }
 
+/** Whether `html` shows `text`; Astro escapes `'` as `&#39;` and React as `&#x27;`, so any of them matches. */
+function showsText(html, text) {
+  return ["&#39;", "&#x27;", "'"].some((apostrophe) => html.includes(escapeHtml(text).replaceAll("&#39;", apostrophe)));
+}
+
+/**
+ * Whether the rating faces (`data-rating-option-id`, "This week" layout) of option `optionId` in `html`
+ * have a face pressed (`aria-pressed="true"`). `undefined` when that option has no faces.
+ */
+function hasPressedFace(html, optionId) {
+  const marker = `data-rating-option-id="${optionId}"`;
+  const start = html.indexOf(marker);
+  if (start === -1) return undefined;
+  const rest = html.slice(start + marker.length);
+  const end = rest.search(/data-rating-option-id="|<\/astro-island>/);
+  return (end === -1 ? rest : rest.slice(0, end)).includes('aria-pressed="true"');
+}
+
 const MS_PER_DAY = 86_400_000;
 
 function isoDate(epochMs) {
@@ -170,6 +188,10 @@ const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
 const KEEPALIVE_TRIGGER = "/cdn-cgi/handler/scheduled?cron=0+3+*+*+*";
 const DELIVERIES = "/api/mo/deliveries";
 const CHOOSE = "/api/plans/choose";
+const RATINGS = "/api/ratings";
+// The rating the rating steps give, and its label (RATING_FACES in src/lib/ratings.ts).
+const RATING = 5;
+const RATING_LABEL = "Chef's kiss";
 const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
 // Optional: the Supabase instance the server uses, to check its grants directly (CI sets both).
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -195,6 +217,9 @@ let recoveryTokenHash, inviteTokenHash, emailLink;
 
 let delivery, newUserDelivery, redelivery, laterDelivery, oldName, newName, recencyNote, swapName;
 let currentDelivery, currentRedelivery, currentName;
+// The rating steps: the current week's Monday meal they rate (the second meal, which is not renamed, so the
+// upcoming week has the same name), an option of that meal that is not chosen, and the rated option's id.
+let ratedName, unchosenName, ratedOptionId;
 // The week before the current one: past, so /history lists it. It is never saved, so it gives no recency notes.
 // The same week for the account a delivery creates, which the smoke user must not be able to open.
 let pastDelivery, otherPastDelivery, pastName;
@@ -248,6 +273,17 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   currentDelivery = await loadDelivery(email, thisWeek);
   currentName = `Smoke current-week meal ${Date.now()}`;
   currentDelivery.days[0].meals[0].variants[index].name = currentName;
+  // Rating: the recommended (so chosen, as the week is never saved) option of the Monday's second meal.
+  // The Monday of the current week is always within the rateable window (today - 7 .. today).
+  const ratedMeal = currentDelivery.days[0].meals[1];
+  if (!ratedMeal || ratedMeal.variants.length < 2) {
+    console.error("Fixture problem: the sample's first day needs a second meal with at least two options to rate.");
+    process.exit(1);
+  }
+  const ratedIndex = recommendedIndex(ratedMeal);
+  ratedName = ratedMeal.variants[ratedIndex].name;
+  unchosenName = ratedMeal.variants.find((_, i) => i !== ratedIndex)?.name;
+
   // A changed re-send of the current week, which has started, so it must be refused.
   currentRedelivery = structuredClone(currentDelivery);
   currentRedelivery.days[0].meals[0].variants[index].name = `Smoke refused current-week meal ${Date.now()}`;
@@ -373,6 +409,15 @@ function historyItemFor(body, planId) {
     .find((part) => part.includes(`href="/history/${planId}"`));
   return item?.slice(0, item.indexOf("</li>")) ?? "";
 }
+
+/** Rates option `optionId` with `rating` (1-5, or `null` to clear) as the signed-in user. */
+const rate = (optionId, rating) => request(RATINGS, { method: "POST", json: { optionId, rating } });
+
+/** Whether the dashboard's "This week" shows the rated meal's faces with one pressed (`pressed`) or none. */
+const ratedFacePressed = (pressed) => [
+  `"This week" shows the faces of "${ratedName}" ${pressed ? "with" : "without"} a pressed face`,
+  (body) => ratedOptionId !== undefined && hasPressedFace(panels(body).thisWeek, ratedOptionId) === pressed,
+];
 
 /** Whether `body` shows the label of a plan that was never saved; Astro may escape its `'` either way. */
 function showsNotSavedLabel(body) {
@@ -531,6 +576,83 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             },
           ],
         },
+      ],
+      [
+        "rating without session is rejected",
+        () =>
+          request(RATINGS, {
+            method: "POST",
+            json: { optionId: randomUUID(), rating: RATING },
+            headers: { Cookie: "" },
+          }),
+        { status: 401 },
+      ],
+      [
+        "rating a chosen meal of this week is saved",
+        async () => {
+          const { thisWeek } = panels((await request("/dashboard")).body);
+          ratedOptionId = optionIdFor(thisWeek, ratedName ?? "");
+          return ratedOptionId ? rate(ratedOptionId, RATING) : stepFailure(`no "${ratedName}" in "This week"`);
+        },
+        { status: 200, body: [`rating: ${RATING}`, (body) => jsonField(body, "rating") === RATING] },
+      ],
+      [
+        "dashboard shows the rating pressed",
+        () => request("/dashboard"),
+        { status: 200, body: ratedFacePressed(true) },
+      ],
+      [
+        // The current week is never saved: a rated meal was had, so its rating shows on later plans anyway.
+        "next week shows the rating on the same meal",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" has "Last rated" and "${RATING_LABEL}" on "${ratedName}"`,
+            (body) => {
+              const label = optionLabelFor(panels(body).nextWeek, ratedName ?? "");
+              return label.includes("Last rated") && showsText(label, RATING_LABEL);
+            },
+          ],
+        },
+      ],
+      [
+        "rating an upcoming meal is refused",
+        async () => {
+          const { nextWeek } = panels((await request("/dashboard")).body);
+          const optionId = radioIdFor(nextWeek, ratedName ?? "");
+          return optionId ? rate(optionId, RATING) : stepFailure(`no "${ratedName}" in "Next week"`);
+        },
+        { status: 409, body: ["error: not_rateable", (body) => jsonField(body, "error") === "not_rateable"] },
+      ],
+      [
+        "rating a meal of this week that is not chosen is refused",
+        async () => {
+          const { thisWeek } = panels((await request("/dashboard")).body);
+          const optionId = optionIdFor(thisWeek, unchosenName ?? "");
+          return optionId ? rate(optionId, RATING) : stepFailure(`no "${unchosenName}" in "This week"`);
+        },
+        { status: 409, body: ["error: not_rateable", (body) => jsonField(body, "error") === "not_rateable"] },
+      ],
+      [
+        "rating off the scale is rejected",
+        () => (ratedOptionId ? rate(ratedOptionId, 6) : stepFailure("no rated option id")),
+        { status: 400, body: ["error: invalid_request", (body) => jsonField(body, "error") === "invalid_request"] },
+      ],
+      [
+        "rating is cleared",
+        () => (ratedOptionId ? rate(ratedOptionId, null) : stepFailure("no rated option id")),
+        { status: 200, body: ["rating: null", (body) => jsonField(body, "rating") === null] },
+      ],
+      [
+        "dashboard shows the rating cleared",
+        () => request("/dashboard"),
+        { status: 200, body: ratedFacePressed(false) },
+      ],
+      [
+        "meal is rated again",
+        () => (ratedOptionId ? rate(ratedOptionId, RATING) : stepFailure("no rated option id")),
+        { status: 200, body: [`rating: ${RATING}`, (body) => jsonField(body, "rating") === RATING] },
       ],
       [
         // A first delivery of a started week is stored; only a changed re-send of one is refused.

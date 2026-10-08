@@ -16,6 +16,7 @@ import {
   todayInWarsaw,
 } from "@/lib/plans";
 import { getCurrentPlan, getPlanRecency, getUpcomingPlan } from "@/lib/services/plans";
+import { getPlanRatings } from "@/lib/services/ratings";
 import { createClient } from "@/lib/supabase";
 import type { WeeklyPlan } from "@/types";
 
@@ -27,6 +28,7 @@ const today = todayInWarsaw(new Date());
 let currentPlan: WeeklyPlan | null = null;
 let upcomingPlan: WeeklyPlan | null = null;
 let upcomingRecency: Map<string, string> | undefined;
+let upcomingRatings: Map<string, number> | undefined;
 let loadFailed = false;
 if (supabase && user) {
   try {
@@ -39,14 +41,28 @@ if (supabase && user) {
     console.error(`dashboard plan load failed: ${error instanceof Error ? error.message : String(error)}`);
     loadFailed = true;
   }
-  // Notes only on the upcoming week; "This week" shows its plan without them. The notes are an
-  // annotation: if they fail, the weeks still render, just without notes.
+  // Notes and earlier ratings only on the upcoming week; "This week" shows its plan without them. Both
+  // are annotations: if one fails, the weeks still render, just without it.
   if (upcomingPlan) {
-    try {
-      upcomingRecency = await getPlanRecency(supabase, upcomingPlan.id);
-    } catch (error) {
-      console.error(`dashboard recency load failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    const planId = upcomingPlan.id;
+    await Promise.all([
+      getPlanRecency(supabase, planId).then(
+        (recency) => {
+          upcomingRecency = recency;
+        },
+        (error: unknown) => {
+          console.error(`dashboard recency load failed: ${error instanceof Error ? error.message : String(error)}`);
+        },
+      ),
+      getPlanRatings(supabase, planId).then(
+        (ratings) => {
+          upcomingRatings = ratings;
+        },
+        (error: unknown) => {
+          console.error(`dashboard ratings load failed: ${error instanceof Error ? error.message : String(error)}`);
+        },
+      ),
+    ]);
   }
 }
 
@@ -121,6 +137,7 @@ const upcomingDays: EditorDay[] = upcomingPlan
                 savedAtLabel={upcomingPlan.saved_at ? formatSavedAt(upcomingPlan.saved_at) : null}
                 days={upcomingDays}
                 recency={Object.fromEntries(upcomingRecency ?? [])}
+                ratings={Object.fromEntries(upcomingRatings ?? [])}
               />
             ) : (
               <NoUpcomingPlan />
