@@ -377,13 +377,13 @@ own history, using `plan_meal_options_chosen_history_idx`.
 
 #### Automated
 
-- [x] 1.1 Migration applies cleanly to the local stack (after the user's go-ahead): `npx supabase migration up`
-- [x] 1.2 pgTAP tests pass: `npx supabase test db`
-- [x] 1.3 The new test file covers every case listed above (adjusted_score, ingest pick, tie-break, latest rating, other user/provider, saved fallback, late re-pick safeguards)
+- [x] 1.1 Migration applies cleanly to the local stack (after the user's go-ahead): `npx supabase migration up` — dc38f8f
+- [x] 1.2 pgTAP tests pass: `npx supabase test db` — dc38f8f
+- [x] 1.3 The new test file covers every case listed above (adjusted_score, ingest pick, tie-break, latest rating, other user/provider, saved fallback, late re-pick safeguards) — dc38f8f
 
 #### Manual
 
-- [x] 1.4 In Studio, a never-saved upcoming plan whose MO-recommended meal was rated 1/5 earlier has another option chosen
+- [x] 1.4 In Studio, a never-saved upcoming plan whose MO-recommended meal was rated 1/5 earlier has another option chosen — dc38f8f
 
 ### Phase 2: App — order, star and wording
 
