@@ -317,15 +317,15 @@ None: no database change, no secrets. Deploy is the usual merge to `master`. The
 
 #### Automated
 
-- [x] 2.1 New unit tests pass
-- [x] 2.2 Lint, check and build pass
-- [x] 2.3 Smoke passes including the new error-message steps
-- [x] 2.4 CI workflow still parses
+- [x] 2.1 New unit tests pass — 65808a3
+- [x] 2.2 Lint, check and build pass — 65808a3
+- [x] 2.3 Smoke passes including the new error-message steps — 65808a3
+- [x] 2.4 CI workflow still parses — 65808a3
 
 #### Manual
 
-- [x] 2.5 Wrong password shows the fixed message with only a code in the URL
-- [x] 2.6 An arbitrary `?error=` shows no alert
+- [x] 2.5 Wrong password shows the fixed message with only a code in the URL — 65808a3
+- [x] 2.6 An arbitrary `?error=` shows no alert — 65808a3
 
 ### Phase 3: DoD smoke coverage and docs
 

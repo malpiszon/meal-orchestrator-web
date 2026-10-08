@@ -468,7 +468,7 @@ async function pollResetEmailLink(to) {
 }
 
 /**
- * Apostrophe-free parts of the four fixed sign-in messages (src/lib/signin-errors.ts), so a match
+ * Apostrophe-free parts of the fixed sign-in messages (src/lib/signin-errors.ts), so a match
  * doesn't depend on how the SSR output escapes "'".
  */
 const SIGN_IN_MESSAGE_MARKERS = [
@@ -476,6 +476,7 @@ const SIGN_IN_MESSAGE_MARKERS = [
   "Too many sign-in attempts.",
   "configured on this server.",
   "sign you in. Try again in a moment.",
+  "This link is invalid or has expired.",
 ];
 
 const steps = KEEPALIVE_EXPECT_FAILURE
@@ -514,6 +515,11 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           status: 200,
           body: ["contains 'Wrong email or password.'", (body) => body.includes("Wrong email or password.")],
         },
+      ],
+      [
+        "malformed email link is sent to sign-in with a code",
+        () => request("/api/auth/confirm?type=nonsense"),
+        { status: 302, location: "/auth/signin?error=invalid_link" },
       ],
       [
         "signin accepts correct password",
@@ -1087,7 +1093,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "signin accepts the new password",
               () => request("/api/auth/signin", { method: "POST", form: { email, password: smokePassword } }),
-              { status: 302, location: "/" },
+              { status: 302, location: "/dashboard" },
             ],
             [
               "used password-reset link is rejected",

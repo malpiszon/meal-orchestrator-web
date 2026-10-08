@@ -24,7 +24,7 @@ const INVALID_LINK_MESSAGE = "This link is invalid or has expired. Ask for a new
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return context.redirect(`/auth/signin?error=${encodeURIComponent("Supabase is not configured")}`);
+    return context.redirect("/auth/signin?error=not_configured");
   }
 
   const invalidLink = () =>
