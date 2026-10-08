@@ -11,8 +11,9 @@ const PLAN_SELECT =
 /**
  * The signed-in user's upcoming plan: the nearest `weekly_plans` row with `week_start > today`
  * (`today` from `todayInWarsaw`), with its options. A later future week stays hidden until the nearer
- * one starts, so the week with the earliest edit deadline is the one shown. Pass the user's cookie-session client, so RLS
- * limits the read to the user's own rows; the explicit `user_id` filter is defence in depth.
+ * one starts, so the week with the earliest edit deadline is the one shown. Pass the user's
+ * cookie-session client, so RLS limits the read to the user's own rows; the explicit `user_id` filter
+ * is defence in depth.
  * Returns `null` when there is none; throws on a query error. Retries PGRST303 "JWT issued at future"
  * first (see `withPgrst303Retry`).
  */
