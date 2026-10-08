@@ -208,13 +208,13 @@ nearer one after deploy.
 
 #### Automated
 
-- [x] 1.1 Lint passes
-- [x] 1.2 Unit tests pass, including the new getUpcomingPlan order test
-- [x] 1.3 Type check passes
-- [x] 1.4 Build passes
-- [x] 1.5 Smoke passes against the preview on :4323
+- [x] 1.1 Lint passes — 5edf7be
+- [x] 1.2 Unit tests pass, including the new getUpcomingPlan order test — 5edf7be
+- [x] 1.3 Type check passes — 5edf7be
+- [x] 1.4 Build passes — 5edf7be
+- [x] 1.5 Smoke passes against the preview on :4323 — 5edf7be
 
 #### Manual
 
-- [x] 1.6 Walkthrough with two future weeks: "Next week" shows W+1, W+2 not visible
-- [x] 1.7 README walkthrough step 6 reads correctly against the running app
+- [x] 1.6 Walkthrough with two future weeks: "Next week" shows W+1, W+2 not visible — 5edf7be
+- [x] 1.7 README walkthrough step 6 reads correctly against the running app — 5edf7be

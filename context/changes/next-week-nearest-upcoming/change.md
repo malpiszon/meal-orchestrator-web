@@ -1,7 +1,7 @@
 ---
 change_id: next-week-nearest-upcoming
 title: "Next week" shows the nearest upcoming week
-status: implementing
+status: implemented
 created: 2026-10-08
 updated: 2026-10-08
 archived_at: null
