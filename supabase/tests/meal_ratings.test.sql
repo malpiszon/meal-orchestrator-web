@@ -2,9 +2,9 @@
 -- Europe/Warsaw, change and clear) and get_plan_ratings ("latest" = the most recent rated meal day
 -- before the option's), see context/changes/rate-recent-meals/plan.md. Window dates are relative to
 -- today in Europe/Warsaw, so the test never ages; the "latest" fixtures use fixed dates and are written
--- as the table owner, outside the window. Run with `npx supabase test db`.
+-- directly as the table owner, bypassing rate_meal. Run with `npx supabase test db`.
 begin;
-select plan(32);
+select plan(33);
 
 insert into auth.users (id, email) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'ratings-a@test.local'),
@@ -72,11 +72,11 @@ values
   ('c4000000-0000-0000-0000-000000000006', '30000000-0000-0000-0000-000000000004', 'cccccccc-0000-0000-0000-000000000003',
    '2026-10-16', 'lunch', 0, 'M', 'M', 8, true, true);
 
--- 10-01 M 😋, another provider's 10-10 M 😐, the annotated week's own 10-15 dinner M (same day) 🙂 and
+-- 10-01 M 😋, another provider's 10-10 M 😕, the annotated week's own 10-15 dinner M (same day) 🙂 and
 -- 10-16 M (later) 🙂, 10-14 K 😋. 10-08 M starts unrated.
 insert into public.meal_ratings (option_id, user_id, rating) values
   ('c1000000-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000003', 5),
-  ('c3000000-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000003', 3),
+  ('c3000000-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000003', 2),
   ('c4000000-0000-0000-0000-000000000005', 'cccccccc-0000-0000-0000-000000000003', 4),
   ('c4000000-0000-0000-0000-000000000006', 'cccccccc-0000-0000-0000-000000000003', 4),
   ('c4000000-0000-0000-0000-000000000002', 'cccccccc-0000-0000-0000-000000000003', 5);
@@ -172,7 +172,11 @@ select throws_ok(
   'rating 6 fails the check constraint'
 );
 
--- Re-rating and clearing.
+-- Re-rating and clearing. Backdate the stored rated_at, so the re-rate must refresh it to now().
+reset role;
+update public.meal_ratings set rated_at = now() - interval '1 day'
+ where option_id = 'a2000000-0000-0000-0000-000000000001';
+set local role authenticated;
 select is(
   public.rate_meal('a2000000-0000-0000-0000-000000000001', 3::smallint),
   3::smallint,
@@ -183,7 +187,7 @@ select results_eq(
   $$ values
        ('a1000000-0000-0000-0000-000000000002'::uuid, 2::smallint, now()),
        ('a2000000-0000-0000-0000-000000000001'::uuid, 3::smallint, now()) $$,
-  're-rating updates the one row of the option; the refused calls stored nothing'
+  're-rating updates the one row of the option and its rated_at; the refused calls stored nothing'
 );
 select is(
   public.rate_meal('a1000000-0000-0000-0000-000000000002', null),
@@ -227,7 +231,7 @@ select results_eq(
   $$ values
        -- 10-14 K: 10-13 K was never rated.
        -- 10-15 M lunch: 10-08 M is unrated, so 10-01's 5 shows; the same day's dinner (4) and 10-16 (4) are
-       -- ignored, and so is the other provider's 10-10 M (3).
+       -- ignored, and so is the other provider's 10-10 M (2).
        ('c4000000-0000-0000-0000-000000000003'::uuid, 5::smallint),
        -- 10-15 M dinner: the same day's lunch has no rating, so 10-01's 5.
        ('c4000000-0000-0000-0000-000000000005'::uuid, 5::smallint),
@@ -242,7 +246,7 @@ select is_empty(
   'no row for a meal rated only later (10-13 K), never rated before (10-14 K) or never rated (N)'
 );
 
--- 8 Oct rated 🤢 (fixture writes run as the table owner, outside the window).
+-- 8 Oct rated 🤢 (fixture writes run directly as the table owner, bypassing rate_meal).
 reset role;
 insert into public.meal_ratings (option_id, user_id, rating) values
   ('c2000000-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000003', 1);
@@ -308,6 +312,12 @@ select results_eq(
        ('a2000000-0000-0000-0000-000000000001'::uuid, 3::smallint),
        ('b1000000-0000-0000-0000-000000000001'::uuid, 1::smallint) $$,
   'stored ratings of users A and B as the table owner sees them'
+);
+
+delete from public.plan_meal_options where id = 'a2000000-0000-0000-0000-000000000001';
+select is_empty(
+  $$ select 1 from public.meal_ratings where option_id = 'a2000000-0000-0000-0000-000000000001' $$,
+  'deleting a rated option deletes its rating'
 );
 
 select * from finish();

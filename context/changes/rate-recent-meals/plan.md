@@ -287,12 +287,12 @@ New table and functions only; no backfill. Push the migration to production (`np
 
 #### Automated
 
-- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset`
-- [x] 1.2 Database tests pass: `npx supabase test db`
+- [x] 1.1 Migration applies on a fresh local stack: `npx supabase db reset` — e64f570
+- [x] 1.2 Database tests pass: `npx supabase test db` — e64f570
 
 #### Manual
 
-- [x] 1.3 The table, policy and both functions look right in local Studio, with RLS enabled on `meal_ratings`
+- [x] 1.3 The table, policy and both functions look right in local Studio, with RLS enabled on `meal_ratings` — e64f570
 
 ### Phase 2: Rating API and domain helpers
 
