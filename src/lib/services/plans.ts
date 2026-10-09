@@ -9,9 +9,11 @@ const PLAN_SELECT =
   "id, provider, week_start, week_end, received_at, saved_at, plan_meal_options(*, meal_ratings(rating))";
 
 /**
- * The signed-in user's upcoming plan: the latest `weekly_plans` row with `week_start > today`
- * (`today` from `todayInWarsaw`), with its options. Pass the user's cookie-session client, so RLS
- * limits the read to the user's own rows; the explicit `user_id` filter is defence in depth.
+ * The signed-in user's upcoming plan: the nearest `weekly_plans` row with `week_start > today`
+ * (`today` from `todayInWarsaw`), with its options. A later future week stays hidden until the nearer
+ * one starts, so the week with the earliest edit deadline is the one shown. Pass the user's
+ * cookie-session client, so RLS limits the read to the user's own rows; the explicit `user_id` filter
+ * is defence in depth.
  * Returns `null` when there is none; throws on a query error. Retries PGRST303 "JWT issued at future"
  * first (see `withPgrst303Retry`).
  */
@@ -27,7 +29,7 @@ export async function getUpcomingPlan(
       // Defence in depth on top of RLS.
       .eq("user_id", userId)
       .gt("week_start", today)
-      .order("week_start", { ascending: false })
+      .order("week_start", { ascending: true })
       .limit(1)
       .maybeSingle<WeeklyPlan>(),
   );

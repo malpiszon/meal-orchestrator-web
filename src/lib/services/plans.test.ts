@@ -37,4 +37,29 @@ describe("getUpcomingPlan", () => {
     await expect(loading).resolves.toBe(plan);
     expect(from).toHaveBeenCalledTimes(2);
   });
+
+  it("selects the nearest future week, not the latest", async () => {
+    const gt = vi.fn();
+    const order = vi.fn();
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      gt: (...args: unknown[]) => {
+        gt(...args);
+        return builder;
+      },
+      order: (...args: unknown[]) => {
+        order(...args);
+        return builder;
+      },
+      limit: () => builder,
+      maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    };
+    const supabase = { from: () => builder } as unknown as SupabaseClient;
+
+    await expect(getUpcomingPlan(supabase, "user-1", "2026-10-04")).resolves.toBeNull();
+
+    expect(gt).toHaveBeenCalledWith("week_start", "2026-10-04");
+    expect(order).toHaveBeenCalledWith("week_start", { ascending: true });
+  });
 });

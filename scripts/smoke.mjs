@@ -139,9 +139,9 @@ function isoDate(epochMs) {
 /**
  * The first Monday at least 7 days after today (UTC), as `YYYY-MM-DD`. Today in Europe/Warsaw is at most
  * one day after today in UTC, so that Monday is always "upcoming". Except on Mondays it is two Mondays
- * ahead; the dashboard's "Next week" tab still shows it, because it shows the latest future plan (as in
- * S-01). The recency history is this week once it is saved, and the later week sits 7 days after it,
- * wherever it falls.
+ * ahead; the dashboard's "Next week" tab still shows it, because it shows the nearest future plan and the
+ * smoke delivers no nearer one. The later week the smoke delivers 7 days after it stays hidden: "Next week"
+ * keeps showing this (nearer) week until it starts.
  */
 function upcomingMonday() {
   const now = new Date();
@@ -217,7 +217,10 @@ const CLAIM_PASSWORD = "Smoke-Claim-Passw0rd!";
 // Tokens of the reset links the steps generate or read from Mailpit, kept for the steps that reuse them.
 let recoveryTokenHash, inviteTokenHash, emailLink;
 
-let delivery, newUserDelivery, redelivery, laterDelivery, oldName, newName, recencyNote, swapName;
+let delivery, newUserDelivery, redelivery, laterDelivery, oldName, newName, swapName;
+// The same-week recency check: a meal on the upcoming week's second day that repeats the swap option's meal,
+// and the note it gets once the swap saves the plan. The later week's meal, which "Next week" must not show.
+let repeatName, repeatNote, laterName;
 let currentDelivery, currentRedelivery, currentName;
 // The rating steps: the current week's Monday meal they rate (the second meal, which is not renamed, so the
 // upcoming week has the same name), an option of that meal that is not chosen, and the rated option's id.
@@ -259,6 +262,31 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     console.error("Fixture problem: the sample's first meal has only one option, so there is nothing to swap to.");
     process.exit(1);
   }
+  // Same-week recency: the second day's first meal offers the swap option's meal again (same
+  // provider_meal_id) under a unique name, in place of an option MO did not recommend, so the recommendation
+  // stays the same. Once the swap saves the plan, it is chosen on the first day, so this option gets a note.
+  const repeatMeal = delivery.days[1]?.meals[0];
+  const swapVariant = firstMeal.variants.find((variant) => variant.name === swapName);
+  const repeatIndex = repeatMeal?.variants.findIndex((_, i) => i !== recommendedIndex(repeatMeal)) ?? -1;
+  if (
+    !repeatMeal ||
+    repeatIndex === -1 ||
+    repeatMeal.variants.some((variant) => variant.provider_meal_id === swapVariant.provider_meal_id)
+  ) {
+    console.error(
+      "Fixture problem: the sample needs a second day whose first meal has at least two options, none of them the swap option's meal.",
+    );
+    process.exit(1);
+  }
+  repeatName = `Smoke repeated meal ${Date.now()}`;
+  repeatMeal.variants[repeatIndex] = {
+    ...repeatMeal.variants[repeatIndex],
+    provider_meal_id: swapVariant.provider_meal_id,
+    name: repeatName,
+  };
+  const repeatDays = daysBetween(delivery.days[0].date, delivery.days[1].date);
+  repeatNote = `In your plan ${repeatDays} ${repeatDays === 1 ? "day" : "days"} earlier (`;
+
   newName = `Smoke re-delivered meal ${Date.now()}`;
   redelivery = structuredClone(delivery);
   redelivery.days[0].meals[0].variants[index].name = newName;
@@ -297,13 +325,12 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   pastDelivery.days[0].meals[0].variants[index].name = pastName;
   otherPastDelivery = await loadDelivery(newUserDelivery.user.email, pastWeek);
 
-  // History: the upcoming week, once the swap step has saved it. A week 7 days after it, with the same
-  // meals (their ids repeat) and the re-delivered recommended meal's name, is annotated against it: each
-  // meal the user chose in the saved week carries a note, the number of days between the two Mondays earlier.
+  // A second future week, 7 days after the upcoming one, with a meal renamed only there. It is stored, but
+  // "Next week" shows the nearest future week, so it stays on the saved upcoming week and never shows this meal.
   const laterWeek = isoDate(Date.parse(`${nextWeek}T00:00:00Z`) + 7 * MS_PER_DAY);
   laterDelivery = await loadDelivery(email, laterWeek);
-  laterDelivery.days[0].meals[0].variants[index].name = newName;
-  recencyNote = `In your plan ${daysBetween(nextWeek, laterWeek)} days earlier (`;
+  laterName = `Smoke later-week meal ${Date.now()}`;
+  laterDelivery.days[0].meals[0].variants[index].name = laterName;
 }
 
 const deliver = (payload) =>
@@ -985,26 +1012,33 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         },
       ],
       [
-        // The upcoming week is saved with a swap by now, so it counts as history for a week 7 days later.
+        // Two future weeks: the upcoming one (saved with a swap) and this one, 7 days after it.
         "delivery of a later week for the signed-in user is stored",
         () => deliver(laterDelivery),
         { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
       ],
       [
-        "later week shows recency notes from the saved week, none for the swapped-away meal",
+        // The saved week counts as history from its save, including its own earlier days: the meal chosen
+        // by the swap on the first day gives its repeat on the second day a note.
+        "Next week stays on the nearer week, with its same-week note",
         () => request("/dashboard"),
         {
           status: 200,
           body: [
-            `"Next week" has "${recencyNote}" on "${swapName}", not on "${newName}", and "This week" has no note`,
+            `no "${laterName}"; "Next week" has "${swapName}" checked, "Saved " and "${repeatNote}" on "${repeatName}", not on "${newName}"; "This week" has no note`,
             (body) => {
               const { thisWeek, nextWeek } = panels(body);
               const swappedAway = optionLabelFor(nextWeek, newName ?? "");
+              const swapOption = radioIdFor(nextWeek, swapName ?? "");
               return (
-                !thisWeek.includes("In your plan") &&
-                optionLabelFor(nextWeek, swapName ?? "").includes(recencyNote ?? "") &&
+                !body.includes(escapeHtml(laterName ?? "")) &&
+                swapOption !== undefined &&
+                isRadioChecked(nextWeek, swapOption) &&
+                nextWeek.includes("Saved ") &&
+                optionLabelFor(nextWeek, repeatName ?? "").includes(repeatNote ?? "") &&
                 swappedAway !== "" &&
-                !swappedAway.includes("In your plan")
+                !swappedAway.includes("In your plan") &&
+                !thisWeek.includes("In your plan")
               );
             },
           ],
