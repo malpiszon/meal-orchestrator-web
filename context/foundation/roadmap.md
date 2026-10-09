@@ -9,7 +9,7 @@ main_goal: speed
 top_blocker: time
 milestone_id: weekly-plan-loop-with-memory
 milestone_seq: 1
-milestone_status: open
+milestone_status: done
 tracker: github-issues
 gh_milestone: "M-1: Weekly plan loop with memory"
 ---
@@ -22,7 +22,7 @@ gh_milestone: "M-1: Weekly plan loop with memory"
 
 ## Milestone
 
-**M-1: Weekly plan loop with memory** — Status: open
+**M-1: Weekly plan loop with memory** — Status: done
 
 - **Intent:** MO's weekly recommendation lands in mo-web alongside the existing email; invited users see it annotated with how recently each meal appeared in their own history, adjust it within that week's menu, and every plan becomes history automatically when the next week arrives.
 - **Source materials:** `context/foundation/prd.md` (v1)
@@ -55,7 +55,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one              | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
 | S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored          | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
 | S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered   | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | done   |
-| S-13 | rating-ordered-options     | user sees each meal's options ordered by their own ratings: 5/5 first, 1/5 last, whatever MO's score | S-03, S-08       | FR-009, FR-013, US-08                                    | in-progress |
+| S-13 | rating-ordered-options     | user sees each meal's options ordered by their own ratings: 5/5 first, 1/5 last, whatever MO's score | S-03, S-08       | FR-009, FR-013, US-08                                    | done   |
 
 ## Streams
 
@@ -296,7 +296,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Does the order also change which option is preselected on a plan nobody saved (e.g. MO recommends a meal rated 1/5), or only the order the options are listed in? — Owner: user. Block: no.
   - Which rating counts when a meal was rated several times: the latest earlier one by meal day, as the "Last rated" note shows (S-08)? — Owner: user. Block: no.
 - **Risk:** Nice-to-have, added at the user's request on 2026-10-08. Today options are listed by MO's score, and the star marks the top score. Putting a 1/5 meal last can move it away from MO's recommendation, so the star, the preselected option and the order must stay readable together. It partly overlaps the parked "smarter tie-break" item. The ratings are already loaded for "Next week" (S-08).
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -316,7 +316,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice        | Show an expired invite/reset link as soon as it's opened     | done                  | Archived 2026-10-06                                |
 | S-11       | [#78](https://github.com/malpiszon/meal-orchestrator-web/issues/78) | recency-from-saved-plans   | Recency notes only from plans the user saved                 | done                  | Archived 2026-10-07                                |
 | S-12       | [#84](https://github.com/malpiszon/meal-orchestrator-web/issues/84) | next-week-nearest-upcoming | "Next week" shows the nearest upcoming week                  | done                  | Merged 2026-10-08 (PR #99)                         |
-| S-13       | [#93](https://github.com/malpiszon/meal-orchestrator-web/issues/93) | rating-ordered-options     | Order meal options by the user's ratings                     | yes                   | Nice-to-have; `/10x-frame` the open unknowns first |
+| S-13       | [#93](https://github.com/malpiszon/meal-orchestrator-web/issues/93) | rating-ordered-options     | Order meal options by the user's ratings                     | done                  | Merged 2026-10-09 (PR #112)                        |
 
 ## Open Roadmap Questions
 
@@ -346,6 +346,8 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Milestone History
 
+- **M-1: Weekly plan loop with memory** (`weekly-plan-loop-with-memory`) — closed 2026-10-09. MO's weekly plan lands in mo-web for invited users, who see recency notes, swap and save the upcoming week, rate recent meals (which also order the options) and browse past weeks; all 13 slices and their foundations done.
+
 ## Done
 
 - **F-02: (foundation) the production database stays active through weeks with no user activity, so MO's weekly delivery and the dashboard keep working.** — Archived 2026-09-29 → `context/archive/2026-09-25-supabase-idle-keepalive/`. Lesson: —.
@@ -362,3 +364,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-08: user can rate meals dated today or in the previous 7 days, and their own rating appears alongside the recency note on later plans.** — Archived 2026-10-08 → `context/archive/2026-10-07-rate-recent-meals/`. Lesson: —.
 - **S-12: user always sees the nearest upcoming week under "Next week", even when MO has delivered more than one future week (for example a week sent 14 days ahead by mistake).** — Archived 2026-10-08 → `context/archive/2026-10-08-next-week-nearest-upcoming/`. Lesson: —.
 - **S-09: user opening `/` lands on a sign-in page that looks finished and matches the rest of the app, logs in from there, or follows "forgot password" into the reset flow; the starter's "10x Astro Starter" page is gone.** — Archived 2026-10-09 → `context/archive/2026-10-08-landing-page/`. Lesson: —.
+- **S-13: user sees each meal slot's options in "Next week" ordered by their own earlier ratings: a meal they rated 5/5 (😋 Chef's kiss) always comes first and one rated 1/5 (🤢 Never again) always comes last, whatever MO's score.** — Archived 2026-10-09 → `context/archive/2026-10-08-rating-ordered-options/`. Lesson: —.

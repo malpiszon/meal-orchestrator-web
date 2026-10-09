@@ -1,10 +1,10 @@
 ---
 change_id: rating-ordered-options
 title: Rating ordered options
-status: impl_reviewed
+status: archived
 created: 2026-10-08
 updated: 2026-10-09
-archived_at: null
+archived_at: 2026-10-09T14:18:53Z
 ---
 
 ## Notes
