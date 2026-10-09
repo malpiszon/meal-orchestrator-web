@@ -28,9 +28,9 @@ BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> \
 | `MAILPIT_URL`               | no       | Reads one real reset email from local Supabase's Mailpit. Without it: `SKIP  real reset email`                 |
 | `KEEPALIVE_EXPECT_FAILURE`  | no       | `1` runs only the keep-alive check and expects it to fail (CI points a preview at an unreachable Supabase)     |
 
-¹ Not needed with `KEEPALIVE_EXPECT_FAILURE=1`, which only fires the keep-alive.
+For a full run the server under test needs `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN` configured too.
 
-The server needs `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN` configured too.
+¹ Not needed with `KEEPALIVE_EXPECT_FAILURE=1`, which only fires the keep-alive: the script then needs only `BASE_URL`, and the server only `SUPABASE_URL` and `SUPABASE_KEY` (CI sets an unreachable `SUPABASE_URL`).
 
 What it covers, each with its error and edge cases (unauthenticated calls, other users' data, invalid bodies):
 
