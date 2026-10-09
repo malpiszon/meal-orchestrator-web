@@ -1,10 +1,10 @@
 ---
 change_id: landing-page
 title: Landing page
-status: impl_reviewed
+status: archived
 created: 2026-10-08
-updated: 2026-10-08
-archived_at: null
+updated: 2026-10-09
+archived_at: 2026-10-09T12:45:10Z
 ---
 
 ## Notes
