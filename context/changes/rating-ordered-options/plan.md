@@ -373,6 +373,12 @@ own history, using `plan_meal_options_chosen_history_idx`.
   `20261008180000_rating_ordered_defaults.sql` (left as is: that migration indeed doesn't re-pick).
 - No pgTAP test: CI builds the database from empty migrations, so the block does nothing there; it was
   verified on the local stack (two upcoming weeks, 3 slots each re-picked; started weeks unchanged).
+- Known limitation (full review F2, accepted): if a delivery commits while `rate_meal` waits on the
+  plan lock, or inserts a new plan, the rating's re-pick can miss that plan (its locking select uses
+  the statement's snapshot), and the delivery's `pick_default_choices` ran without the uncommitted
+  rating. The stored pick then disagrees with the dashboard order until the next rating or
+  re-delivery. The window is milliseconds against a weekly delivery and nothing is corrupted, so no
+  SQL change.
 
 ## References
 

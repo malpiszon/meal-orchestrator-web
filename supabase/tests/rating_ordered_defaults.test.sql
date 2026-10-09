@@ -4,7 +4,7 @@
 -- unsaved upcoming plans, with its safeguards. Dates are relative to today in Europe/Warsaw, so the test
 -- never ages. Run with `npx supabase test db`.
 begin;
-select plan(30);
+select plan(31);
 
 -- Day offsets are relative to today in Europe/Warsaw.
 create function pg_temp.d(p_day int) returns date
@@ -265,8 +265,11 @@ values
    pg_temp.d(1), 'lunch', 1, 'ALTC', 'ALTC', 5, false, false);
 
 -- Upcoming weeks offering LATE as MO's recommendation: A's unsaved day 29 (ntfy), A's saved day 36
--- (ntfy), A's unsaved day 43 (another provider), B's unsaved day 29 (ntfy).
+-- (ntfy), A's unsaved day 43 (another provider), B's unsaved day 29 (ntfy). Plus A's unsaved week starting
+-- today (ntfy; a first delivery of a started week is stored), the re-pick's cut-off.
 set local role service_role;
+select pg_temp.send('ordered-a@test.local', 'ntfy', 0, '{"week":"w0","v":"1"}',
+  pg_temp.o(0, 'lunch', 0, 'LATE', 9, true), pg_temp.o(0, 'lunch', 1, 'ALT', 5, false));
 select pg_temp.send('ordered-a@test.local', 'ntfy', 29, '{"week":"w29","v":"1"}',
   pg_temp.o(29, 'lunch', 0, 'LATE', 9, true), pg_temp.o(29, 'lunch', 1, 'ALT', 5, false),
   pg_temp.o(29, 'dinner', 0, 'D1', 8, true), pg_temp.o(29, 'dinner', 1, 'D2', 6, false));
@@ -317,6 +320,11 @@ select results_eq(
   $$ select * from pg_temp.chosen('10000000-0000-0000-0000-000000000003') $$,
   $$ values (0, 'lunch', 'LATE'), (1, 'lunch', 'LATE') $$,
   'late rating: a started unsaved week (the rated meal''s own) keeps LATE'
+);
+select results_eq(
+  $$ select * from pg_temp.chosen(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 0)) $$,
+  $$ values (0, 'lunch', 'LATE') $$,
+  'late rating: an unsaved week starting today (the cut-off) keeps LATE'
 );
 select results_eq(
   $$ select * from pg_temp.chosen(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 43)) $$,
