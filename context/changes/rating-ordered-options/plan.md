@@ -419,9 +419,9 @@ own history, using `plan_meal_options_chosen_history_idx`.
 
 #### Automated
 
-- [x] 3.1 Smoke passes against the preview, including the 5/5-first and 1/5-last steps: `npm run build && npx astro preview --port 4323`, then `BASE_URL=http://localhost:4323 MO_INGEST_TOKEN=… SUPABASE_URL=… SUPABASE_KEY=… SUPABASE_SERVICE_ROLE_KEY=… MAILPIT_URL=http://127.0.0.1:54324 npm run smoke`
-- [x] 3.2 Lint and format pass: `npm run lint` and `npx prettier --check README.md`
+- [x] 3.1 Smoke passes against the preview, including the 5/5-first and 1/5-last steps: `npm run build && npx astro preview --port 4323`, then `BASE_URL=http://localhost:4323 MO_INGEST_TOKEN=… SUPABASE_URL=… SUPABASE_KEY=… SUPABASE_SERVICE_ROLE_KEY=… MAILPIT_URL=http://127.0.0.1:54324 npm run smoke` — 0508bc8
+- [x] 3.2 Lint and format pass: `npm run lint` and `npx prettier --check README.md` — 0508bc8
 
 #### Manual
 
-- [x] 3.3 README walkthrough steps 5 and 7 read correctly against the running app
+- [x] 3.3 README walkthrough steps 5 and 7 read correctly against the running app — 0508bc8
