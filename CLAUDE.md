@@ -27,12 +27,12 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 
 ## Commands
 
-- Check @README.md
+- Check @README.md (scripts, local setup, env vars); tests and smoke env vars: `docs/testing.md`.
 - Pre-commit (husky + lint-staged): `eslint --fix` on `*.{ts,tsx,astro}`, `prettier --write` on `*.{json,css,md}`.
 
 ## Architecture & conventions
 
-- Auth: `@src/lib/supabase.ts` (SSR client, cookie sessions, `astro:env/server` for `SUPABASE_URL`/`SUPABASE_KEY`), `@src/middleware.ts` (resolves `context.locals.user`, redirects unauthenticated users off `PROTECTED_ROUTES`). API at `src/pages/api/auth/{signin,signup,signout}.ts`, pages at `src/pages/auth/*.astro`, protected example: `@src/pages/dashboard.astro`.
+- Auth: `@src/lib/supabase.ts` (SSR client, cookie sessions, `astro:env/server` for `SUPABASE_URL`/`SUPABASE_KEY`), `@src/middleware.ts` (resolves `context.locals.user`, redirects unauthenticated users off `PROTECTED_ROUTES`). API at `src/pages/api/auth/{signin,signout,forgot-password,set-password,confirm}.ts`, pages at `src/pages/auth/*.astro`; no sign-up (accounts come from MO deliveries plus an invitation).
 - Path alias `@/*` → `./src/*`.
 - Astro components for static content; React only where interactivity is needed. Extract hooks to `src/components/hooks/`.
 - shadcn/ui components live in `src/components/ui/` ("new-york" variant); add with `npx shadcn@latest add [name]`.
@@ -44,7 +44,11 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 
 - Check @README.md
 
+## Docs
+
+- Behaviour and routes: `docs/api.md`; MO payload and responses: `docs/mo-delivery-contract.md` (keep in sync with `moDeliverySchema`); secrets, deploy order, Supabase dashboard settings: `docs/deployment.md`; local walkthrough: `docs/dev-walkthrough.md`. Read the relevant one before changing that area.
+- A change that alters a route, a user-visible rule, a secret or a deploy step updates the matching `docs/` file in the same PR. Docs describe the current state; rollout history belongs in the change's `context/` folder.
+
 ## CI
 
-- Check @README.md
-- `@.github/workflows/ci.yml`
+- `docs/testing.md#ci`, `@.github/workflows/ci.yml`
