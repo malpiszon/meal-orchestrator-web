@@ -389,15 +389,15 @@ own history, using `plan_meal_options_chosen_history_idx`.
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm test`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Type check passes: `npx astro check`
-- [ ] 2.4 Build passes: `npm run build`
+- [x] 2.1 Unit tests pass: `npm test`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Type check passes: `npx astro check`
+- [x] 2.4 Build passes: `npm run build`
 
 #### Manual
 
-- [ ] 2.5 On :4323, an unsaved "Next week" with a meal rated 1/5 earlier lists it last, with another option selected and starred
-- [ ] 2.6 "Keep these picks" saves the shown selection, and history shows "Not saved: suggested picks" for a never-saved past week
+- [x] 2.5 On :4323, an unsaved "Next week" with a meal rated 1/5 earlier lists it last, with another option selected and starred
+- [x] 2.6 "Keep these picks" saves the shown selection, and history shows "Not saved: suggested picks" for a never-saved past week
 
 ### Phase 3: Smoke and README
 

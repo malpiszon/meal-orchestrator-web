@@ -24,7 +24,7 @@ export type EditorOption = Pick<
 >;
 
 /** A grouped slot reduced to what the editor reads, so each option is serialized into the page once. */
-export type EditorSlot = Pick<PlanSlot<EditorOption>, "mealType" | "options" | "topScore"> & { chosenId: string };
+export type EditorSlot = Pick<PlanSlot<EditorOption>, "mealType" | "options" | "starredIds"> & { chosenId: string };
 
 /** A grouped day plus its label, formatted on the server so the browser's ICU can't change it on hydration. */
 export interface EditorDay {
@@ -41,7 +41,7 @@ interface UpcomingWeekEditorProps {
   editableUntil: string;
   /** `formatSavedAt` of the plan's `saved_at`; `null` when never saved. */
   savedAtLabel: string | null;
-  /** `groupPlanOptions` of the plan's options, reduced to `EditorSlot`s, each day with its `formatDayLabel`. */
+  /** `groupPlanOptions` of the plan's options (with its ratings), reduced to `EditorSlot`s, each day with its `formatDayLabel`. */
   days: EditorDay[];
   /** Option id → last earlier planned date (`getPlanRecency`). */
   recency: Record<string, string>;
@@ -95,10 +95,10 @@ function SlotFieldset({ slot, name, chosenId, recency, ratings, disabled, onChoo
                 <div className="flex items-start justify-between gap-2">
                   <span className={cn("min-w-0 break-words", selected && "font-medium")}>{option.name}</span>
                   <div className="flex shrink-0 items-center gap-1">
-                    {option.score === slot.topScore && (
+                    {slot.starredIds.includes(option.id) && (
                       <Badge variant="outline">
                         <Star aria-hidden="true" className="text-primary fill-current" />
-                        <span className="sr-only">Top score</span>
+                        <span className="sr-only">Top pick</span>
                       </Badge>
                     )}
                     <Badge variant={selected ? "default" : "secondary"}>
@@ -185,7 +185,7 @@ export default function UpcomingWeekEditor({
         </p>
         {savedAtLabel === null && !locked && (
           <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={confirm}>
-            Keep as recommended
+            Keep these picks
           </Button>
         )}
       </div>
