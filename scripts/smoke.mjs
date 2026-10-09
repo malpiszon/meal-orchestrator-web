@@ -2,7 +2,7 @@
 // Zero dependencies on purpose. Run against a live server:
 //   BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> node scripts/smoke.mjs
 // Required: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (the smoke user is created through the Admin API).
-// Optional: SUPABASE_KEY and MAILPIT_URL enable more checks (see README).
+// Optional: SUPABASE_KEY and MAILPIT_URL enable more checks (see docs/testing.md).
 
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";

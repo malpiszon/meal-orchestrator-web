@@ -3,7 +3,7 @@ import { MEAL_TYPES, type OptionRow } from "@/types";
 
 /**
  * Payload v1 of MO's weekly delivery (`POST /api/mo/deliveries`).
- * Keep in sync with context/changes/mo-weekly-delivery/mo-delivery-contract.md.
+ * Keep in sync with docs/mo-delivery-contract.md.
  * No `astro:env` import here, so Vitest can load this module.
  */
 

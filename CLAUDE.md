@@ -4,7 +4,7 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 
 ## Hard rules
 
-- API routes must export `const prerender = false` (app runs `output: "server"`, see `@astro.config.mjs`) and validate input with zod.
+- API routes export uppercase `GET`/`POST` handlers (Astro ignores lowercase ones) and `const prerender = false` (app runs `output: "server"`, see `@astro.config.mjs`), and validate input with zod.
 - Use the `cn()` helper from `@/lib/utils` for Tailwind class merging; never concatenate class strings manually.
 - No Next.js directives (`"use client"`, etc.) in React components.
 - New Supabase tables must enable RLS with granular per-operation, per-role policies.

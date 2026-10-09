@@ -5,7 +5,7 @@
 | Unit           | `npm test`                        | `src/**/*.test.ts` (Vitest)         | Nothing                                  |
 | Database       | `npx supabase test db`            | `supabase/tests/*.test.sql` (pgTAP) | Local Supabase running                   |
 | Smoke (HTTP)   | `npm run smoke`                   | `scripts/smoke.mjs`                 | A running server and Supabase, see below |
-| Lint and types | `npm run lint`, `npx astro check` |                                     | Nothing                                  |
+| Lint and types | `npm run lint`, `npx astro check` |                                     | `npx astro sync` once, as CI does        |
 
 ## Smoke test
 
@@ -21,12 +21,14 @@ BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> \
 | Variable                    | Required | Purpose                                                                                                        |
 | --------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
 | `BASE_URL`                  | no       | Server under test; defaults to `http://localhost:4321`                                                         |
-| `MO_INGEST_TOKEN`           | yes      | Must match the server's token                                                                                  |
-| `SUPABASE_URL`              | yes      | The Supabase instance the server uses                                                                          |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes      | Creates the smoke user and generates email-link tokens through the Admin API (there is no sign-up)             |
+| `MO_INGEST_TOKEN`           | yes¹     | Must match the server's token                                                                                  |
+| `SUPABASE_URL`              | yes¹     | The Supabase instance the server uses                                                                          |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes¹     | Creates the smoke user and generates email-link tokens through the Admin API (there is no sign-up)             |
 | `SUPABASE_KEY`              | no       | The anon key; checks that it can't execute `ingest_weekly_plan` directly. Without it: `SKIP  anon grant check` |
 | `MAILPIT_URL`               | no       | Reads one real reset email from local Supabase's Mailpit. Without it: `SKIP  real reset email`                 |
 | `KEEPALIVE_EXPECT_FAILURE`  | no       | `1` runs only the keep-alive check and expects it to fail (CI points a preview at an unreachable Supabase)     |
+
+¹ Not needed with `KEEPALIVE_EXPECT_FAILURE=1`, which only fires the keep-alive.
 
 The server needs `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN` configured too.
 
