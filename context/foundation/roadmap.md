@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-09-25
-updated: 2026-10-08
+updated: 2026-10-09
 prd_version: 1
 main_goal: speed
 top_blocker: time
@@ -51,7 +51,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-06 | week-resubmission-replace  | a re-sent week from MO replaces only that week's stored recommendation, keeping saved choices        | S-01, S-03       | FR-017, FR-018, US-07                                    | done   |
 | S-07 | plan-history-list          | user can browse all past plans as a simple chronological list                                        | S-02             | FR-012                                                   | done   |
 | S-08 | rate-recent-meals          | user can rate meals from today or the previous 7 days and see their rating in annotations            | S-02             | FR-013, US-08                                            | done   |
-| S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                  | S-05             | FR-004, FR-005, US-03, US-04                             | ready  |
+| S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                  | S-05             | FR-004, FR-005, US-03, US-04                             | done   |
 | S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one              | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
 | S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored          | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
 | S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered   | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | done   |
@@ -239,7 +239,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **Blockers:** —
 - **Unknowns:** —
 - **Risk:** Not a marketing page: no pitch or ad copy, just a pleasant entry point. Build it through the Core Skills Chain (`/10x-new` → `/10x-research` → `/10x-plan` → `/10x-implement`), then polish with `/10x-ui`. Must not link to `/auth/signup`, which S-04 removed. The login and reset paths from `/` need a test, not only a manual check.
-- **Status:** ready
+- **Status:** done
 
 ### S-10: Expired link notice on open
 
@@ -312,7 +312,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
 | S-06       | [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)   | week-resubmission-replace  | Replace a re-sent week's recommendation                      | done                  | Merged 2026-10-06 (PR #76)                         |
 | S-07       | [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10) | plan-history-list          | Chronological list of past plans                             | done                  | Archived 2026-10-07                                |
 | S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals          | Rate meals from the last 7 days                              | done                  | Merged 2026-10-08 (PR #92)                         |
-| S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page               | Sign-in landing page with login and password reset           | yes                   | Run `/10x-plan landing-page`                       |
+| S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page               | Sign-in landing page with login and password reset           | done                  | Merged 2026-10-09 (PR #104)                        |
 | S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice        | Show an expired invite/reset link as soon as it's opened     | done                  | Archived 2026-10-06                                |
 | S-11       | [#78](https://github.com/malpiszon/meal-orchestrator-web/issues/78) | recency-from-saved-plans   | Recency notes only from plans the user saved                 | done                  | Archived 2026-10-07                                |
 | S-12       | [#84](https://github.com/malpiszon/meal-orchestrator-web/issues/84) | next-week-nearest-upcoming | "Next week" shows the nearest upcoming week                  | done                  | Merged 2026-10-08 (PR #99)                         |
@@ -361,3 +361,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 - **S-07: user can browse their full history of past plans as a simple chronological list.** — Archived 2026-10-07 → `context/archive/2026-10-07-plan-history-list/`. Lesson: —.
 - **S-08: user can rate meals dated today or in the previous 7 days, and their own rating appears alongside the recency note on later plans.** — Archived 2026-10-08 → `context/archive/2026-10-07-rate-recent-meals/`. Lesson: —.
 - **S-12: user always sees the nearest upcoming week under "Next week", even when MO has delivered more than one future week (for example a week sent 14 days ahead by mistake).** — Archived 2026-10-08 → `context/archive/2026-10-08-next-week-nearest-upcoming/`. Lesson: —.
+- **S-09: user opening `/` lands on a sign-in page that looks finished and matches the rest of the app, logs in from there, or follows "forgot password" into the reset flow; the starter's "10x Astro Starter" page is gone.** — Archived 2026-10-09 → `context/archive/2026-10-08-landing-page/`. Lesson: —.

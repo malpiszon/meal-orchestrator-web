@@ -13,8 +13,6 @@ import { createClient } from "@/lib/supabase";
 
 export const prerender = false;
 
-const INVALID_LINK_MESSAGE = "This link is invalid or has expired. Ask for a new one.";
-
 /**
  * Saves a new password from the set-password page. The emailed token is verified only here, on
  * the POST, and only after the password passed validation, so a rejected password never uses it.
@@ -24,11 +22,10 @@ const INVALID_LINK_MESSAGE = "This link is invalid or has expired. Ask for a new
 export const POST: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
   if (!supabase) {
-    return context.redirect(`/auth/signin?error=${encodeURIComponent("Supabase is not configured")}`);
+    return context.redirect("/auth/signin?error=not_configured");
   }
 
-  const invalidLink = () =>
-    context.redirect(`${FORGOT_PASSWORD_PATH}?error=${encodeURIComponent(INVALID_LINK_MESSAGE)}`);
+  const invalidLink = () => context.redirect(`${FORGOT_PASSWORD_PATH}?error=invalid_link`);
 
   const form = await context.request.formData().catch(() => null);
   const field = (name: string) => {

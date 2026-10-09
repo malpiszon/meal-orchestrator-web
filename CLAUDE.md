@@ -10,7 +10,7 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 - New Supabase tables must enable RLS with granular per-operation, per-role policies.
 - API route handlers use uppercase `GET`/`POST` exports and validate input with zod.
 - Deploy target is Cloudflare **Workers** (`npx wrangler deploy`), never Pages (`wrangler pages …`); see `@context/foundation/infrastructure.md`.
-- Style with design tokens (`bg-background`, `text-muted-foreground`, `bg-primary`, …, defined in `src/styles/global.css`) and shadcn component variants; never hard-code palette colours (`white/*`, `blue-500`, hex) and never pass colour classes to a shadcn component via `className` (tailwind-merge makes them override the variant). Layout classes (`w-full`, spacing) are fine. Legacy exceptions until S-09/S-04: `Welcome.astro`, `Topbar.astro`, `signup.astro`.
+- Style with design tokens (`bg-background`, `text-muted-foreground`, `bg-primary`, …, defined in `src/styles/global.css`) and shadcn component variants; never hard-code palette colours (`white/*`, `blue-500`, hex) and never pass colour classes to a shadcn component via `className` (tailwind-merge makes them override the variant). Layout classes (`w-full`, spacing) are fine.
 - Never use shadcn `asChild` from `.astro` files (Astro wraps slot children, so Radix `Slot` drops the classes); apply `buttonVariants({ variant })` to the element instead.
 
 ## Issue tracking (GitHub)
