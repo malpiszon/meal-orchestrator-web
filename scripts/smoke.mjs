@@ -202,6 +202,8 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MAILPIT_URL = process.env.MAILPIT_URL?.replace(/\/$/, "");
 const inviteEmail = `smoke-invite-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 const unknownEmail = `smoke-unknown-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
+// The landing path's reset request: unknown on purpose, so no email is sent.
+const landingEmail = `smoke-landing-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 const FORGOT_PASSWORD = "/api/auth/forgot-password";
 const SET_PASSWORD = "/api/auth/set-password";
 // Set by src/pages/api/auth/set-password.ts when a save fails after the emailed token was used.
@@ -494,10 +496,65 @@ async function pollResetEmailLink(to) {
   );
 }
 
+/**
+ * Apostrophe-free parts of the fixed sign-in messages (src/lib/signin-errors.ts), so a match
+ * doesn't depend on how the SSR output escapes "'".
+ */
+const SIGN_IN_MESSAGE_MARKERS = [
+  "Wrong email or password.",
+  "Too many sign-in attempts.",
+  "configured on this server.",
+  "sign you in. Try again in a moment.",
+  "This link is invalid or has expired.",
+];
+
+// Fragments of the fixed `/auth/forgot-password?error=` messages (src/lib/forgot-password-errors.ts).
+const FORGOT_PASSWORD_MESSAGE_MARKERS = [
+  "Enter a valid email address",
+  "configured on this server.",
+  "This link is invalid or has expired.",
+];
+
 const steps = KEEPALIVE_EXPECT_FAILURE
   ? [["keepalive cron reports failure", () => request(KEEPALIVE_TRIGGER), { status: (status) => status >= 400 }]]
   : [
-      ["home renders", () => request("/"), { status: 200 }],
+      // The landing paths (S-09): from `/`, an anonymous visitor reaches sign-in and can start a password reset.
+      [
+        "landing: home redirects anonymous user to sign-in",
+        () => request("/"),
+        { status: 302, location: "/auth/signin" },
+      ],
+      [
+        "landing: signin page shows the logo, the form and the reset link",
+        () => request("/auth/signin"),
+        {
+          status: 200,
+          body: [
+            "contains the logo, the sign-in form and the reset link, and no starter leftovers",
+            (body) =>
+              body.includes('src="/logo.png"') &&
+              body.includes('action="/api/auth/signin"') &&
+              body.includes('href="/auth/forgot-password"') &&
+              !body.includes("10x Astro Starter") &&
+              !body.includes("/auth/signup"),
+          ],
+        },
+      ],
+      [
+        "landing: forgot-password page shows the email form",
+        () => request("/auth/forgot-password"),
+        {
+          status: 200,
+          body: ["contains the reset request form", (body) => body.includes(`action="${FORGOT_PASSWORD}"`)],
+        },
+      ],
+      [
+        // An unknown email gets the same answer as a real account and sends no email, which keeps local
+        // Supabase's email budget for the Mailpit step.
+        "landing: reset request from the forgot-password page looks like a success",
+        () => requestReset(landingEmail),
+        { status: 302, location: "/auth/forgot-password?sent=1" },
+      ],
       ["dashboard redirects anonymous user", () => request("/dashboard"), { status: 302, location: "/auth/signin" }],
       ["history redirects anonymous user", () => request("/history"), { status: 302, location: "/auth/signin" }],
       [
@@ -509,17 +566,81 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       [
         "signin rejects wrong password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
-        { status: 302, location: "/auth/signin?error=" },
+        { status: 302, location: "/auth/signin?error=invalid_credentials" },
       ],
       [
-        "signin accepts correct password",
+        "signin rejects a body that isn't a form",
+        () =>
+          request("/api/auth/signin", { method: "POST", raw: "not a form", headers: { "Content-Type": "text/plain" } }),
+        { status: 302, location: "/auth/signin?error=invalid_credentials" },
+      ],
+      [
+        // Still anonymous here: the sign-in page redirects a signed-in visitor to /dashboard.
+        "signin page never renders error text from the URL",
+        () => request(`/auth/signin?error=${encodeURIComponent("<script>spoof</script>")}`),
+        {
+          status: 200,
+          body: [
+            "contains neither 'spoof' nor any fixed sign-in message",
+            (body) => !body.includes("spoof") && !SIGN_IN_MESSAGE_MARKERS.some((marker) => body.includes(marker)),
+          ],
+        },
+      ],
+      [
+        "signin page shows the fixed message for a known code",
+        () => request("/auth/signin?error=invalid_credentials"),
+        {
+          status: 200,
+          body: ["contains 'Wrong email or password.'", (body) => body.includes("Wrong email or password.")],
+        },
+      ],
+      [
+        "forgot-password page never renders error text from the URL",
+        () => request(`/auth/forgot-password?error=${encodeURIComponent("<script>spoof</script>")}`),
+        {
+          status: 200,
+          body: [
+            "contains neither 'spoof' nor any fixed reset message",
+            (body) =>
+              !body.includes("spoof") && !FORGOT_PASSWORD_MESSAGE_MARKERS.some((marker) => body.includes(marker)),
+          ],
+        },
+      ],
+      [
+        "forgot-password page shows the fixed message for a known code",
+        () => request("/auth/forgot-password?error=invalid_link"),
+        {
+          status: 200,
+          body: [
+            "contains 'This link is invalid or has expired.'",
+            (body) => body.includes("This link is invalid or has expired."),
+          ],
+        },
+      ],
+      [
+        "malformed email link is sent to sign-in with a code",
+        () => request("/api/auth/confirm?type=nonsense"),
+        { status: 302, location: "/auth/signin?error=invalid_link" },
+      ],
+      [
+        "landing: signin accepts correct password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
-        { status: 302, location: "/" },
+        { status: 302, location: "/dashboard" },
       ],
       [
-        "dashboard shows no upcoming plan yet",
+        "landing: dashboard shows no upcoming plan yet",
         () => request("/dashboard"),
         { status: 200, body: ["contains 'No upcoming plan yet'", (body) => body.includes("No upcoming plan yet")] },
+      ],
+      [
+        "landing: home redirects signed-in user to dashboard",
+        () => request("/"),
+        { status: 302, location: "/dashboard" },
+      ],
+      [
+        "landing: signin page redirects signed-in user to dashboard",
+        () => request("/auth/signin"),
+        { status: 302, location: "/dashboard" },
       ],
       [
         // The smoke user is new on every run, so no earlier run's past weeks can show up here.
@@ -1000,7 +1121,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "reset request with an invalid email is rejected",
               () => requestReset("not-an-email"),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_email" },
             ],
             [
               "old-style password-reset link is forwarded to the set-password page",
@@ -1070,7 +1191,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "token-less save from a signed-in session without the retry cookie is refused",
               () => postSetPassword(RETRY_PASSWORD),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "signout after the reset",
@@ -1080,17 +1201,17 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "token-less save without a session is refused",
               () => postSetPassword(RETRY_PASSWORD),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "signin rejects the password from before the reset",
               () => request("/api/auth/signin", { method: "POST", form: { email, password } }),
-              { status: 302, location: "/auth/signin?error=" },
+              { status: 302, location: "/auth/signin?error=invalid_credentials" },
             ],
             [
               "signin accepts the new password",
               () => request("/api/auth/signin", { method: "POST", form: { email, password: smokePassword } }),
-              { status: 302, location: "/" },
+              { status: 302, location: "/dashboard" },
             ],
             [
               "used password-reset link is rejected",
@@ -1100,7 +1221,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
                 if (!recoveryTokenHash) return stepFailure("no password-reset token was generated");
                 return postSetPassword(RETRY_PASSWORD, { tokenHash: recoveryTokenHash });
               },
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "used password-reset link opened on the page shows the notice",
@@ -1113,7 +1234,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "made-up password-reset token is rejected",
               () => postSetPassword(RETRY_PASSWORD, { tokenHash: "not-a-real-token-hash" }),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
             [
               "made-up token opened on the page shows the notice",
@@ -1257,7 +1378,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             [
               "garbage invitation token is rejected on save",
               () => postSetPassword(RESET_PASSWORD, { tokenHash: "not-a-real-token-hash", type: "invite" }),
-              { status: 302, location: "/auth/forgot-password?error=" },
+              { status: 302, location: "/auth/forgot-password?error=invalid_link" },
             ],
           ]
         : []),

@@ -107,11 +107,11 @@ jobs:
         run: |
           curl -sf -o /dev/null "$PROD_URL/auth/signin"
           test "$(curl -s -o /dev/null -w '%{http_code}' "$PROD_URL/dashboard")" = 302
-          # Fails if Worker secrets are missing ("Supabase is not configured") instead of reaching Supabase.
+          # Fails if Worker secrets are missing (the redirect then carries error=not_configured) instead of reaching Supabase.
           location=$(curl -s -o /dev/null -w '%{redirect_url}' -X POST -H "Origin: $PROD_URL" \
             -d 'email=ci-probe%40example.com&password=not-a-real-password' "$PROD_URL/api/auth/signin")
           echo "$location"
-          echo "$location" | grep -q 'Invalid%20login%20credentials'
+          echo "$location" | grep -q 'error=invalid_credentials'
           # MO delivery endpoint without a token must answer 401. A 503 means the Worker secrets
           # SUPABASE_SERVICE_ROLE_KEY / MO_INGEST_TOKEN are missing; a 403 or challenge page means
           # Cloudflare bot protection is blocking machine-to-machine calls, so MO couldn't deliver either.
