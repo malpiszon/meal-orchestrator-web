@@ -88,7 +88,7 @@ There are two mo-web environments, and each has its own endpoint and token:
 
 Unknown top-level keys are rejected (HTTP 400). Unknown keys inside nested objects (`user`, days, meals, variants, `nutrition`) are not rejected but are ignored; mo-web only keeps them in the stored raw payload. Extending the payload therefore means bumping `schema_version` in coordination with mo-web.
 
-All date checks use the calendar date as written, with no time zone involved.
+Payload date validation uses the calendar date as written, with no time zone conversion. Whether a week has started is decided by today in Europe/Warsaw (see Idempotency below).
 
 ## Configuration
 

@@ -53,6 +53,8 @@ Without the last two, the MO delivery endpoint answers 503. MO reads its token f
 
 Public sign-up is off in the production project.
 
+Worker logs drop query strings from request URLs (`observability.redact_query_string` in `wrangler.jsonc`), so the `token_hash` of an unused invitation or reset link on `/auth/set-password` and `/api/auth/confirm` never reaches them.
+
 ## Keep-alive Cron Trigger
 
 The Worker runs a daily Cron Trigger (`0 3 * * *`, see `wrangler.jsonc`) that calls the `keepalive` Postgres function, keeping the free-tier Supabase project from pausing after about 7 days of inactivity. A successful run logs `keepalive ok`; a failure logs `keepalive failed: <message>` and the invocation is reported as failed.
@@ -72,6 +74,5 @@ curl "http://localhost:8787/__scheduled?cron=0+3+*+*+*"
 
 ## Known risks
 
-- **Reset tokens in logs.** Cloudflare Workers request logs record the full URLs of `/auth/set-password` and `/api/auth/confirm`, so a reset token that hasn't been used yet (valid for up to 1 hour) sits in logs readable by the Cloudflare account's admins.
 - **The link check depends on Supabase internals.** `auth_link_is_valid` (see [API](api.md#accounts-and-email-links)) reads `auth.one_time_tokens` and `auth.users`, which a Supabase upgrade may change. The pgTAP test `supabase/tests/auth_link_is_valid.test.sql` and the smoke steps catch a break in the local Supabase version, so in CI. A hosted Supabase upgrade isn't covered: if it made the check answer "not live" for valid links, the page would hide the form for every link. A sudden rise of `auth link check: link not live` lines in the Worker logs is the sign; dropping the function (`drop function public.auth_link_is_valid`) makes the page fail open at once.
 - **A paused database.** If the keep-alive stops (a failed cron, a removed migration), a week without activity pauses the Supabase project and MO's next delivery fails.

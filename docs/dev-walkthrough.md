@@ -4,10 +4,10 @@
 
 The rules behind each step are in [Pages and API](api.md).
 
-1. Deliver the sample for your email and an upcoming week. `start` must be a Monday after today (Europe/Warsaw); the day dates are shifted to match. The response shows `"account_created":true`.
+1. Deliver the sample for your email and an upcoming week. `start` must be a Monday after today (Europe/Warsaw); the command computes the next one with GNU `date` (on macOS, type the date in) and shifts the day dates to match. The response shows `"account_created":true`.
 
    ```bash
-   jq --arg email you@example.com --arg start 2026-10-12 '
+   jq --arg email you@example.com --arg start "$(TZ=Europe/Warsaw date -d 'next monday' +%F)" '
      ((($start + "T00:00:00Z") | fromdate) - ((.week_start + "T00:00:00Z") | fromdate)) as $shift
      | def move: ((. + "T00:00:00Z") | fromdate) + $shift | strftime("%Y-%m-%d");
      .user.email = $email | .week_start = $start | .week_end |= move | .days |= map(.date |= move)' \

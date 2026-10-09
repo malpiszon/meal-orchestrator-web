@@ -18,7 +18,7 @@ Protected pages redirect anonymous visitors to `/auth/signin`; the list is `PROT
 
 ## Accounts and email links
 
-There is no public sign-up: an invitation is the only way to get an account. The first MO delivery for an unknown email creates the account (unconfirmed, `app_metadata.provisioned_by = "mo-delivery"`) and sends it an invitation (Supabase Admin API `inviteUserByEmail`). Later deliveries send no second invitation. If the invitation email can't be sent (for example the email rate limit), the delivery still stores the week and returns 200, the failure is only logged, and the user can get a password through "Forgot or never set a password?" on the sign-in page.
+There is no public sign-up: accounts come only from MO deliveries. The first MO delivery for an unknown email creates the account (unconfirmed, `app_metadata.provisioned_by = "mo-delivery"`) and normally sends it an invitation (Supabase Admin API `inviteUserByEmail`). Later deliveries send no second invitation. If the invitation email can't be sent (for example the email rate limit), the delivery still stores the week and returns 200, the failure is only logged, and the user can get a password through "Forgot or never set a password?" on the sign-in page.
 
 | Route                            | Effect                                                                                                                      |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
@@ -100,7 +100,7 @@ An option whose meal was chosen earlier shows a note such as "In your plan 7 day
 
 ## Ratings
 
-Under each chosen meal of the last 7 days (today minus 7 days to today, both included), "This week" and `/history/<id>` show "How was it?" and five faces: 🤢 Never again, 😕 Meh, 😐 Fine, 🙂 Tasty, 😋 Chef's kiss. Tapping a face saves it at once; tapping another changes it, and tapping the pressed face again clears it.
+Under each chosen meal from today and the previous 7 days (today minus 7 days to today, both included), "This week" and `/history/<id>` show "How was it?" and five faces: 🤢 Never again, 😕 Meh, 😐 Fine, 🙂 Tasty, 😋 Chef's kiss. Tapping a face saves it at once; tapping another changes it, and tapping the pressed face again clears it.
 
 - Only the chosen meal of a slot can be rated (the suggested pick when the plan was never saved; a week first delivered after it started keeps the pick made at delivery), and no meal before its day.
 - Outside that window a stored rating is shown read-only (for example "😋 Chef's kiss"), and other meals show no faces.
