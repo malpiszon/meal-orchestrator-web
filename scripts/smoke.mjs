@@ -192,6 +192,8 @@ const RATINGS = "/api/ratings";
 // The rating the rating steps give, and its label (RATING_FACES in src/lib/ratings.ts).
 const RATING = 5;
 const RATING_LABEL = "Chef's kiss";
+// The rating the 1/5 step gives (Never again).
+const LOWEST_RATING = 1;
 const MO_INGEST_TOKEN = process.env.MO_INGEST_TOKEN;
 // Optional: the Supabase instance the server uses, to check its grants directly (CI sets both).
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -223,6 +225,10 @@ let currentDelivery, currentRedelivery, currentName;
 // The rating steps: the current week's Monday meal they rate (the second meal, which is not renamed, so the
 // upcoming week has the same name), an option of that meal that is not chosen, and the rated option's id.
 let ratedName, unchosenName, ratedOptionId;
+// Rating-ordered options: the upcoming option planted with the rated meal (re-picked by the 5/5 rating), the
+// upcoming recommendation planted with a meal of its own, and that meal's provider_meal_id, which the current
+// week's renamed Monday meal shares, so rating that meal 1/5 re-picks the slot.
+let plantedName, neverAgainName, neverAgainMealId;
 // The week before the current one: past, so /history lists it. It is never saved, so it gives no recency notes.
 // The same week for the account a delivery creates, which the smoke user must not be able to open.
 let pastDelivery, otherPastDelivery, pastName;
@@ -285,6 +291,46 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   const repeatDays = daysBetween(delivery.days[0].date, delivery.days[1].date);
   repeatNote = `In your plan ${repeatDays} ${repeatDays === 1 ? "day" : "days"} earlier (`;
 
+  // Rating-ordered options: two more upcoming slots, neither the swap and rename slot (first day's first
+  // meal), the rated meal's own slot (first day's second meal) nor the repeat slot (second day's first meal).
+  // - The 5/5 slot offers the rated meal (the Monday second meal's recommended option, same provider_meal_id)
+  //   under a unique name, in place of an option MO did not recommend. The upcoming week is delivered before
+  //   the rating and stays unsaved until the swap, so the rating re-picks it: selected, first and starred.
+  // - The 1/5 slot's recommended option becomes a meal of its own (a provider_meal_id no other option has),
+  //   which the current week's renamed Monday meal also gets below. Rating that meal 1/5 re-picks the slot:
+  //   the option is listed last, not selected and not starred. With its own id, the rating leaves the swap
+  //   slot alone, which recommends the sample's meal of that renamed option.
+  const ratedSampleMeal = delivery.days[0].meals[1];
+  const ratedMealId = ratedSampleMeal?.variants[recommendedIndex(ratedSampleMeal)]?.provider_meal_id;
+  const isReserved = (dayIndex, mealIndex) => dayIndex === 0 || (dayIndex === 1 && mealIndex === 0);
+  const plantSlots = delivery.days
+    .flatMap((day, dayIndex) => day.meals.filter((_, mealIndex) => !isReserved(dayIndex, mealIndex)))
+    .filter((meal) => meal.variants.length >= 2);
+  const offersRatedMeal = (meal) => meal.variants.some((variant) => variant.provider_meal_id === ratedMealId);
+  const fiveSlot = plantSlots.find((meal) => !offersRatedMeal(meal));
+  const oneSlot = plantSlots.find((meal) => meal !== fiveSlot);
+  if (!ratedMealId || !fiveSlot || !oneSlot) {
+    console.error(
+      "Fixture problem: besides the first day's meals and the second day's first meal, the sample needs two meals with at least two options, one of them without the rated meal.",
+    );
+    process.exit(1);
+  }
+  plantedName = `Smoke 5/5 planted meal ${Date.now()}`;
+  const plantIndex = fiveSlot.variants.findIndex((_, i) => i !== recommendedIndex(fiveSlot));
+  fiveSlot.variants[plantIndex] = {
+    ...fiveSlot.variants[plantIndex],
+    provider_meal_id: ratedMealId,
+    name: plantedName,
+  };
+  neverAgainMealId = `smoke-never-again-${Date.now()}`;
+  neverAgainName = `Smoke 1/5 planted meal ${Date.now()}`;
+  const neverAgainIndex = recommendedIndex(oneSlot);
+  oneSlot.variants[neverAgainIndex] = {
+    ...oneSlot.variants[neverAgainIndex],
+    provider_meal_id: neverAgainMealId,
+    name: neverAgainName,
+  };
+
   newName = `Smoke re-delivered meal ${Date.now()}`;
   redelivery = structuredClone(delivery);
   redelivery.days[0].meals[0].variants[index].name = newName;
@@ -301,6 +347,9 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   currentDelivery = await loadDelivery(email, thisWeek);
   currentName = `Smoke current-week meal ${Date.now()}`;
   currentDelivery.days[0].meals[0].variants[index].name = currentName;
+  // The meal the 1/5 step rates: chosen (the week is never saved and has no earlier ratings), on the Monday,
+  // so always rateable, and offered as the recommendation of the upcoming week's 1/5 slot.
+  currentDelivery.days[0].meals[0].variants[index].provider_meal_id = neverAgainMealId;
   // Rating: the recommended (so chosen, as the week is never saved) option of the Monday's second meal.
   // The Monday of the current week is always within the rateable window (today - 7 .. today).
   const ratedMeal = currentDelivery.days[0].meals[1];
@@ -446,9 +495,23 @@ const ratedFacePressed = (pressed) => [
   (body) => ratedOptionId !== undefined && hasPressedFace(panels(body).thisWeek, ratedOptionId) === pressed,
 ];
 
-/** Whether `body` shows the label of a plan that was never saved; Astro may escape its `'` either way. */
+/** Whether `body` shows the label of a plan that was never saved. */
 function showsNotSavedLabel(body) {
-  return ["MO&#39;s", "MO&#x27;s", "MO's"].some((mo) => body.includes(`Not saved: ${mo} recommendation`));
+  return body.includes("Not saved: suggested picks");
+}
+
+/**
+ * The option labels, in listed order, of the "Next week" meal slot (`<fieldset>`) in `html` that shows `name`;
+ * empty if none does. The star is the `Top pick` badge inside a label.
+ */
+function slotLabelsFor(html, name) {
+  const slot = html
+    .split("<fieldset")
+    .slice(1)
+    .map((part) => part.slice(0, part.indexOf("</fieldset>")))
+    .find((part) => part.includes(escapeHtml(name)));
+  const labels = slot?.split("<label").slice(1) ?? [];
+  return labels.map((part) => part.slice(0, part.indexOf("</label>")));
 }
 
 /** `location` parsed against BASE_URL, so relative and absolute redirects read the same. */
@@ -682,6 +745,63 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         { status: 200, body: [`rating: ${RATING}`, (body) => jsonField(body, "rating") === RATING] },
       ],
       [
+        // The upcoming week was delivered before the rating and is not saved, so the rating re-picked it.
+        "next week re-picks the meal rated 5/5 and lists it first",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" is "Not saved yet" and lists "${plantedName}" first in its slot, checked and starred`,
+            (body) => {
+              const { nextWeek } = panels(body);
+              const [first = ""] = slotLabelsFor(nextWeek, plantedName ?? "");
+              const optionId = radioIdFor(nextWeek, plantedName ?? "");
+              return (
+                nextWeek.includes("Not saved yet") &&
+                first.includes(escapeHtml(plantedName ?? "")) &&
+                first.includes("Top pick") &&
+                optionId !== undefined &&
+                isRadioChecked(nextWeek, optionId)
+              );
+            },
+          ],
+        },
+      ],
+      [
+        "rating another chosen meal of this week 1/5 is saved",
+        async () => {
+          const { thisWeek } = panels((await request("/dashboard")).body);
+          const optionId = optionIdFor(thisWeek, currentName ?? "");
+          return optionId ? rate(optionId, LOWEST_RATING) : stepFailure(`no "${currentName}" in "This week"`);
+        },
+        { status: 200, body: [`rating: ${LOWEST_RATING}`, (body) => jsonField(body, "rating") === LOWEST_RATING] },
+      ],
+      [
+        // MO recommends the meal there, and the upcoming week was preselecting it until this rating.
+        "next week lists the meal rated 1/5 last, not selected",
+        () => request("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `"Next week" is "Not saved yet" and lists "${neverAgainName}" last in its slot, not checked or starred`,
+            (body) => {
+              const { nextWeek } = panels(body);
+              const labels = slotLabelsFor(nextWeek, neverAgainName ?? "");
+              const last = labels.at(-1) ?? "";
+              const optionId = radioIdFor(nextWeek, neverAgainName ?? "");
+              return (
+                nextWeek.includes("Not saved yet") &&
+                labels.length >= 2 &&
+                last.includes(escapeHtml(neverAgainName ?? "")) &&
+                !last.includes("Top pick") &&
+                optionId !== undefined &&
+                !isRadioChecked(nextWeek, optionId)
+              );
+            },
+          ],
+        },
+      ],
+      [
         // A first delivery of a started week is stored; only a changed re-send of one is refused.
         "past-week delivery for the signed-in user is stored",
         async () => {
@@ -723,7 +843,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         {
           status: 200,
           body: [
-            `contains "${pastName}" and "Not saved: MO's recommendation"`,
+            `contains "${pastName}" and "Not saved: suggested picks"`,
             (body) => body.includes(escapeHtml(pastName ?? "")) && showsNotSavedLabel(body),
           ],
         },
