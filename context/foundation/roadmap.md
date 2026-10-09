@@ -55,7 +55,7 @@ Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no recor
 | S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one              | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
 | S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored          | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
 | S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered   | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | done   |
-| S-13 | rating-ordered-options     | user sees each meal's options ordered by their own ratings: 5/5 first, 1/5 last, whatever MO's score | S-03, S-08       | FR-009, FR-013, US-08                                    | ready  |
+| S-13 | rating-ordered-options     | user sees each meal's options ordered by their own ratings: 5/5 first, 1/5 last, whatever MO's score | S-03, S-08       | FR-009, FR-013, US-08                                    | in-progress |
 
 ## Streams
 
@@ -296,7 +296,7 @@ Foundations below assume these are present and do NOT re-scaffold them.
   - Does the order also change which option is preselected on a plan nobody saved (e.g. MO recommends a meal rated 1/5), or only the order the options are listed in? — Owner: user. Block: no.
   - Which rating counts when a meal was rated several times: the latest earlier one by meal day, as the "Last rated" note shows (S-08)? — Owner: user. Block: no.
 - **Risk:** Nice-to-have, added at the user's request on 2026-10-08. Today options are listed by MO's score, and the star marks the top score. Putting a 1/5 meal last can move it away from MO's recommendation, so the star, the preselected option and the order must stay readable together. It partly overlaps the parked "smarter tie-break" item. The ratings are already loaded for "Next week" (S-08).
-- **Status:** ready
+- **Status:** in-progress
 
 ## Backlog Handoff
 

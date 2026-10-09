@@ -77,16 +77,17 @@ const upcomingDays: EditorDay[] = upcomingPlan
         name: option.name,
         score: option.score,
         justifications: option.justifications,
-        is_recommended: option.is_recommended,
         is_chosen: option.is_chosen,
       })),
+      // Order, star and the suggested pick agree only with the ratings; without them (load failed), MO order.
+      upcomingRatings,
     ).map((day) => ({
       date: day.date,
       label: formatDayLabel(day.date),
-      slots: day.slots.map(({ mealType, options, topScore, chosen }) => ({
+      slots: day.slots.map(({ mealType, options, starredIds, chosen }) => ({
         mealType,
         options,
-        topScore,
+        starredIds,
         chosenId: chosen.id,
       })),
     }))

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  adjustedScore,
   formatDayLabel,
   formatEditableUntil,
   formatPlanSavedStatus,
@@ -41,6 +42,7 @@ describe("todayInWarsaw", () => {
 });
 
 interface Row {
+  id: string;
   meal_date: string;
   meal_type: string;
   variant_index: number;
@@ -57,8 +59,22 @@ function row(
   is_recommended = false,
   is_chosen = false,
 ): Row {
-  return { meal_date, meal_type, variant_index, score, is_recommended, is_chosen };
+  const id = `${meal_date}/${meal_type}/${variant_index}`;
+  return { id, meal_date, meal_type, variant_index, score, is_recommended, is_chosen };
 }
+
+describe("adjustedScore", () => {
+  it.each([
+    [5, 107],
+    [4, 9],
+    [3, 7],
+    [2, 5],
+    [1, -93],
+    [undefined, 7],
+  ])("maps a 7/10 rated %s to %i", (rating, expected) => {
+    expect(adjustedScore(7, rating)).toBe(expected);
+  });
+});
 
 describe("groupPlanOptions", () => {
   it("orders days by date and slots by MO's slot order", () => {
@@ -80,11 +96,11 @@ describe("groupPlanOptions", () => {
     expect(days[1].slots.map((slot) => slot.mealType)).toEqual(["breakfast", "lunch"]);
   });
 
-  it("puts the recommended option apart and sorts the others by score descending, then index", () => {
+  it("puts the chosen option apart and sorts the others by score descending, then index", () => {
     const rows = [
       row("2026-10-05", "lunch", 0, 6),
       row("2026-10-05", "lunch", 1, 9),
-      row("2026-10-05", "lunch", 2, 8, true),
+      row("2026-10-05", "lunch", 2, 8, true, true),
       row("2026-10-05", "lunch", 3, 9),
       row("2026-10-05", "lunch", 4, 6),
     ];
@@ -95,18 +111,8 @@ describe("groupPlanOptions", () => {
     expect(slot.others.map((option) => option.variant_index)).toEqual([1, 3, 0, 4]);
   });
 
-  it("shows the stored recommendation even when the score/index fallback would pick another option", () => {
-    // Index 1 is flagged although index 0 ties on score: the stored flag wins, not the fallback.
-    const rows = [row("2026-10-05", "breakfast", 0, 9), row("2026-10-05", "breakfast", 1, 9, true)];
-
-    const [slot] = groupPlanOptions(rows)[0].slots;
-
-    expect(slot.chosen.variant_index).toBe(1);
-    expect(slot.others.map((option) => option.variant_index)).toEqual([0]);
-  });
-
-  it("falls back to the highest score, lowest index when no option is recommended", () => {
-    const rows = [row("2026-10-05", "tea", 0, 4), row("2026-10-05", "tea", 2, 7), row("2026-10-05", "tea", 1, 7)];
+  it("falls back to the first option (highest score, lowest index) when none is chosen, ignoring is_recommended", () => {
+    const rows = [row("2026-10-05", "tea", 0, 4, true), row("2026-10-05", "tea", 2, 7), row("2026-10-05", "tea", 1, 7)];
 
     const [slot] = groupPlanOptions(rows)[0].slots;
 
@@ -147,7 +153,7 @@ describe("groupPlanOptions", () => {
     expect(after.chosen.variant_index).toBe(0);
   });
 
-  it("gives the slot's highest score as topScore, shared by tied options", () => {
+  it("stars every option with the slot's highest score when there are no ratings", () => {
     const rows = [
       row("2026-10-05", "snack", 0, 8, true, true),
       row("2026-10-05", "snack", 1, 8),
@@ -156,8 +162,85 @@ describe("groupPlanOptions", () => {
 
     const [slot] = groupPlanOptions(rows)[0].slots;
 
-    expect(slot.topScore).toBe(8);
-    expect(slot.options.filter((option) => option.score === slot.topScore).map((o) => o.variant_index)).toEqual([0, 1]);
+    expect(slot.starredIds).toEqual([rows[0].id, rows[1].id]);
+  });
+
+  describe("with ratings", () => {
+    it("lists a 1/5 recommended option last", () => {
+      const rows = [
+        row("2026-10-05", "lunch", 0, 9, true),
+        row("2026-10-05", "lunch", 1, 7),
+        row("2026-10-05", "lunch", 2, 5),
+      ];
+
+      const [slot] = groupPlanOptions(rows, new Map([[rows[0].id, 1]]))[0].slots;
+
+      expect(slot.options.map((option) => option.variant_index)).toEqual([1, 2, 0]);
+      expect(slot.chosen.variant_index).toBe(1);
+      expect(slot.starredIds).toEqual([rows[1].id]);
+    });
+
+    it("lists a 5/5 low-score option first", () => {
+      const rows = [
+        row("2026-10-05", "lunch", 0, 9, true),
+        row("2026-10-05", "lunch", 1, 7),
+        row("2026-10-05", "lunch", 2, 3),
+      ];
+
+      const [slot] = groupPlanOptions(rows, new Map([[rows[2].id, 5]]))[0].slots;
+
+      expect(slot.options.map((option) => option.variant_index)).toEqual([2, 0, 1]);
+      expect(slot.starredIds).toEqual([rows[2].id]);
+    });
+
+    it("breaks an adjusted-score tie by MO score: A 9/10 unrated before B 7/10 rated 4/5, A alone starred", () => {
+      const rows = [row("2026-10-05", "dinner", 1, 7), row("2026-10-05", "dinner", 0, 9, true)];
+
+      const [slot] = groupPlanOptions(rows, new Map([[rows[0].id, 4]]))[0].slots;
+
+      expect(slot.options.map((option) => option.variant_index)).toEqual([0, 1]);
+      expect(slot.chosen.variant_index).toBe(0);
+      expect(slot.starredIds).toEqual([rows[1].id]);
+    });
+
+    it("orders two 5/5 options by MO score", () => {
+      const rows = [
+        row("2026-10-05", "tea", 0, 7),
+        row("2026-10-05", "tea", 1, 9, true),
+        row("2026-10-05", "tea", 2, 8),
+      ];
+
+      const ratings = new Map([
+        [rows[0].id, 5],
+        [rows[2].id, 5],
+      ]);
+      const [slot] = groupPlanOptions(rows, ratings)[0].slots;
+
+      expect(slot.options.map((option) => option.variant_index)).toEqual([2, 0, 1]);
+      expect(slot.starredIds).toEqual([rows[2].id]);
+    });
+
+    it("stars both of two identical unrated top scores, a 3/5 counting as unrated", () => {
+      const rows = [
+        row("2026-10-05", "snack", 0, 8, true),
+        row("2026-10-05", "snack", 1, 8),
+        row("2026-10-05", "snack", 2, 6),
+      ];
+
+      const [slot] = groupPlanOptions(rows, new Map([[rows[1].id, 3]]))[0].slots;
+
+      expect(slot.options.map((option) => option.variant_index)).toEqual([0, 1, 2]);
+      expect(slot.starredIds).toEqual([rows[0].id, rows[1].id]);
+    });
+
+    it("keeps the stored chosen option, even when it is no longer first", () => {
+      const rows = [row("2026-10-05", "lunch", 0, 9, true, true), row("2026-10-05", "lunch", 1, 7)];
+
+      const [slot] = groupPlanOptions(rows, new Map([[rows[0].id, 1]]))[0].slots;
+
+      expect(slot.options.map((option) => option.variant_index)).toEqual([1, 0]);
+      expect(slot.chosen).toBe(rows[0]);
+    });
   });
 
   it("skips rows whose meal type is unknown", () => {
@@ -273,7 +356,7 @@ describe("formatPlanSavedStatus", () => {
     expect(formatPlanSavedStatus("2026-10-09T16:42:00Z")).toBe("Saved Fri 9 Oct, 18:42");
   });
 
-  it("names MO's recommendation for a plan never saved", () => {
-    expect(formatPlanSavedStatus(null)).toBe("Not saved: MO's recommendation");
+  it("names the suggested picks for a plan never saved", () => {
+    expect(formatPlanSavedStatus(null)).toBe("Not saved: suggested picks");
   });
 });

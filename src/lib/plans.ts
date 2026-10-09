@@ -6,11 +6,11 @@ import { MEAL_TYPES, type MealType, type PlanDay, type PlanSlot } from "@/types"
 
 /** The fields of an option row that grouping relies on. */
 export interface GroupableOption {
+  id: string;
   meal_date: string;
   meal_type: string;
   variant_index: number;
   score: number;
-  is_recommended: boolean;
   is_chosen: boolean;
 }
 
@@ -32,19 +32,44 @@ function isMealType(value: string): value is MealType {
   return (MEAL_TYPES as readonly string[]).includes(value);
 }
 
-/** Best first: score descending, then menu order (lowest `variant_index`). */
-function byScoreThenIndex(a: GroupableOption, b: GroupableOption): number {
-  return b.score - a.score || a.variant_index - b.variant_index;
+/**
+ * MO's score (1-10) adjusted by the user's rating of the meal, as the SQL `adjusted_score`: +100 for 5
+ * (Chef's kiss), -100 for 1 (Never again), +2 for 4, -2 for 2; 3 or never rated (`undefined`) keeps the
+ * score. So a 5/5 meal always comes first and a 1/5 meal always last, MO's score ordering each band.
+ */
+export function adjustedScore(score: number, rating: number | undefined): number {
+  switch (rating) {
+    case 5:
+      return score + 100;
+    case 1:
+      return score - 100;
+    case 4:
+      return score + 2;
+    case 2:
+      return score - 2;
+    default:
+      return score;
+  }
 }
 
 /**
  * Group a plan's option rows into days (date order) and meal slots (MO's slot order, `MEAL_TYPES`).
- * Each slot holds its `chosen` option, the `others`, and all `options`, each sorted by score
- * descending, then index, plus the slot's `topScore`. Rows whose `meal_type` is not in `MEAL_TYPES`
- * are skipped. `chosen` is the `is_chosen` row; without one, the `is_recommended` row; without that,
- * the best option (highest score, lowest index).
+ * Each slot holds its `chosen` option, the `others`, and all `options`, best first, plus the slot's
+ * `starredIds`. Rows whose `meal_type` is not in `MEAL_TYPES` are skipped.
+ *
+ * Best first: with `ratings` (option id → the meal's latest earlier rating, 1-5, as `get_plan_ratings`
+ * gives), adjusted score descending (`adjustedScore`), then MO score descending, then menu order (lowest
+ * `variant_index`), the order `pick_default_choices` picks by. Without `ratings`, MO score then index.
+ * `starredIds` holds the first option and every option tied with it on both adjusted and MO score.
+ * `chosen` is the `is_chosen` row; without one, the first option.
  */
-export function groupPlanOptions<T extends GroupableOption>(rows: readonly T[]): PlanDay<T>[] {
+export function groupPlanOptions<T extends GroupableOption>(
+  rows: readonly T[],
+  ratings?: ReadonlyMap<string, number>,
+): PlanDay<T>[] {
+  const adjusted = (option: T) => adjustedScore(option.score, ratings?.get(option.id));
+  const bestFirst = (a: T, b: T) => adjusted(b) - adjusted(a) || b.score - a.score || a.variant_index - b.variant_index;
+
   const byDate = new Map<string, Map<MealType, T[]>>();
   for (const row of rows) {
     if (!isMealType(row.meal_type)) continue;
@@ -68,15 +93,17 @@ export function groupPlanOptions<T extends GroupableOption>(rows: readonly T[]):
     for (const mealType of MEAL_TYPES) {
       const options = slotsByType.get(mealType);
       if (!options?.length) continue;
-      const sorted = [...options].sort(byScoreThenIndex);
-      const chosen =
-        sorted.find((option) => option.is_chosen) ?? sorted.find((option) => option.is_recommended) ?? sorted[0];
+      const sorted = [...options].sort(bestFirst);
+      const [first] = sorted;
+      const chosen = sorted.find((option) => option.is_chosen) ?? first;
       slots.push({
         mealType,
         chosen,
         others: sorted.filter((option) => option !== chosen),
         options: sorted,
-        topScore: sorted[0].score,
+        starredIds: sorted
+          .filter((option) => adjusted(option) === adjusted(first) && option.score === first.score)
+          .map((option) => option.id),
       });
     }
     return { date, slots };
@@ -184,7 +211,7 @@ export function formatSavedAt(isoTimestamp: string): string {
   return `${SHORT_WEEKDAYS[weekday]} ${day} ${SHORT_MONTHS[month - 1]}, ${pad(part("hour"))}:${pad(part("minute"))}`;
 }
 
-/** The eyebrow of a past week: e.g. "Saved Fri 9 Oct, 18:42", or "Not saved: MO's recommendation". */
+/** The eyebrow of a past week: e.g. "Saved Fri 9 Oct, 18:42", or "Not saved: suggested picks". */
 export function formatPlanSavedStatus(savedAt: string | null): string {
-  return savedAt ? `Saved ${formatSavedAt(savedAt)}` : "Not saved: MO's recommendation";
+  return savedAt ? `Saved ${formatSavedAt(savedAt)}` : "Not saved: suggested picks";
 }

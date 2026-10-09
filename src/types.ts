@@ -50,7 +50,7 @@ export interface PlanMealOption {
   score: number;
   justifications: Justification[];
   is_recommended: boolean;
-  /** The user's choice for the slot; MO's recommendation until the user swaps. */
+  /** The user's choice for the slot; mo-web's suggested pick until the user swaps. */
   is_chosen: boolean;
   /** The user's rating of this option (1-5), embedded from `meal_ratings`; `null` when not rated. */
   meal_ratings: { rating: number } | null;
@@ -77,17 +77,21 @@ export interface PastPlanSummary {
   saved_at: string | null;
 }
 
-/** One meal slot of a day: the chosen option, the others and all options, best first. */
+/**
+ * One meal slot of a day: the chosen option, the others and all options, best first. "Best first" is the
+ * adjusted order of `groupPlanOptions` (rating-adjusted score, then MO score, then menu order; MO score
+ * then menu order when no ratings are given).
+ */
 export interface PlanSlot<T = PlanMealOption> {
   mealType: MealType;
-  /** The headline: the user's choice (falls back to MO's recommendation, then the best option). */
+  /** The headline: the user's choice (falls back to the first option). */
   chosen: T;
   /** Every option except `chosen`, best first. */
   others: T[];
   /** Every option of the slot, best first, in an order independent of the choice (for the editor). */
   options: T[];
-  /** The slot's highest score; every option with this score gets the star. */
-  topScore: number;
+  /** Ids of the starred options: the first one and every option tied with it on adjusted and MO score. */
+  starredIds: string[];
 }
 
 export interface PlanDay<T = PlanMealOption> {
