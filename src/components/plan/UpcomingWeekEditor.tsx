@@ -12,15 +12,7 @@ import type { PlanMealOption, PlanSlot } from "@/types";
 /** The fields of an option the editor shows; `meal_type` and `variant_index` are kept for grouping. */
 export type EditorOption = Pick<
   PlanMealOption,
-  | "id"
-  | "meal_date"
-  | "meal_type"
-  | "variant_index"
-  | "name"
-  | "score"
-  | "justifications"
-  | "is_recommended"
-  | "is_chosen"
+  "id" | "meal_date" | "meal_type" | "variant_index" | "name" | "score" | "justifications" | "is_chosen"
 >;
 
 /** A grouped slot reduced to what the editor reads, so each option is serialized into the page once. */

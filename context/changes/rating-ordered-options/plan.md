@@ -303,7 +303,9 @@ also edits the README).
 - "Rating recent meals": "Only the chosen meal of a slot can be rated (the suggested pick when the plan
   was never saved…)"; mention that ratings also order "Next week".
 - Walkthrough steps 5 and 7, and the Smoke test paragraph, for the new wording and the new step.
-- Production setup paragraph listing migrations: add `rating_ordered_defaults` (push before merge).
+- Production setup paragraph listing migrations: add `rating_ordered_defaults` and
+  `repick_unsaved_upcoming_plans` (push before merge; between the push and the deploy the old Worker
+  briefly shows re-picked selections that aren't first or starred, review F5).
 
 ### Success Criteria:
 
@@ -350,13 +352,27 @@ own history, using `plan_meal_options_chosen_history_idx`.
 
 ## Migration Notes
 
-- Existing stored plans are not re-picked by the migration; only deliveries and ratings after it apply
-  the rule. An unsaved upcoming plan stored before deploy keeps MO's pick until it is re-sent or a
-  matching rating arrives (one week at most).
-- Production: push the migration with `npx supabase db push` after the PR's CI is green and before
+- Existing stored plans are not re-picked by `20261008180000_rating_ordered_defaults`; only deliveries
+  and ratings after it apply the rule. Addendum 2026-10-09: a second, one-time migration
+  `20261009090000_repick_unsaved_upcoming_plans` re-picks every unsaved, not-yet-started plan (see
+  "Addendum" below), so no plan stored before deploy keeps MO's pick.
+- Production: push both migrations with `npx supabase db push` after the PR's CI is green and before
   merging, as for earlier migrations (README "Production setup").
 - Rollback: a follow-up migration restoring the previous `ingest_weekly_plan` and `rate_meal` bodies;
   stored picks stay valid either way.
+
+## Addendum (2026-10-09, Phase 2 manual testing)
+
+- Plans stored before the Phase 1 migration kept MO's pick as `is_chosen`, so with Phase 2 the
+  selected option could be listed last while another one was starred (seen on 12 Oct breakfast). At
+  the user's request, `supabase/migrations/20261009090000_repick_unsaved_upcoming_plans.sql` was added
+  in the Phase 2 commit: a one-time DO block that, for every plan with `saved_at is null` and
+  `week_start` after today (Europe/Warsaw), clears `is_chosen` and calls `pick_default_choices`, locking
+  plans in `week_start, id` order as `rate_meal` does. Saved plans and started weeks are untouched.
+- It overrides "Existing plans are not re-picked" in `plan-brief.md` and in the header of
+  `20261008180000_rating_ordered_defaults.sql` (left as is: that migration indeed doesn't re-pick).
+- No pgTAP test: CI builds the database from empty migrations, so the block does nothing there; it was
+  verified on the local stack (two upcoming weeks, 3 slots each re-picked; started weeks unchanged).
 
 ## References
 
@@ -389,15 +405,15 @@ own history, using `plan_meal_options_chosen_history_idx`.
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Lint passes: `npm run lint`
-- [x] 2.3 Type check passes: `npx astro check`
-- [x] 2.4 Build passes: `npm run build`
+- [x] 2.1 Unit tests pass: `npm test` — a9f73a9
+- [x] 2.2 Lint passes: `npm run lint` — a9f73a9
+- [x] 2.3 Type check passes: `npx astro check` — a9f73a9
+- [x] 2.4 Build passes: `npm run build` — a9f73a9
 
 #### Manual
 
-- [x] 2.5 On :4323, an unsaved "Next week" with a meal rated 1/5 earlier lists it last, with another option selected and starred
-- [x] 2.6 "Keep these picks" saves the shown selection, and history shows "Not saved: suggested picks" for a never-saved past week
+- [x] 2.5 On :4323, an unsaved "Next week" with a meal rated 1/5 earlier lists it last, with another option selected and starred — a9f73a9
+- [x] 2.6 "Keep these picks" saves the shown selection, and history shows "Not saved: suggested picks" for a never-saved past week — a9f73a9
 
 ### Phase 3: Smoke and README
 
