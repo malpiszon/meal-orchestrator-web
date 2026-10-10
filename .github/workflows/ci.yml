@@ -33,7 +33,30 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
+  # Docs-only PRs skip smoke; a skipped job still satisfies required checks. Pushes to master always run it (deploy needs it).
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 2
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # HEAD is the PR's merge commit; its first parent is master.
+          code_files=$(git diff --name-only HEAD^1 HEAD | grep -vE '\.md$|^docs/|^context/|^\.claude/' || true)
+          echo "Non-docs files: ${code_files:-none}"
+          echo "code=$([ -n "$code_files" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   smoke:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     env:
       # Test-only token shared by the preview (.env/.dev.vars) and the smoke script; not a secret.
