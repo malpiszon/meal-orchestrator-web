@@ -1,4 +1,4 @@
--- Test-plan Phase 1 (testing-migration-date-rules): pins what the deployed Worker calls and reads, so a
+-- S-01 (testing-migration-date-rules): pins what the deployed Worker calls and reads, so a
 -- migration pushed before its code merges keeps the old Worker working (docs/deployment.md). The oracle is
 -- the consumer, not the migrations: the RPC call sites (src/lib/keepalive.ts, src/lib/services/plans.ts,
 -- src/lib/services/ratings.ts, src/lib/services/auth-links.ts, src/pages/api/mo/deliveries.ts), the row

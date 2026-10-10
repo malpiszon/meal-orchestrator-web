@@ -84,12 +84,12 @@ Order rationale: #1 is the only High × High risk and covers the SQL the deliver
 | Layer | Tool | Version | Notes |
 |---|---|---|---|
 | unit | Vitest | ^5.0.3 | `src/**/*.test.ts`; 11 files in `src/lib/` and `src/lib/services/` |
-| database | pgTAP via Supabase CLI | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 6 files; runs against local Supabase |
+| database | pgTAP via Supabase CLI | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 9 files; runs against local Supabase |
 | HTTP smoke | `scripts/smoke.mjs` (Node, no deps) | n/a | Drives flows over HTTP against a preview on the Workers runtime; also post-deploy probe |
 | e2e (browser) | none yet — see §3 Phase 4 | — | Playwright is the likely candidate; checked: 2026-10-10 |
 | (AI-native) post-edit hook | Claude Code hooks — checked: 2026-10-10 | n/a | When NOT to use: UI, styling or docs edits, and any edit where the matching test needs the full stack and takes over a minute |
 
-Test-base profile: `meaningful` — Vitest configured, 11 unit files, 6 pgTAP files and an HTTP smoke; pages, API routes and components have no tests of their own beyond the smoke.
+Test-base profile: `meaningful` — Vitest configured, 11 unit files, 9 pgTAP files and an HTTP smoke; pages, API routes and components have no tests of their own beyond the smoke.
 
 **Stack grounding tools (current session):**
 - Docs: none (no Context7 or framework docs MCP) — versions taken from `package.json`; checked: 2026-10-10

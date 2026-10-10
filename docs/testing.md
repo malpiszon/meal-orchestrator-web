@@ -49,9 +49,9 @@ Pin one date per file, at the top, and build every fixture date from it. Choose 
 4. `npx supabase test db supabase/replay/checks.test.sql`: the snapshotted choices, ratings and plan dates are unchanged, and every slot is still there with exactly one chosen option;
 5. `npx supabase test db`: the full suite, now over the seeded rows.
 
-Any failing step exits non-zero. The reset **wipes the local database** shared with `npm run dev`, the smoke test and other worktrees, so the script refuses to run unless `CI=true` or `MIGRATION_REPLAY_WIPES_LOCAL_DB=1`. Afterwards the local database is at the newest migration with only the seed rows; re-deliver a week to sign in again ([dev walkthrough](dev-walkthrough.md)).
+Any failing step exits non-zero. The reset **wipes the local database** shared with `npm run dev`, the smoke test and other worktrees, so the script refuses to run unless `MIGRATION_REPLAY_WIPES_LOCAL_DB=1` (the CI step sets it). Afterwards the local database is at the newest migration with only the seed rows, plus the `replay_snapshot` schema, which the next `db reset` removes; re-deliver a week to sign in again ([dev walkthrough](dev-walkthrough.md)).
 
-An older base replays every migration after it, but no further back than `20261008180000`: the seed calls the RPCs as they are from that version on. The seed creates rows only through RPCs that `rpc_contract.test.sql` pins, so it keeps working at the previous version. The checks live outside `supabase/tests/` on purpose, as the plain `supabase test db` would run them without a snapshot.
+With no argument only the newest migration runs over the seeded rows: a PR that adds several migrations should also run the script with the newest version on `master` as the base, as the reset applies the others before the seed. An older base replays every migration after it, but no further back than `20261008180000`: the seed calls the RPCs as they are from that version on. The seed creates rows only through RPCs that `rpc_contract.test.sql` pins, so it keeps working at the previous version. The checks live outside `supabase/tests/` on purpose, as the plain `supabase test db` would run them without a snapshot.
 
 ## Smoke test
 

@@ -1,4 +1,4 @@
--- Test-plan Phase 1 (testing-migration-date-rules): the PRD rules a migration must not break on existing
+-- S-01 (testing-migration-date-rules): the PRD rules a migration must not break on existing
 -- data. supabase/replay/seed.sql creates rows at the previous migration version and snapshots them into
 -- the replay_snapshot schema; scripts/migration-replay.sh then applies the newest migration and runs this
 -- file. The expected values are the snapshot, i.e. what the users saw before the migration:

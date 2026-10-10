@@ -1,4 +1,4 @@
--- Test-plan Phase 1 (testing-migration-date-rules): realistic rows for the migration replay
+-- S-01 (testing-migration-date-rules): realistic rows for the migration replay
 -- (scripts/migration-replay.sh, docs/testing.md "Migration replay"). The script loads this file at the
 -- previous migration version, applies the newest migration, then runs supabase/replay/checks.test.sql
 -- against the snapshot taken at the end of this file, and the full pgTAP suite over the same rows.

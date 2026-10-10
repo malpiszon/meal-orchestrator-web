@@ -1,4 +1,4 @@
--- Test-plan Phase 1 (testing-migration-date-rules): pins the single SQL "today"
+-- S-01 (testing-migration-date-rules): pins the single SQL "today"
 -- (20261010120000_warsaw_today_helper.sql). "Today" is the calendar date in Europe/Warsaw (docs/api.md),
 -- so a week locks and the rating window moves at Warsaw midnight, 22:00 UTC in summer (CEST) and 23:00
 -- UTC in winter (CET; the clocks go back on 2026-10-25). The helpers are private: no usage on their

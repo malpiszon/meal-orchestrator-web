@@ -1,4 +1,4 @@
--- Test-plan Phase 2 (testing-migration-date-rules): pins every SQL date rule at its boundary days, with
+-- S-01 (testing-migration-date-rules): pins every SQL date rule at its boundary days, with
 -- today pinned to 2026-03-30 (T), a date the real one never matches. A function that derives today
 -- without private.warsaw_today() therefore fails here on every run, not only near Warsaw midnight.
 -- The expected values come from the PRD and docs/api.md, not from the functions:

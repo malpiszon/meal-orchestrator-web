@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Migration replay: checks the newest migration(s) over existing rows (docs/testing.md "Migration replay").
+# Migration replay: checks the newest migration over existing rows (docs/testing.md "Migration replay").
 #
 #   scripts/migration-replay.sh [base-version]
 #
@@ -9,19 +9,20 @@
 # failing step exits non-zero.
 #
 # An older base replays every migration after it, but only as far back as the seed's RPCs exist:
-# 20261008180000 (rate_meal with the re-pick) is the oldest valid base.
+# 20261008180000 (rate_meal with the re-pick) is the oldest valid base. The default replays only the
+# newest migration: with several new ones, pass the newest version on master as base-version.
 #
-# It wipes the local database, which `npm run dev` and other worktrees share, so it runs only in CI
-# (CI=true) or with MIGRATION_REPLAY_WIPES_LOCAL_DB=1.
+# It wipes the local database, which `npm run dev` and other worktrees share, so it runs only with
+# MIGRATION_REPLAY_WIPES_LOCAL_DB=1 (CI sets it on the replay step).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ "${CI:-}" != "true" ] && [ "${MIGRATION_REPLAY_WIPES_LOCAL_DB:-}" != "1" ]; then
+if [ "${MIGRATION_REPLAY_WIPES_LOCAL_DB:-}" != "1" ]; then
   cat >&2 <<'EOF'
 migration-replay: refusing to run. It resets the local Supabase database, wiping every row that
 `npm run dev`, the smoke test and other worktrees use. Run it with MIGRATION_REPLAY_WIPES_LOCAL_DB=1
-to accept that (CI runs it with CI=true).
+to accept that (the CI replay step sets it).
 EOF
   exit 1
 fi
@@ -34,7 +35,11 @@ if [ "$(printf '%s\n' "$versions" | grep -c .)" -lt 2 ]; then
 fi
 
 base=${1:-$(printf '%s\n' "$versions" | tail -n 2 | head -n 1)}
-if ! printf '%s\n' "$versions" | grep -qx "$base"; then
+if ! [[ $base =~ ^[0-9]{14}$ ]]; then
+  echo "migration-replay: base-version must be a 14-digit migration version, got '$base'" >&2
+  exit 1
+fi
+if ! printf '%s\n' "$versions" | grep -qxF -- "$base"; then
   echo "migration-replay: no migration with version $base in supabase/migrations/" >&2
   exit 1
 fi
@@ -49,7 +54,7 @@ if [ -z "$replayed" ]; then
 fi
 
 echo "==> Replaying over seeded rows, from base $base:"
-printf '    %s\n' $replayed
+printf '%s\n' "$replayed" | sed 's/^/    /'
 
 echo "==> 1/5 Reset the local database to $base"
 npx supabase db reset --version "$base" --local
