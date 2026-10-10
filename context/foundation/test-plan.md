@@ -71,7 +71,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries | #1, #5 | pgTAP, unit, migration replay | implementing | testing-migration-date-rules |
+| 1 | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries | #1, #5 | pgTAP, unit, migration replay | complete | testing-migration-date-rules |
 | 2 | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should | #2, #6 | pgTAP, unit, smoke extensions | not started | — |
 | 3 | Data isolation sweep | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3 | pgTAP, smoke | not started | — |
 | 4 | Critical journey e2e | One real-browser journey on the Workers runtime, wired as a CI gate | #4, #7 | e2e (Playwright) | not started | — |

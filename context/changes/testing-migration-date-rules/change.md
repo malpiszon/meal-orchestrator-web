@@ -1,7 +1,7 @@
 ---
 change_id: testing-migration-date-rules
 title: Testing migration date rules
-status: impl_reviewed
+status: implemented
 created: 2026-10-10
 updated: 2026-10-10
 archived_at: null
@@ -18,3 +18,4 @@ archived_at: null
   - `npx supabase test db <path>` runs files outside `supabase/tests/` (a pass and a deliberate fail in `supabase/replay/` exited 0 and 1), so no `pg_prove`/psql fallback is needed. It runs every `*.sql` in a directory, `seed.sql` included, so the replay script passes `supabase/replay/checks.test.sql`, not the directory.
   - `db reset --version` recreates only the db container and restarts the services that already run (storage, auth, realtime here); the stopped `edge_runtime` container stayed stopped and no missing service was created, so it shouldn't bring back CI's `-x` exclusions. Not provable locally without restarting the shared stack with `-x`; the PR's CI run of the replay step confirms it (Progress 3.3).
   - Confirmed in CI (PR #127, run 38070577041): after `db reset --version` the `-x` services stayed stopped, and the replay passed (checks 8/8, full suite 231).
+- Progress 3.7 (2026-10-10): pre-check (no `private` schema on prod), dry run and `db push` done; the dashboard and a rating worked on the old Worker. The swap was not tried on production, to keep the user's real choice. `choose_plan_option`'s signature and grants are pinned by `rpc_contract`, and its cut-off is covered by `date_boundaries` in CI on this migration.
