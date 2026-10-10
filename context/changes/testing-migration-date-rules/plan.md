@@ -388,15 +388,15 @@ The replay adds one `db reset`, a migration and two pgTAP runs to the `smoke` jo
 
 #### Automated
 
-- [x] 1.1 `npx supabase db reset` applies all migrations cleanly, including the new one
-- [x] 1.2 `npx supabase test db` passes, with the full output saved to a log (lessons.md), including `rpc_contract`, `warsaw_today` and all existing files unchanged
-- [x] 1.3 `npm run lint` and `npm test` pass
-- [x] 1.4 `warsaw_today.test.sql` asserts that `anon` and `authenticated` have no USAGE on `private` and no EXECUTE on either helper
+- [x] 1.1 `npx supabase db reset` applies all migrations cleanly, including the new one — 8acb638
+- [x] 1.2 `npx supabase test db` passes, with the full output saved to a log (lessons.md), including `rpc_contract`, `warsaw_today` and all existing files unchanged — 8acb638
+- [x] 1.3 `npm run lint` and `npm test` pass — 8acb638
+- [x] 1.4 `warsaw_today.test.sql` asserts that `anon` and `authenticated` have no USAGE on `private` and no EXECUTE on either helper — 8acb638
 
 #### Manual
 
-- [x] 1.5 The diff of each redefined function against its latest previous definition changes only the date expression
-- [x] 1.6 Mutation check: rename one RPC argument in a local scratch copy. `rpc_contract.test.sql` fails. Revert.
+- [x] 1.5 The diff of each redefined function against its latest previous definition changes only the date expression — 8acb638
+- [x] 1.6 Mutation check: rename one RPC argument in a local scratch copy. `rpc_contract.test.sql` fails. Revert. — 8acb638
 
 ### Phase 2: Date-boundary tests (pinned SQL today, TS week selection)
 

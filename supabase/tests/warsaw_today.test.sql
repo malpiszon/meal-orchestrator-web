@@ -43,19 +43,23 @@ select function_privs_are('private', 'warsaw_date', array['timestamptz'], 'publi
 select function_privs_are('private', 'warsaw_today', array[]::text[], 'public', array[]::text[],
   'PUBLIC cannot execute private.warsaw_today');
 
--- Guard: only private.warsaw_date turns an instant into a date. Functions an extension owns (pgTAP) are
--- not the app's and are skipped.
+-- Guard: only private.warsaw_date turns an instant into a date explicitly (time-zone conversion,
+-- current_date/localtime, 'today', date(...), or a cast of now()/current_timestamp/*_timestamp() to date).
+-- A regex can't see implicit assignment casts (`v_today date := now();`); the pinned-today boundary
+-- tests catch those for the rules they cover. Functions an extension owns (pgTAP) are skipped.
 select is_empty(
   $$ select p.oid::regprocedure
        from pg_proc p
       where p.pronamespace in ('public'::regnamespace, 'private'::regnamespace)
         and p.oid <> 'private.warsaw_date(timestamptz)'::regprocedure
-        and p.prosrc ~* 'at time zone|timezone\s*\(|current_date|localtime(stamp)?|(now\(\)|current_timestamp)\s*::\s*date'
+        and p.prosrc ~* ('at time zone|timezone\s*\(|current_date|localtime(stamp)?|''today''|\mdate\s*\('
+                         '|cast\s*\(\s*(now|current_timestamp|statement_timestamp|clock_timestamp|transaction_timestamp)\M[^;]*\sas\s+date\M'
+                         '|(now\(\)|current_timestamp(\s*\(\s*\d*\s*\))?|(statement|clock|transaction)_timestamp\(\))(\s*::\s*\w+)*\s*::\s*date\M')
         and not exists (
           select 1 from pg_depend d
            where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e'
         ) $$,
-  'no function derives a date without private.warsaw_today'
+  'no function derives a date explicitly without private.warsaw_today'
 );
 
 select * from finish();

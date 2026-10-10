@@ -37,7 +37,8 @@ language sql stable as $$
      and p.proname = p_name
 $$;
 
--- keepalive: the Cron Trigger's client uses SUPABASE_KEY (anon), no arguments, any result.
+-- keepalive: the Cron Trigger's client uses SUPABASE_KEY (anon), no arguments. The TS ignores the result;
+-- the return type is pinned from the schema, so changing it is a deliberate contract change.
 select is(pg_temp.args('keepalive'), array['']::text[], 'keepalive takes no arguments');
 select is(pg_temp.result('keepalive'), array['timestamp with time zone']::text[], 'keepalive returns timestamptz');
 select ok(pg_temp.can('anon', 'keepalive'), 'anon can execute keepalive');
