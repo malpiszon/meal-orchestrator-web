@@ -37,7 +37,9 @@ venv/
 *.bak
 
 # Claude Code local config (skills, settings, etc.) and 10xDevs AI Toolkit CLI state
-.claude/
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 .10x-cli.json
 # from 10x-astro-starter
 

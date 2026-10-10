@@ -75,7 +75,7 @@ orchestrator updates Status as artifacts appear on disk.
 | 2 | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should | #2, #6 | pgTAP, unit, smoke extensions | not started | — |
 | 3 | Data isolation sweep | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3 | pgTAP, smoke | not started | — |
 | 4 | Critical journey e2e | One real-browser journey on the Workers runtime, wired as a CI gate | #4, #7 | e2e (Playwright) | not started | — |
-| 5 | Agent-loop feedback | Post-edit hook runs the matching pgTAP or unit tests when an agent edits migrations or `src/lib/` | #1, #5 | post-edit hook | not started | — |
+| 5 | Agent-loop feedback | Post-edit hook runs the matching pgTAP or unit tests when an agent edits migrations or `src/lib/` | #1, #5 | post-edit hook | implementing | — (built with `/10x-configure-hook`, tracked on #123) |
 
 Order rationale: #1 is the only High × High risk and covers the SQL the delivery logic runs on; delivery integrity follows (interview Q1); isolation is the abuse lens; e2e is the most expensive layer and only covers what cheaper layers can't reach; the hook comes last because it runs the tests the earlier phases add.
 
@@ -139,6 +139,7 @@ the relevant rollout phase ships; before that, the sub-section reads
 ### 6.5 Per-rollout-phase notes
 
 - **Phase 1** (`testing-migration-date-rules`): the SQL "today" had to become a function (`private.warsaw_today()`) before any test could pin it; the older pgTAP files still use the real Warsaw today and were left as they are. The replay runs only in CI or with `MIGRATION_REPLAY_WIPES_LOCAL_DB=1`, as it resets the local stack shared with `npm run dev` and other worktrees, and it can start no further back than `20261008180000`, the oldest version with every RPC the seed calls.
+- **Phase 5** (agent hooks, #123): type-checked ESLint takes ~45 s per file and `astro check` ~50 s on this checkout, so neither runs per edit; the end-of-turn hook runs them side by side. Per edit, only Vitest (`related`) and an edited pgTAP file run. A hook never applies a migration (that changes the local database the developer uses): until `npx supabase migration up --local` applies it, the end-of-turn hook skips pgTAP and says so.
 
 ## 7. What We Deliberately Don't Test
 

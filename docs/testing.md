@@ -2,7 +2,7 @@
 
 | Layer            | Command                           | Where                                                     | Needs                                                                    |
 | ---------------- | --------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Unit             | `npm test`                        | `src/**/*.test.ts` (Vitest)                               | Nothing                                                                  |
+| Unit             | `npm test`                        | `src/**/*.test.ts`, `scripts/**/*.test.ts` (Vitest)       | Nothing (`bash`, `git`, `jq` for the agent-hook test)                    |
 | Database         | `npx supabase test db`            | `supabase/tests/*.test.sql` (pgTAP)                       | Local Supabase running                                                   |
 | Migration replay | `npm run test:replay`             | `scripts/migration-replay.sh`, `supabase/replay/` (pgTAP) | Local Supabase running, `psql` or `docker`; **wipes the local database** |
 | Smoke (HTTP)     | `npm run smoke`                   | `scripts/smoke.mjs`                                       | A running server and Supabase, see below                                 |
@@ -91,6 +91,15 @@ What it covers, each with its error and edge cases (unauthenticated calls, other
 Local Supabase sends at most 2 auth emails per hour (`email_sent` in `supabase/config.toml`), so running it with `MAILPIT_URL` more often than that fails the real-email step.
 
 The smoke test guards the flows end to end; it is not a substitute for unit and database tests of new logic.
+
+## Agent hooks
+
+Claude Code runs two hooks from `.claude/settings.json` (scripts in `.claude/hooks/`, both need `jq`). Their output goes to the agent (exit 2 + stderr), so it fixes what they report before handing back.
+
+- **After each `Write`/`Edit`** (`related-tests.sh`, 60 s): an edited `src/**/*.{ts,tsx,js,mjs}` file runs `vitest related <file>` (a test file runs itself); an edited `supabase/tests/*.sql` runs that pgTAP file. With local Supabase down, the agent and the user get a notice instead.
+- **At the end of each turn** (`end-of-turn.sh`, 180 s): every file changed against `HEAD` plus untracked ones, including files written through the shell. Changed code runs ESLint on those files and `npx astro check` side by side (~50 s), then the whole unit suite; a changed `supabase/` file runs `supabase test db`. It skips pgTAP, and says so, while local Supabase is down or a migration is not applied (`npx supabase migration up --local`); a hook never applies one. A tree identical to the last green sweep is not checked again. The agent gets one retry; what is still red after that is left to the pre-commit hook and CI.
+
+`scripts/__tests__/agent-hooks.test.ts` (part of `npm test`) runs both scripts in throwaway git repos with stubbed ESLint, astro, Vitest and Supabase CLI. Change it with the scripts. After editing the settings, restart the Claude Code session; `/hooks` lists what is loaded.
 
 ## CI
 
