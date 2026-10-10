@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop: sweep everything this turn changed before the agent finishes, one retry.
 #   code changed      -> ESLint on the changed files and `astro check` (in parallel), then the unit suite
-#   supabase/ changed -> `supabase test db`, when local Supabase is up and every migration is applied
+#   supabase/ changed -> new migrations applied (`migration up`, never a reset), then `supabase test db`
 export NO_COLOR=1 FORCE_COLOR=0
 command -v jq >/dev/null || { echo "Hook end-of-turn.sh needs jq: install it or port the hook to Node." >&2; exit 2; }
 
@@ -128,9 +128,13 @@ $OUT
     else
       PENDING=$(node_modules/.bin/supabase migration list --local --output-format json 2>/dev/null </dev/null |
         jq -r '[.migrations[] | select((.remote // "") == "") | .local] | join(" ")' 2>/dev/null)
-      if [ -n "$PENDING" ]; then
-        # Applying migrations changes the local database the developer uses: not the hook's call.
-        SKIPPED="$SKIPPED pgTAP ($ROOT): migration(s) $PENDING not applied locally, run \`npx supabase migration up --local\`;"
+      # The agent has stopped editing for this turn: apply its new migrations so pgTAP sees
+      # them. `migration up` only adds; it never resets the local database.
+      if [ -n "$PENDING" ] && ! OUT=$(node_modules/.bin/supabase migration up --local 2>&1 </dev/null); then
+        REPORT="$REPORT
+Applying migration(s) $PENDING to local Supabase fails ($ROOT):
+$(printf '%s\n' "$OUT" | tail -n 40)
+"
       else
         EDITED=$(git diff --name-only --diff-filter=M HEAD -- supabase/migrations 2>/dev/null | tr '\n' ' ')
         [ -n "$EDITED" ] && SKIPPED="$SKIPPED pgTAP ($ROOT) ran against the applied version of edited migration(s) ${EDITED% }; \`npx supabase db reset\` (wipes local data) applies the edit;"

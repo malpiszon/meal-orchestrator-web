@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # PostToolUse (Write|Edit): run the tests that depend on the file the agent just edited.
-#   src/**/*.{ts,tsx,js,mjs}   -> the Vitest tests related to it (or the test file itself)
-#   supabase/tests/*.sql       -> that pgTAP file, against local Supabase
-# Exit 2 + stderr is the only combination Claude sees. ESLint (~45 s per file) and
-# `astro check` (~50 s) are too slow per edit here; end-of-turn.sh runs them.
-# Migrations are not applied here (that changes the local database); end-of-turn.sh
-# runs pgTAP once they are.
+#   src/lib/**, src/test/** (ts, tsx, js, mjs) -> the Vitest tests related to it (or the test file itself)
+#   supabase/tests/*.sql                       -> that pgTAP file, against local Supabase
+# Exit 2 + stderr is the only combination Claude sees. UI edits (components, pages) have no
+# unit tests here and are left to end-of-turn.sh, as are ESLint (~45 s per file) and
+# `astro check` (~50 s). Migrations are applied at end of turn, once the agent stops editing them.
 export NO_COLOR=1 FORCE_COLOR=0
 command -v jq >/dev/null || { echo "Hook related-tests.sh needs jq: install it or port the hook to Node." >&2; exit 2; }
 
@@ -51,10 +50,10 @@ db_up() {
 }
 
 case "$REL" in
-  src/*.test.ts|src/*.test.tsx)
+  src/lib/*.test.ts|src/lib/*.test.tsx|src/test/*.test.ts)
     run vitest run "$REL" || { echo "Tests in $REL fail:" >&2; echo "$OUTPUT" >&2; exit 2; }
     ;;
-  src/*.ts|src/*.tsx|src/*.js|src/*.mjs)
+  src/lib/*.ts|src/lib/*.tsx|src/lib/*.js|src/lib/*.mjs|src/test/*.ts)
     run vitest related "$REL" --run || { echo "Tests related to $REL fail:" >&2; echo "$OUTPUT" >&2; exit 2; }
     ;;
   supabase/tests/*.sql)

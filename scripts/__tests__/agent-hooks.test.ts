@@ -32,12 +32,18 @@ hits=$(grep -rl TEST_FAIL "\${files[@]}" 2>/dev/null)
 echo "FAIL $hits TEST_FAIL"
 exit 1`,
   supabase: `
+# HOOK_STUB_PENDING names a migration the local database lacks until \`migration up\` applies it.
+if [ "$1 $2" = "migration up" ]; then
+  if grep -l MIGRATION_ERROR supabase/migrations/*.sql 2>/dev/null; then echo "ERROR: syntax error MIGRATION_ERROR"; exit 1; fi
+  touch "$HOOK_STUB_LOG.applied"
+  exit 0
+fi
 if [ "$1" = migration ]; then
   printf '{"migrations":['
   sep=""
   for f in supabase/migrations/*.sql; do
     v=$(basename "$f"); v=\${v%%_*}; r=$v
-    [ "$v" = "\${HOOK_STUB_PENDING:-}" ] && r=""
+    [ "$v" = "\${HOOK_STUB_PENDING:-}" ] && [ ! -e "$HOOK_STUB_LOG.applied" ] && r=""
     printf '%s{"local":"%s","remote":"%s"}' "$sep" "$v" "$r"; sep=,
   done
   printf ']}\\n'
@@ -205,6 +211,9 @@ describe("related-tests.sh (PostToolUse)", () => {
   it("skips files it does not cover, files that do not exist and payloads without a path", () => {
     const repo = makeRepo();
     expect(edit(repo, "README.md").status).toBe(0);
+    // UI code has no unit tests: left to the end-of-turn sweep.
+    write(repo.root, "src/components/Card.tsx", "// TEST_FAIL\n");
+    expect(edit(repo, "src/components/Card.tsx").status).toBe(0);
     expect(edit(repo, "src/lib/gone.ts").status).toBe(0);
     expect(hook(repo, "related-tests.sh", {}).status).toBe(0);
     expect(hook(repo, "related-tests.sh", "not json").status).toBe(0);
@@ -317,16 +326,28 @@ describe("end-of-turn.sh (Stop)", () => {
     expect(r.stderr).toContain("PGTAP_FAIL");
   });
 
-  it("skips pgTAP visibly when a migration is not applied or Supabase is down", () => {
-    const up = makeRepo("up");
-    write(up.root, "supabase/migrations/20260202000000_new.sql", "-- PGTAP_FAIL\n");
-    const pending = stop(up, {}, { env: { HOOK_STUB_PENDING: "20260202000000" } });
-    expect(pending.status).toBe(0);
-    expect((JSON.parse(pending.stdout) as { systemMessage: string }).systemMessage).toContain(
-      "20260202000000 not applied locally",
-    );
-    expect(stubCalls(up)).not.toContain("supabase test");
+  it("applies a new migration before pgTAP, and blocks when it fails to apply", () => {
+    const repo = makeRepo("up");
+    const env = { env: { HOOK_STUB_PENDING: "20260202000000" } };
+    write(repo.root, "supabase/migrations/20260202000000_new.sql", "create table u (id int);\n");
+    write(repo.root, "supabase/tests/a.test.sql", "-- PGTAP_FAIL\n");
+    const r = stop(repo, {}, env);
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("pgTAP fails");
+    const calls = stubCalls(repo);
+    expect(calls.indexOf("supabase migration up --local")).toBeGreaterThan(-1);
+    expect(calls.indexOf("supabase test db")).toBeGreaterThan(calls.indexOf("supabase migration up"));
 
+    const broken = makeRepo("up");
+    write(broken.root, "supabase/migrations/20260202000000_new.sql", "-- MIGRATION_ERROR\n");
+    const b = stop(broken, {}, env);
+    expect(b.status).toBe(2);
+    expect(b.stderr).toContain("Applying migration(s) 20260202000000 to local Supabase fails");
+    expect(b.stderr).toContain("MIGRATION_ERROR");
+    expect(stubCalls(broken)).not.toContain("supabase test");
+  });
+
+  it("skips pgTAP visibly when Supabase is down", () => {
     const down = makeRepo();
     write(down.root, "supabase/tests/a.test.sql", "-- PGTAP_FAIL\n");
     const r = stop(down);
