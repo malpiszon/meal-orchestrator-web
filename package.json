@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:replay": "bash scripts/migration-replay.sh",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
@@ -64,6 +65,9 @@
     ],
     "*.{json,css,md}": [
       "prettier --write"
+    ],
+    "src/**/*.{ts,tsx}": [
+      "vitest related --run"
     ]
   },
   "overrides": {
