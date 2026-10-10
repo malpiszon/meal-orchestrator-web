@@ -26,7 +26,7 @@ gh_milestone: "M-2: Regression safety net"
 
 - **Intent:** a change that breaks a plan rule, MO's delivery, another user's data or the main journey fails a test before it reaches production. The test plan's risks #1–#7 are covered by the cheapest test that gives a real signal; more scope goes into a later milestone.
 - **Source materials:** `context/foundation/test-plan.md` §3 Phased Rollout (risks in §2), plus the user's description for MS-06 (2026-10-10).
-- **Done when:** every S-NN below is `done`.
+- **Done when:** S-01 to S-05 are `done`, and S-06 (nice-to-have) is either `done` or moved to `## Parked` with its issue closed as not planned.
 - **Scope anchors:**
   - MS-01: Test-plan Phase 1, migration and date-rule safety (risks #1, #5).
   - MS-02: Test-plan Phase 2, delivery and re-send integrity (risks #2, #6).
