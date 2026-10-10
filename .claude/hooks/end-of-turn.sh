@@ -59,6 +59,7 @@ node_modules/.bin/$b is missing in $ROOT (run npm install there).
 }
 
 SKIPPED=""
+NOTICES=""
 REPORT=""
 UNCHANGED_RED=""
 DONE_MARKS=()
@@ -135,9 +136,15 @@ $OUT
     elif ! db_up; then
       SKIPPED="$SKIPPED pgTAP ($ROOT): local Supabase is not running, start it with \`npx supabase start\`;"
     else
-      PENDING=$(node_modules/.bin/supabase migration list --local --output-format json 2>/dev/null </dev/null |
-        jq -r '[.migrations[] | select((.remote // "") == "") | .local] | join(" ")' 2>/dev/null)
       APPLY_OK=1
+      # Without the list, pgTAP could run against a database missing this turn's migrations
+      # and pass. The listing is the tooling's problem, not the agent's: skip, visibly.
+      if ! PENDING=$(node_modules/.bin/supabase migration list --local --output-format json 2>"$TMP/list-err" </dev/null |
+        jq -er '[.migrations[] | select((.remote // "") == "") | .local] | join(" ")' 2>>"$TMP/list-err"); then
+        APPLY_OK=0
+        PENDING=""
+        SKIPPED="$SKIPPED pgTAP ($ROOT): could not list the local migrations ($(grep -v '^Connecting' "$TMP/list-err" | head -n 1));"
+      fi
       # The agent has stopped editing for this turn: apply its new migrations so pgTAP sees
       # them. `migration up` only adds; it never resets the local database.
       if [ -n "$PENDING" ]; then
@@ -168,6 +175,7 @@ $(printf '%s\n' "$OUT" | tail -n 40)
       if [ "$APPLY_OK" = 1 ]; then
         # Applied migrations edited since: tracked ones against HEAD, uncommitted ones
         # against what this hook applied. The database keeps the old version.
+        # A migration applied in this very turn (in PENDING) is current, whatever HEAD has.
         EDITED=$(git diff --name-only --diff-filter=M HEAD -- supabase/migrations 2>/dev/null)
         while IFS= read -r f; do
           [ -n "$f" ] || continue
@@ -177,8 +185,10 @@ $f"
         done <<EOF
 $(git ls-files -o --exclude-standard -- supabase/migrations 2>/dev/null)
 EOF
+        for v in $PENDING; do EDITED=$(printf '%s\n' "$EDITED" | grep -v "^supabase/migrations/${v}_"); done
         EDITED=$(printf '%s\n' "$EDITED" | grep -v '^$' | tr '\n' ' ')
-        [ -n "$EDITED" ] && SKIPPED="$SKIPPED pgTAP ($ROOT) ran against the applied version of edited migration(s) ${EDITED% }; \`npx supabase db reset\` (wipes local data) applies the edit;"
+        # A warning, not a skip: pgTAP did run, so it does not keep the tree from counting as green.
+        [ -n "$EDITED" ] && NOTICES="$NOTICES pgTAP ($ROOT) ran against the applied version of edited migration(s) ${EDITED% }; \`npx supabase db reset\` (wipes local data) applies the edit;"
         if ! OUT=$(node_modules/.bin/supabase test db 2>&1 </dev/null); then
           REPORT="$REPORT
 pgTAP fails ($ROOT):
@@ -205,11 +215,15 @@ if [ -n "$REPORT" ]; then
   [ -n "$SKIPPED" ] && REPORT="$REPORT
 Skipped on this host:$SKIPPED
 "
+  [ -n "$NOTICES" ] && REPORT="$REPORT
+Note:$NOTICES
+"
   echo "Fix these before you finish:$REPORT" >&2
   exit 2
 fi
 NOTE=""
 [ -n "$SKIPPED" ] && NOTE="end-of-turn.sh skipped on this host:$SKIPPED"
+[ -n "$NOTICES" ] && NOTE="${NOTE:+$NOTE }end-of-turn.sh:$NOTICES"
 [ -n "$UNCHANGED_RED" ] && NOTE="${NOTE:+$NOTE }end-of-turn.sh: still red and unchanged since it was reported, not re-checked:$UNCHANGED_RED"
 [ -n "$NOTE" ] && jq -cn --arg m "$NOTE" '{systemMessage: $m}'
 exit 0

@@ -41,6 +41,9 @@ if [ "$1 $2" = "migration up" ]; then
   touch "$HOOK_STUB_LOG.applied"
   exit 0
 fi
+if [ "$1" = migration ] && [ -n "\${HOOK_STUB_LIST_FAIL:-}" ]; then
+  echo "failed to connect to postgres" >&2; exit 1
+fi
 if [ "$1" = migration ]; then
   printf '{"migrations":['
   sep=""
@@ -205,6 +208,17 @@ describe("related-tests.sh (PostToolUse)", () => {
     const r = edit(repo, "src/lib/math.test.ts");
     expect(r.status).toBe(2);
     expect(stubCalls(repo)).toContain("vitest run src/lib/math.test.ts");
+  });
+
+  it("treats a file vitest.config.ts does not include as a module, not a test file", () => {
+    const repo = makeRepo();
+    write(repo.root, "src/lib/view.test.tsx", "// not picked up by vitest\n");
+    expect(edit(repo, "src/lib/view.test.tsx").status).toBe(0);
+    write(repo.root, "src/test/helper.tsx", "// helper\n");
+    expect(edit(repo, "src/test/helper.tsx").status).toBe(0);
+    expect(stubCalls(repo)).toBe(
+      "vitest related src/lib/view.test.tsx --run\nvitest related src/test/helper.tsx --run\n",
+    );
   });
 
   it("passes silently on a clean file", () => {
@@ -391,6 +405,21 @@ describe("end-of-turn.sh (Stop)", () => {
     const msg = (JSON.parse(second.stdout) as { systemMessage: string }).systemMessage;
     expect(msg).toContain("edited migration(s) supabase/migrations/20260202000000_new.sql");
     expect(msg).toContain("db reset");
+    // A warning, not a skip: the tree counts as green and is not swept again.
+    rmSync(repo.log);
+    expect(stop(repo, {}, env).stdout).toBe("");
+    expect(stubCalls(repo)).toBe("");
+  });
+
+  it("skips pgTAP visibly when the migrations cannot be listed", () => {
+    const repo = makeRepo("up");
+    write(repo.root, "supabase/tests/a.test.sql", "-- PGTAP_FAIL\n");
+    const r = stop(repo, {}, { env: { HOOK_STUB_LIST_FAIL: "1" } });
+    expect(r.status).toBe(0);
+    expect((JSON.parse(r.stdout) as { systemMessage: string }).systemMessage).toContain(
+      "could not list the local migrations (failed to connect to postgres)",
+    );
+    expect(stubCalls(repo)).not.toContain("supabase test");
   });
 
   it("skips pgTAP visibly when Supabase is down", () => {

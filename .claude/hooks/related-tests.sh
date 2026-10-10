@@ -51,10 +51,11 @@ db_up() {
 }
 
 case "$REL" in
-  src/lib/*.test.ts|src/lib/*.test.tsx|src/test/*.test.ts)
+  # vitest.config.ts includes *.test.ts only; any other edited file is a module.
+  src/lib/*.test.ts|src/test/*.test.ts)
     run vitest run "$REL" || { echo "Tests in $REL fail:" >&2; echo "$OUTPUT" >&2; exit 2; }
     ;;
-  src/lib/*.ts|src/lib/*.tsx|src/lib/*.js|src/lib/*.mjs|src/test/*.ts)
+  src/lib/*.ts|src/lib/*.tsx|src/lib/*.js|src/lib/*.mjs|src/test/*.ts|src/test/*.tsx|src/test/*.js|src/test/*.mjs)
     run vitest related "$REL" --run || { echo "Tests related to $REL fail:" >&2; echo "$OUTPUT" >&2; exit 2; }
     ;;
   supabase/tests/*.sql)
