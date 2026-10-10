@@ -38,7 +38,7 @@
           {
             "type": "command",
             "command": "\"$(git rev-parse --show-toplevel 2>/dev/null || echo \"$CLAUDE_PROJECT_DIR\")\"/.claude/hooks/end-of-turn.sh",
-            "timeout": 180,
+            "timeout": 300,
             "statusMessage": "Checking lint, types and tests before finishing (~1 min, wait before typing)…"
           }
         ]

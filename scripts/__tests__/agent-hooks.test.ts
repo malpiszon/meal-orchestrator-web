@@ -35,6 +35,9 @@ exit 1`,
 # HOOK_STUB_PENDING names a migration the local database lacks until \`migration up\` applies it.
 if [ "$1 $2" = "migration up" ]; then
   if grep -l MIGRATION_ERROR supabase/migrations/*.sql 2>/dev/null; then echo "ERROR: syntax error MIGRATION_ERROR"; exit 1; fi
+  if grep -ql MIGRATION_ORDER supabase/migrations/*.sql 2>/dev/null; then
+    echo "Found local migration files to be inserted before the last migration on remote database."; exit 1
+  fi
   touch "$HOOK_STUB_LOG.applied"
   exit 0
 fi
@@ -57,12 +60,16 @@ echo "$hits .. Failed test 1: PGTAP_FAIL"
 exit 1`,
 };
 
+// Run inside a git hook (lint-staged on commit), the inherited GIT_INDEX_FILE, GIT_DIR, … would
+// point the throwaway repos at this checkout's index.
+const ENV = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
+
 const tmpRoots: string[] = [];
 const servers: Server[] = [];
 let templates = "";
 
 function git(cwd: string, ...args: string[]) {
-  const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+  const r = spawnSync("git", args, { cwd, encoding: "utf8", env: ENV });
   if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
   return r.stdout.trim();
 }
@@ -130,7 +137,7 @@ function hook(repo: Repo, script: string, payload: unknown, opts: RunOptions = {
     cwd,
     input,
     encoding: "utf8",
-    env: { ...process.env, TMPDIR: repo.state, HOOK_STUB_LOG: repo.log, CLAUDE_PROJECT_DIR: cwd, ...opts.env },
+    env: { ...ENV, TMPDIR: repo.state, HOOK_STUB_LOG: repo.log, CLAUDE_PROJECT_DIR: cwd, ...opts.env },
   });
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
@@ -294,11 +301,24 @@ describe("end-of-turn.sh (Stop)", () => {
     expect(stubCalls(repo)).toBe("");
   });
 
-  it("lets the agent finish once it was already sent back (stop_hook_active, loop_count)", () => {
+  it("does not re-check or block again on a red tree unchanged since it was reported", () => {
+    const repo = makeRepo();
+    write(repo.root, "src/lib/math.ts", "// LINT_ERROR\n");
+    expect(stop(repo).status).toBe(2);
+    rmSync(repo.log);
+    const again = stop(repo);
+    expect(again.status).toBe(0);
+    expect((JSON.parse(again.stdout) as { systemMessage: string }).systemMessage).toContain("still red and unchanged");
+    expect(stubCalls(repo)).toBe("");
+    // Any change to the tree is checked again.
+    write(repo.root, "src/lib/math.ts", "// LINT_ERROR again\n");
+    expect(stop(repo).status).toBe(2);
+  });
+
+  it("lets the agent finish once it was already sent back (stop_hook_active)", () => {
     const repo = makeRepo();
     write(repo.root, "src/lib/math.ts", "// LINT_ERROR\n");
     expect(stop(repo, { stop_hook_active: true }).status).toBe(0);
-    expect(stop(repo, { loop_count: 1 }).status).toBe(0);
     expect(stubCalls(repo)).toBe("");
   });
 
@@ -347,6 +367,32 @@ describe("end-of-turn.sh (Stop)", () => {
     expect(stubCalls(broken)).not.toContain("supabase test");
   });
 
+  it("skips pgTAP, without blocking, when the local migration history differs from this checkout", () => {
+    const repo = makeRepo("up");
+    write(repo.root, "supabase/migrations/20260202000000_new.sql", "-- MIGRATION_ORDER\n");
+    const r = stop(repo, {}, { env: { HOOK_STUB_PENDING: "20260202000000" } });
+    expect(r.status).toBe(0);
+    expect((JSON.parse(r.stdout) as { systemMessage: string }).systemMessage).toContain(
+      "migration history differs from this checkout",
+    );
+    expect(stubCalls(repo)).not.toContain("supabase test");
+  });
+
+  it("warns when an uncommitted migration the hook applied is edited later", () => {
+    const repo = makeRepo("up");
+    const env = { env: { HOOK_STUB_PENDING: "20260202000000" } };
+    write(repo.root, "supabase/migrations/20260202000000_new.sql", "create table u (id int);\n");
+    const first = stop(repo, {}, env);
+    expect(first.status).toBe(0);
+    expect(first.stdout).toBe("");
+    write(repo.root, "supabase/migrations/20260202000000_new.sql", "create table u (id bigint);\n");
+    const second = stop(repo, {}, env);
+    expect(second.status).toBe(0);
+    const msg = (JSON.parse(second.stdout) as { systemMessage: string }).systemMessage;
+    expect(msg).toContain("edited migration(s) supabase/migrations/20260202000000_new.sql");
+    expect(msg).toContain("db reset");
+  });
+
   it("skips pgTAP visibly when Supabase is down", () => {
     const down = makeRepo();
     write(down.root, "supabase/tests/a.test.sql", "-- PGTAP_FAIL\n");
@@ -377,6 +423,16 @@ describe("checkout resolution", () => {
     expect(edit(repo, "src/lib/math.ts").status).toBe(0);
   });
 
+  it("registers each checkout once, and sweeps registered ones only in the next turn", () => {
+    const repo = makeRepo();
+    edit(repo, "src/lib/math.ts");
+    edit(repo, "src/lib/math.ts");
+    const registry = path.join(repo.state, "claude-hooks/s1.roots");
+    expect(readFileSync(registry, "utf8")).toBe(`${repo.root}\n`);
+    stop(repo);
+    expect(readFileSync(registry, "utf8")).toBe("");
+  });
+
   it("sweeps a sibling worktree the session edited", () => {
     const repo = makeRepo();
     const wt = path.join(path.dirname(repo.root), "wt");
@@ -405,7 +461,7 @@ describe("checkout resolution", () => {
         cwd: wt,
         input: "{}",
         encoding: "utf8",
-        env: { ...process.env, TMPDIR: repo.state, HOOK_STUB_LOG: repo.log, CLAUDE_PROJECT_DIR: "/nonexistent" },
+        env: { ...ENV, TMPDIR: repo.state, HOOK_STUB_LOG: repo.log, CLAUDE_PROJECT_DIR: "/nonexistent" },
       });
       expect({ command, status: r.status, stderr: r.stderr }).toEqual({ command, status: 0, stderr: "" });
     }
