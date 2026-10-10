@@ -184,9 +184,9 @@ select is_empty(
 -- Cut-off (user A, the owner).
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"dddddddd-0000-0000-0000-000000000004","role":"authenticated"}', true);
-select isnt(
+select is(
   public.choose_plan_option('d1000000-0000-0000-0000-000000000002'),
-  null::timestamptz,
+  now(),
   'cut-off: choose_plan_option on a plan starting T+1 succeeds'
 );
 select results_eq(
@@ -194,9 +194,9 @@ select results_eq(
   $$ values ('Y') $$,
   'cut-off: the plan starting T+1 now has Y chosen'
 );
-select isnt(
+select is(
   public.confirm_plan('40000000-0000-0000-0000-000000000001'),
-  null::timestamptz,
+  now(),
   'cut-off: confirm_plan on a plan starting T+1 succeeds'
 );
 select throws_ok(

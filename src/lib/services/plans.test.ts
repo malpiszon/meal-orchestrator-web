@@ -35,7 +35,8 @@ describe("week selection (docs/api.md, Weeks on the dashboard and in history)", 
   describe("today 2026-10-14 (Wednesday), weeks 09-28, 10-05, 10-12, 10-19, 10-26", () => {
     const today = "2026-10-14";
     const supabase = client(
-      ["2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19", "2026-10-26"],
+      // Out of date order, so each selection depends on the service's own order.
+      ["2026-10-26", "2026-09-28", "2026-10-12", "2026-10-05", "2026-10-19"],
       ["2026-10-06", "2026-10-13", "2026-10-15"],
     );
 
