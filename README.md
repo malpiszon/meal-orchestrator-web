@@ -44,16 +44,17 @@ After `npx supabase link`, the local stack runs the linked project's service ver
 
 ## Scripts
 
-| Command                | Does                                                                     |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `npm run dev`          | Dev server on the Cloudflare workerd runtime                             |
-| `npm run build`        | Production build                                                         |
-| `npm run preview`      | Serve the production build on the Cloudflare runtime                     |
-| `npm test`             | Unit tests (Vitest)                                                      |
-| `npx supabase test db` | Database tests (pgTAP, `supabase/tests/`), against local Supabase        |
-| `npm run smoke`        | HTTP smoke test against a running server, see [testing](docs/testing.md) |
-| `npm run lint`         | ESLint with type-checked rules (`lint:fix` to fix)                       |
-| `npm run format`       | Prettier                                                                 |
+| Command                | Does                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run dev`          | Dev server on the Cloudflare workerd runtime                                                |
+| `npm run build`        | Production build                                                                            |
+| `npm run preview`      | Serve the production build on the Cloudflare runtime                                        |
+| `npm test`             | Unit tests (Vitest)                                                                         |
+| `npx supabase test db` | Database tests (pgTAP, `supabase/tests/`), against local Supabase                           |
+| `npm run test:replay`  | Migration replay; wipes the local database, see [testing](docs/testing.md#migration-replay) |
+| `npm run smoke`        | HTTP smoke test against a running server, see [testing](docs/testing.md)                    |
+| `npm run lint`         | ESLint with type-checked rules (`lint:fix` to fix)                                          |
+| `npm run format`       | Prettier                                                                                    |
 
 A pre-commit hook (husky + lint-staged) runs `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
 

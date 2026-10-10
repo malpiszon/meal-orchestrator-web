@@ -71,7 +71,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|---|---|---|---|---|---|
-| 1 | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries | #1, #5 | pgTAP, unit, migration replay | change opened | testing-migration-date-rules |
+| 1 | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries | #1, #5 | pgTAP, unit, migration replay | implementing | testing-migration-date-rules |
 | 2 | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should | #2, #6 | pgTAP, unit, smoke extensions | not started | — |
 | 3 | Data isolation sweep | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3 | pgTAP, smoke | not started | — |
 | 4 | Critical journey e2e | One real-browser journey on the Workers runtime, wired as a CI gate | #4, #7 | e2e (Playwright) | not started | — |
@@ -117,7 +117,12 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.1 Adding a test for a plan rule or migration
 
-- TBD — see §3 Phase 1 for the "rule holds after migration on existing data" and date-boundary patterns.
+- **Date rule (SQL)**: compute "today" with `private.warsaw_today()`, never inline. `supabase/tests/warsaw_today.test.sql` fails when a function in `public` or `private` derives a date any other way (`at time zone`, `current_date`, `now()::date`, …); plain `now()` for timestamps is fine.
+- **Boundary test**: add cases to `supabase/tests/date_boundaries.test.sql`, or copy its header into a new file. It pins today to 2026-03-30 by replacing `private.warsaw_today()` at the top of its `begin … rollback`, as `postgres` before any `set local role` (see `docs/testing.md`, "Pinning today"), and builds fixtures from that date (`pg_temp.d(n)`). Cover T+1, T and T-1 of the rule, and both ends of a window (T-7, T-8), with expected values from the PRD or `docs/api.md`.
+- **New or changed RPC**: add its rows to `supabase/tests/rpc_contract.test.sql`, taken from the TS call site: argument names and types, return type, EXECUTE for the calling role and none for `anon` unless the client is anon, and any column the TS reads. A migration that renames, retypes or revokes something the deployed Worker uses then fails before it reaches production.
+- **Migration over existing rows**: `npm run test:replay` (CI runs it) seeds at the previous version, applies the newest migration and runs `supabase/replay/checks.test.sql` plus the full suite. `supabase/replay/seed.sql` may create rows only through RPCs the contract test pins (`ingest_weekly_plan`, `choose_plan_option`, `confirm_plan`, `rate_meal`), so it stays valid at the previous version; a migration that needs new kinds of existing rows extends the seed that way and adds a snapshot table and a check.
+- **Read-side week selection (TS)**: test `src/lib/services/plans.ts` with fixed `today` strings against rows through `fakeSupabase` (`src/test/fake-supabase.ts`), not by asserting query arguments. The fake throws on any builder method it doesn't implement; add the method there, with its PostgREST semantics, when a service starts using it.
+- **Reference tests**: `supabase/tests/date_boundaries.test.sql`, `supabase/tests/rpc_contract.test.sql`, `src/lib/services/plans.test.ts`.
 
 ### 6.2 Adding a test for the MO delivery endpoint
 
@@ -133,7 +138,7 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.5 Per-rollout-phase notes
 
-- (Appended by each phase as it ships.)
+- **Phase 1** (`testing-migration-date-rules`): the SQL "today" had to become a function (`private.warsaw_today()`) before any test could pin it; the older pgTAP files still use the real Warsaw today and were left as they are. The replay runs only in CI or with `MIGRATION_REPLAY_WIPES_LOCAL_DB=1`, as it resets the local stack shared with `npm run dev` and other worktrees, and it can start no further back than `20261008180000`, the oldest version with every RPC the seed calls.
 
 ## 7. What We Deliberately Don't Test
 
