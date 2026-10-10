@@ -45,14 +45,14 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                | Prerequisites | PRD refs | Status      |
-| ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
-| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production          | —             | MS-01    | in-progress |
-| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week | S-01          | MS-02    | proposed    |
-| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API    | S-01          | MS-03    | proposed    |
-| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                  | —             | MS-04    | ready       |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run after the edit               | S-01          | MS-05    | proposed    |
-| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                  | S-01          | MS-06    | proposed    |
+| ID   | Change ID                         | Outcome (user can …)                                                                                | Prerequisites | PRD refs | Status |
+| ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- | ------------- | -------- | ------ |
+| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production          | —             | MS-01    | done   |
+| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week | S-01          | MS-02    | ready  |
+| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API    | S-01          | MS-03    | ready  |
+| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                  | —             | MS-04    | ready  |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run after the edit               | S-01          | MS-05    | ready  |
+| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                  | S-01          | MS-06    | ready  |
 
 ## Baseline
 
@@ -61,7 +61,7 @@ What's already in place in the codebase as of `2026-10-10` (auto-researched + us
 - **Unit tests:** present — Vitest, 11 files in `src/lib/`; S-01 adds week-selection cases and an in-memory database fake.
 - **Database tests:** present — pgTAP, 6 files; S-01 adds the RPC contract, the Warsaw "today" helper and the date-boundary tests.
 - **HTTP smoke:** present — `scripts/smoke.mjs`, run in CI's smoke job and after deploy.
-- **Migration replay:** partial — being added to CI by S-01 Phase 3.
+- **Migration replay:** present — `npm run test:replay`, run in CI since S-01 (PR #127).
 - **Browser e2e:** absent — no Playwright in the project or CI.
 - **Agent post-edit hook:** absent — `.claude/settings.json` holds permissions only.
 - **Observability:** partial — Workers observability is on; no alerting (FR-019, parked).
@@ -85,7 +85,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Does `supabase test db` run tests from a directory outside `supabase/tests/`? (Phase 3 spike) — Owner: research. Block: no.
   - Does `supabase db reset --version` keep CI's service exclusions? (Phase 3 spike) — Owner: research. Block: no.
 - **Risk:** The only High × High risk in the test plan; first because S-02, S-03, S-05 and S-06 reuse its pinned "today", contract test and replay harness.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-02: Delivery and re-send integrity
 
@@ -100,7 +100,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Is the delivery write atomic, so a failure part-way through answers non-2xx and leaves nothing half-written? — Owner: research. Block: no.
   - Can real dev re-sends serve as fixtures for the changed-week cases? — Owner: user. Block: no.
 - **Risk:** MO alerts only on non-2xx and mo-web has no monitoring, so a 2xx with a bad save goes unnoticed; next in line because the delivery is where every week's data enters.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-03: Data isolation sweep
 
@@ -114,7 +114,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Which tables, functions and grants are reachable with the public keys, and which functions run with the owner's rights (skipping row-level security)? — Owner: research. Block: no.
 - **Risk:** Challenges "row-level security is on, so it's safe"; follows S-01 because it walks the function list S-01's contract test pins.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-04: Critical-journey e2e
 
@@ -142,7 +142,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - How does an edited file map to its tests, and can the hook stay under a minute? — Owner: research. Block: no.
 - **Risk:** Runs the tests the earlier items add, so it comes late; local only, never a CI substitute.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-06: Mutation testing for unit tests (nice-to-have)
 
@@ -156,18 +156,18 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Does Stryker work with this repo's Vitest and TypeScript versions, and is a run fast enough for CI or only for local use? — Owner: research. Block: no.
 - **Risk:** Nice-to-have and first to park if M-2 drags on (top blocker: time); last so it scores the suite the earlier items build. TypeScript only — SQL keeps the manual mutation checks S-01 uses.
-- **Status:** proposed
+- **Status:** ready
 
 ## Backlog Handoff
 
-| Roadmap ID | Issue                                                                 | Change ID                         | Suggested issue title                             | Ready for `/10x-plan` | Notes                                               |
-| ---------- | --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------- | --------------------- | --------------------------------------------------- |
-| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules      | Test-plan Phase 1: migration and date-rule safety | in progress           | Phase sub-issues #117 (closed), #118 (closed), #119 |
-| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | no                    | After S-01                                          |
-| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | no                    | After S-01                                          |
-| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | yes                   | Test-plan order puts it after S-02 and S-03         |
-| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | no                    | After S-01                                          |
-| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | no                    | Nice-to-have; after S-01                            |
+| Roadmap ID | Issue                                                                 | Change ID                         | Suggested issue title                             | Ready for `/10x-plan` | Notes                                             |
+| ---------- | --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------- |
+| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules      | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                       |
+| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity` |
+| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                       |
+| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | yes                   | Test-plan order puts it after S-02 and S-03       |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | yes                   | Runs the tests S-02 and S-03 add                  |
+| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
 
 ## Open Roadmap Questions
 
