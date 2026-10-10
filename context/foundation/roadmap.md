@@ -204,3 +204,5 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 ## Done
 
 (`/10x-archive` appends M-2 entries here. M-1's entries are in this file's git history and in `context/archive/`.)
+
+- **S-01: a migration that changes a plan rule, a grant or a date boundary fails a test (locally and in CI) before it reaches the hosted database, and the previous Worker keeps working against the new schema during the deploy window.** — Archived 2026-10-10 → `context/archive/2026-10-10-testing-migration-date-rules/`. Lesson: —.
