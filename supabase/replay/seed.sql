@@ -153,6 +153,10 @@ create table replay_snapshot.chosen as
    where o.is_chosen
      and (p.saved_at is not null or p.week_start <= pg_temp.d(0));
 
+-- Every slot of every plan, so a migration that drops a slot's options can't pass the one-chosen check.
+create table replay_snapshot.slots as
+  select distinct plan_id, meal_date, meal_type from public.plan_meal_options;
+
 create table replay_snapshot.ratings as
   select option_id, user_id, rating, rated_at from public.meal_ratings;
 

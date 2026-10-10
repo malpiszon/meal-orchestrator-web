@@ -44,9 +44,9 @@ Pin one date per file, at the top, and build every fixture date from it. Choose 
 `npm run test:replay` (`scripts/migration-replay.sh [base-version]`) checks the newest migration over existing rows:
 
 1. `npx supabase db reset --version <base> --local`, where the base defaults to the second-newest file in `supabase/migrations/`;
-2. loads `supabase/replay/seed.sql`, with `psql` against `DB_URL` from `npx supabase status -o env`, or, without `psql` on `PATH`, through `docker exec` into `supabase_db_<project_id>`. The seed creates two users and their history, current, saved and unsaved upcoming weeks and ratings through the RPCs only, then snapshots the chosen options of saved plans and started weeks, the ratings and each plan's `saved_at`, `week_start` and `week_end` into the `replay_snapshot` schema;
+2. loads `supabase/replay/seed.sql`, with `psql` against `DB_URL` from `npx supabase status -o env`, or, without `psql` on `PATH`, through `docker exec` into `supabase_db_<project_id>`. The seed creates two users and their history, current, saved and unsaved upcoming weeks and ratings through the RPCs only, then snapshots every slot, the chosen options of saved plans and started weeks, the ratings and each plan's `saved_at`, `week_start` and `week_end` into the `replay_snapshot` schema;
 3. `npx supabase migration up --local`;
-4. `npx supabase test db supabase/replay/checks.test.sql`: the snapshotted choices, ratings and plan dates are unchanged, and every slot has exactly one chosen option;
+4. `npx supabase test db supabase/replay/checks.test.sql`: the snapshotted choices, ratings and plan dates are unchanged, and every slot is still there with exactly one chosen option;
 5. `npx supabase test db`: the full suite, now over the seeded rows.
 
 Any failing step exits non-zero. The reset **wipes the local database** shared with `npm run dev`, the smoke test and other worktrees, so the script refuses to run unless `CI=true` or `MIGRATION_REPLAY_WIPES_LOCAL_DB=1`. Afterwards the local database is at the newest migration with only the seed rows; re-deliver a week to sign in again ([dev walkthrough](dev-walkthrough.md)).

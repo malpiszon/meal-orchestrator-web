@@ -415,13 +415,13 @@ The replay adds one `db reset`, a migration and two pgTAP runs to the `smoke` jo
 
 #### Automated
 
-- [x] 3.1 `MIGRATION_REPLAY_WIPES_LOCAL_DB=1 npm run test:replay` passes locally, replaying `20261010120000_warsaw_today_helper.sql` over the seed, with output saved to a log
-- [x] 3.2 `npm run test:replay` without the flag (and without `CI=true`) exits non-zero before touching the database
-- [ ] 3.3 The PR's CI run is green, including the "Migration replay over seeded data" step
-- [x] 3.4 `npm run lint` passes and `npx prettier --check .` reports no changes
+- [x] 3.1 `MIGRATION_REPLAY_WIPES_LOCAL_DB=1 npm run test:replay` passes locally, replaying `20261010120000_warsaw_today_helper.sql` over the seed, with output saved to a log — 7c70367
+- [x] 3.2 `npm run test:replay` without the flag (and without `CI=true`) exits non-zero before touching the database — 7c70367
+- [x] 3.3 The PR's CI run is green, including the "Migration replay over seeded data" step
+- [x] 3.4 `npm run lint` passes and `npx prettier --check .` reports no changes — 7c70367
 
 #### Manual
 
-- [ ] 3.5 Replay negative check: a scratch migration (not committed) that flips one saved plan's choice makes `checks.test.sql` fail. Delete the scratch file.
+- [x] 3.5 Replay negative check: a scratch migration (not committed) that flips one saved plan's choice makes `checks.test.sql` fail. Delete the scratch file.
 - [ ] 3.6 `docs/testing.md` and test-plan §6.1 are enough for someone else to add a boundary test for a new date rule
 - [ ] 3.7 After CI is green and before merging, push `20261010120000_warsaw_today_helper.sql` to production as `docs/deployment.md` describes, and confirm the dashboard, a swap and a rating still work on the deployed (old) Worker

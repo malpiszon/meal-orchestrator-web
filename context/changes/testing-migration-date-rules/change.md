@@ -17,3 +17,4 @@ archived_at: null
 - CLI spike (Phase 3 step 0, CLI 2.120.0, 2026-10-10):
   - `npx supabase test db <path>` runs files outside `supabase/tests/` (a pass and a deliberate fail in `supabase/replay/` exited 0 and 1), so no `pg_prove`/psql fallback is needed. It runs every `*.sql` in a directory, `seed.sql` included, so the replay script passes `supabase/replay/checks.test.sql`, not the directory.
   - `db reset --version` recreates only the db container and restarts the services that already run (storage, auth, realtime here); the stopped `edge_runtime` container stayed stopped and no missing service was created, so it shouldn't bring back CI's `-x` exclusions. Not provable locally without restarting the shared stack with `-x`; the PR's CI run of the replay step confirms it (Progress 3.3).
+  - Confirmed in CI (PR #127, run 38070577041): after `db reset --version` the `-x` services stayed stopped, and the replay passed (checks 8/8, full suite 231).

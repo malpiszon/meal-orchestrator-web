@@ -4,12 +4,12 @@
 -- file. The expected values are the snapshot, i.e. what the users saw before the migration:
 -- - the system never changes the choices of a saved plan or of a week that has started (PRD US-01, US-07);
 -- - ratings are kept (PRD US-08);
--- - every slot has exactly one chosen option (PRD US-01).
+-- - every slot is kept and has exactly one chosen option (PRD US-01).
 -- Unsaved upcoming plans may legitimately be re-picked by a migration, so their choices are not compared.
 -- This file lives outside supabase/tests/ on purpose: the snapshot exists only after the seed, so the
 -- default `npx supabase test db` must never pick it up. Run with `npm run test:replay`.
 begin;
-select plan(8);
+select plan(9);
 
 -- The seed ran, so the comparisons below are not vacuous.
 select ok((select count(*) from replay_snapshot.chosen) > 0, 'the snapshot has chosen options');
@@ -39,6 +39,13 @@ select bag_eq(
   $$ select id, saved_at, week_start, week_end from public.weekly_plans $$,
   $$ select plan_id, saved_at, week_start, week_end from replay_snapshot.plans $$,
   'every plan keeps its saved_at, week_start and week_end'
+);
+
+-- US-01: every slot is still there, so the one-chosen check below covers all of them.
+select set_eq(
+  $$ select plan_id, meal_date, meal_type from public.plan_meal_options $$,
+  $$ select plan_id, meal_date, meal_type from replay_snapshot.slots $$,
+  'every plan keeps all its slots'
 );
 
 -- US-01: one chosen option per slot, in every plan (unsaved upcoming plans included).
