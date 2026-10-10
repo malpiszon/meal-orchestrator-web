@@ -56,7 +56,7 @@ After `npx supabase link`, the local stack runs the linked project's service ver
 | `npm run lint`         | ESLint with type-checked rules (`lint:fix` to fix)                                          |
 | `npm run format`       | Prettier                                                                                    |
 
-A pre-commit hook (husky + lint-staged) runs `eslint --fix` on `*.{ts,tsx,astro}` and `prettier --write` on `*.{json,css,md}`.
+A pre-commit hook (husky + lint-staged) runs `eslint --fix` and then `vitest related --run` (the unit tests that import the staged files) on `*.{ts,tsx,astro}`, and `prettier --write` on `*.{json,css,md}`. `npm install` sets it up through the `prepare` script.
 
 ## Project structure
 
