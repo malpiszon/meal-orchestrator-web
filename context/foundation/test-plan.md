@@ -1,0 +1,158 @@
+# Test Plan
+
+> Phased test rollout for this project. Strategy is frozen at the top
+> (§1–§5); cookbook patterns at the bottom (§6) fill in as phases ship.
+> Read before writing any new test.
+>
+> Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
+>
+> Last updated: 2026-10-10
+
+## 1. Strategy
+
+Tests follow three non-negotiable principles for this project:
+
+1. **Cost × signal.** The cheapest test that gives a real signal for the
+   risk wins. Do not promote to e2e because e2e "feels safer." Do not put a
+   vision model on top of a deterministic visual diff that already catches
+   the regression.
+2. **User concerns are first-class evidence.** Risks anchored in "the
+   team is worried about X, and the failure would surface somewhere in
+   <area>" carry the same weight as PRD lines or hot-spot data.
+3. **Risks are scenarios, not code locations.** This plan documents *what
+   could fail* and *why we believe it's likely* — drawn from documents,
+   interview, and codebase *signal* (churn, structure, test base). It does
+   NOT claim to know which line owns the failure. That knowledge is
+   produced by `/10x-research` during each rollout phase. If the plan and
+   research disagree about where the failure lives, research is the
+   ground truth.
+
+Hot-spot scope used for likelihood weighting: `src/`, `supabase/migrations/`, `supabase/tests/`, `scripts/` (80 commits in the 30 days to 2026-10-10).
+
+Expected values in every test come from an independent source — the PRD, `docs/api.md`, `docs/mo-delivery-contract.md`, or this plan's §2 — never from the implementation under test.
+
+## 2. Risk Map
+
+The top failure scenarios this project must protect against, ordered by
+risk = impact × likelihood. Risks are failure scenarios in user / business
+terms, not test names. The Source column cites the *evidence that surfaced
+this risk* — never a specific file as "where the failure lives" (that is
+research's job, see §1 principle #3).
+
+| # | Risk (failure scenario) | Impact | Likelihood | Source (evidence — not anchor) |
+|---|---|---|---|---|
+| 1 | A migration ships plan logic, a grant or a policy that behaves differently than intended, and the hosted database runs it (migrations are applied before the matching code merges) | High | High | interview Q3; hot-spot dirs `supabase/migrations/` (13 commits/30d), `supabase/tests/` (15/30d); archive: S-02, S-06, S-11, S-12, S-13 all changed SQL plan logic; README deploy order |
+| 2 | MO's weekly delivery gets a 2xx but the week is stored wrong — wrong account, missing slots or options, wrong dates, or a partial write — and nobody notices, because MO alerts only on non-2xx and mo-web has no monitoring | High | Medium | interview Q1; PRD FR-001, FR-002, Guardrails; hot-spot dir `src/pages/api/` (30/30d) |
+| 3 | Abuse: a signed-in user reads or changes another user's plan, choices or ratings, through the app's API or by calling the database API directly with their own session | High | Medium | PRD NFR data isolation, US-03; README (RLS, plan logic in SQL functions); hot-spot dir `src/pages/api/` (30/30d) |
+| 4 | The critical journey breaks in a real browser while the HTTP smoke stays green: swap, save or rate doesn't work, or the dashboard shows "Something went wrong" | High | Medium | interview Q4; hot-spot dirs `src/components/plan/` (25/30d), `src/pages/` (16/30d); archive: dashboard-pgrst303-retry |
+| 5 | Date rules go wrong at their boundaries: a plan can still be changed on its first day, the rating window is off by a day, or "This week"/"Next week" picks the wrong plan | Medium | Medium | PRD Business Logic, US-01, US-05, US-08; archive: next-week-nearest-upcoming (a past selection bug); hot-spot dir `src/lib/` (60/30d) |
+| 6 | A re-sent week breaks state: saved choices lost, other weeks or history changed, or the wrong week shown as "Next week" | High | Low | PRD US-07, FR-017, FR-018; archive: week-resubmission-replace; roadmap Parked "stale Keep as recommended"; re-sends are rare on prod (user, 2026-10-10) |
+| 7 | An invitation or reset link stops signing the user in, or is wrongly reported as expired | Medium | Low | `docs/deployment.md` Known risks (link check reads Supabase internals); PRD US-02, US-04; 2–4 users, so a workaround (operator sends a new link) exists |
+
+Not a test: mo-web has no monitoring of its own (FR-019, parked). Risk #2 covers the testable part, a 2xx with a bad save. Noticing failures in production belongs to observability.
+
+### Risk Response Guidance
+
+| Risk | What would prove protection | Must challenge | Context `/10x-research` must ground | Likely cheapest layer | Anti-pattern to avoid |
+|------|-----------------------------|----------------|--------------------------------------|-----------------------|-----------------------|
+| #1 | Each PRD plan rule (recency from saved plans only, cut-off, rating window, rating order, re-send replace) still holds after the migrations are applied on top of existing data, and the previous app version still works against the new schema during the deploy window | "pgTAP green on a fresh local database means the hosted migration is safe" | Which migrations rewrite functions, grants or policies; deploy-order window; what seed or fixture data looks like production | pgTAP + a migration replay over seeded data | Asserting a function's output against a copy of its own SQL |
+| #2 | Each field of a contract-valid payload reads back intact through the owning user's view; any failure part-way through the write answers non-2xx and leaves nothing half-written | "2xx means the week is stored" | Ingest entry point, whether the write is atomic, error translation to HTTP codes, `docs/mo-delivery-contract.md` | pgTAP + unit (schema) | Expected values taken from the code instead of from the delivery contract |
+| #3 | A second user gets nothing back and changes nothing on every read and write path, both through the app routes and directly against the database API with their own session | "RLS is enabled, so it's safe" (functions that run with the owner's rights skip RLS) | Every table, function and grant reachable with the anon or authenticated key; how the app derives the user | pgTAP + smoke | Checking only the pages, not direct database calls |
+| #4 | One real-browser run: delivery, invitation, set password, dashboard, swap, save, rate, sign in again, choices still there | "The HTTP smoke implies the interactive parts work" | Preview on the Workers runtime, Mailpit, fixtures, how to reset the stack between runs | e2e (one journey) | Re-checking in e2e every rule pgTAP already covers |
+| #5 | The day before, the first day and the day after a plan starts; days 7 and 8 of the rating window; two future weeks delivered | "Server time equals the user's date" (Workers run in UTC) | Where "today" comes from in each rule; the time-zone rule the PRD implies | unit + pgTAP | Tests that depend on the real current date |
+| #6 | After a re-send: saved choices are kept where the meal is still offered, other weeks are unchanged, the plan stays saved, "Next week" stays the nearest week | "The identical re-send case covers the changed one" | Replace rules, how the saved flag survives, real dev re-sends as fixtures | pgTAP | Testing only a re-send identical to the first delivery |
+| #7 | A valid link leads to a session; a used or expired link is refused before the password form | "The local Supabase version behaves like hosted" | Existing pgTAP and smoke coverage of links; what a Supabase upgrade could change | existing pgTAP + smoke; Phase 4 journey | Duplicating checks the smoke already makes |
+
+## 3. Phased Rollout
+
+Each row is a discrete rollout phase that will open its own change folder
+via `/10x-new`. Status moves left-to-right through the values below; the
+orchestrator updates Status as artifacts appear on disk.
+
+| # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
+|---|---|---|---|---|---|---|
+| 1 | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries | #1, #5 | pgTAP, unit, migration replay | change opened | testing-migration-date-rules |
+| 2 | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should | #2, #6 | pgTAP, unit, smoke extensions | not started | — |
+| 3 | Data isolation sweep | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3 | pgTAP, smoke | not started | — |
+| 4 | Critical journey e2e | One real-browser journey on the Workers runtime, wired as a CI gate | #4, #7 | e2e (Playwright) | not started | — |
+| 5 | Agent-loop feedback | Post-edit hook runs the matching pgTAP or unit tests when an agent edits migrations or `src/lib/` | #1, #5 | post-edit hook | not started | — |
+
+Order rationale: #1 is the only High × High risk and covers the SQL the delivery logic runs on; delivery integrity follows (interview Q1); isolation is the abuse lens; e2e is the most expensive layer and only covers what cheaper layers can't reach; the hook comes last because it runs the tests the earlier phases add.
+
+## 4. Stack
+
+| Layer | Tool | Version | Notes |
+|---|---|---|---|
+| unit | Vitest | ^5.0.3 | `src/**/*.test.ts`; 11 files in `src/lib/` and `src/lib/services/` |
+| database | pgTAP via Supabase CLI | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 6 files; runs against local Supabase |
+| HTTP smoke | `scripts/smoke.mjs` (Node, no deps) | n/a | Drives flows over HTTP against a preview on the Workers runtime; also post-deploy probe |
+| e2e (browser) | none yet — see §3 Phase 4 | — | Playwright is the likely candidate; checked: 2026-10-10 |
+| (AI-native) post-edit hook | Claude Code hooks — checked: 2026-10-10 | n/a | When NOT to use: UI, styling or docs edits, and any edit where the matching test needs the full stack and takes over a minute |
+
+Test-base profile: `meaningful` — Vitest configured, 11 unit files, 6 pgTAP files and an HTTP smoke; pages, API routes and components have no tests of their own beyond the smoke.
+
+**Stack grounding tools (current session):**
+- Docs: none (no Context7 or framework docs MCP) — versions taken from `package.json`; checked: 2026-10-10
+- Search: no search MCP (no Exa); built-in web search only, not used; checked: 2026-10-10
+- Runtime/browser: none (no Playwright MCP) — not used; Phase 4 research should verify Playwright on the Workers preview; checked: 2026-10-10
+- Provider/platform: `gh` CLI (not an MCP) for issues and CI status; no Supabase or Cloudflare MCP; checked: 2026-10-10
+
+## 5. Quality Gates
+
+| Gate | Where | Required? | Catches |
+|---|---|---|---|
+| lint + typecheck (`npm run lint`, `npx astro check`) | local + CI (`ci` job) | required | syntactic / type drift |
+| unit (`npm test`) | local + CI (`ci` job) | required | logic regressions in `src/lib/` |
+| database (`supabase test db`) | local + CI (`smoke` job) | required; scope widens after §3 Phases 1–3 | plan-rule, migration and isolation regressions |
+| HTTP smoke (`npm run smoke`) | local + CI (`smoke` job) | required | broken flows over HTTP, error and edge cases |
+| e2e on the critical journey | CI on PR | required after §3 Phase 4 | broken interactive journey in a real browser |
+| post-deploy probe | CI (`deploy` job) | required | missing Worker secrets, bot protection blocking MO |
+| post-edit hook | local (agent loop) | recommended after §3 Phase 5 | regressions at edit time; not a CI substitute |
+
+## 6. Cookbook Patterns
+
+How to add new tests in this project. Each sub-section is filled in once
+the relevant rollout phase ships; before that, the sub-section reads
+"TBD — see §3 Phase <N>."
+
+### 6.1 Adding a test for a plan rule or migration
+
+- TBD — see §3 Phase 1 for the "rule holds after migration on existing data" and date-boundary patterns.
+
+### 6.2 Adding a test for the MO delivery endpoint
+
+- TBD — see §3 Phase 2 for the "2xx means stored exactly per contract" and re-send patterns.
+
+### 6.3 Adding an isolation test for a new table, function or route
+
+- TBD — see §3 Phase 3 for the second-user denial pattern.
+
+### 6.4 Adding to the critical-journey e2e
+
+- TBD — see §3 Phase 4.
+
+### 6.5 Per-rollout-phase notes
+
+- (Appended by each phase as it ships.)
+
+## 7. What We Deliberately Don't Test
+
+Exclusions agreed during the rollout (Phase 2 interview, Q5). Future
+contributors should respect these unless the underlying assumption changes.
+
+- **Visual or snapshot tests of shadcn components** — generated components, and the look will change in the parked UI review. Re-evaluate after that review lands. (Source: interview Q5.)
+- **Load and performance tests** — 2–4 users and one delivery a week. Re-evaluate if the user base grows beyond a personally-known group. (Source: interview Q5.)
+- **More keep-alive tests** — the smoke already checks the Cron Trigger's success and failure modes. Re-evaluate if the keep-alive mechanism changes. (Source: interview Q5.)
+
+## 8. Freshness Ledger
+
+- Strategy (§1–§5) last reviewed: 2026-10-10
+- Stack versions last verified: 2026-10-10
+- AI-native tool references last verified: 2026-10-10
+
+Refresh (`/10x-test-plan --refresh`) when:
+
+- a new top-3 risk surfaces from the roadmap or archive,
+- a recommended tool's `checked:` date is older than three months,
+- the project's tech stack changes (new framework, new test runner),
+- §7 negative-space no longer matches what the team believes.
