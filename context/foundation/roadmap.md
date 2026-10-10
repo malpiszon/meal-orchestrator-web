@@ -2,331 +2,184 @@
 project: mo-web
 version: 1
 status: draft
-created: 2026-09-25
-updated: 2026-10-09
-prd_version: 1
-main_goal: speed
+created: 2026-10-10
+updated: 2026-10-10
+prd_version: —
+main_goal: quality
 top_blocker: time
-milestone_id: weekly-plan-loop-with-memory
-milestone_seq: 1
-milestone_status: done
+milestone_id: regression-safety-net
+milestone_seq: 2
+milestone_status: open
 tracker: github-issues
-gh_milestone: "M-1: Weekly plan loop with memory"
+gh_milestone: "M-2: Regression safety net"
 ---
 
 # Roadmap: mo-web
 
-> Derived from `context/foundation/prd.md` (v1) + auto-researched codebase baseline.
+> Derived from `context/foundation/test-plan.md` §3 (2026-10-10) + the user's description of a nice-to-have mutation-testing item + auto-researched codebase baseline.
 > Edit-in-place; archive when superseded.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
 
 ## Milestone
 
-**M-1: Weekly plan loop with memory** — Status: done
+**M-2: Regression safety net** — Status: open
 
-- **Intent:** MO's weekly recommendation lands in mo-web alongside the existing email; invited users see it annotated with how recently each meal appeared in their own history, adjust it within that week's menu, and every plan becomes history automatically when the next week arrives.
-- **Source materials:** `context/foundation/prd.md` (v1)
-- **Done when:** every F-NN and S-NN below is `done`.
-- **Scope anchors:** FR-001–FR-005, FR-007–FR-013, FR-017, FR-018; US-01–US-08. Parked from this milestone: FR-006, FR-014, FR-015, FR-016, FR-019.
+- **Intent:** a change that breaks a plan rule, MO's delivery, another user's data or the main journey fails a test before it reaches production. The test plan's risks #1–#7 are covered by the cheapest test that gives a real signal; more scope goes into a later milestone.
+- **Source materials:** `context/foundation/test-plan.md` §3 Phased Rollout (risks in §2), plus the user's description for MS-06 (2026-10-10).
+- **Done when:** S-01 to S-05 are `done`, and S-06 (nice-to-have) is either `done` or moved to `## Parked` with its issue closed as not planned.
+- **Scope anchors:**
+  - MS-01: Test-plan Phase 1, migration and date-rule safety (risks #1, #5).
+  - MS-02: Test-plan Phase 2, delivery and re-send integrity (risks #2, #6).
+  - MS-03: Test-plan Phase 3, data isolation sweep (risk #3).
+  - MS-04: Test-plan Phase 4, critical-journey e2e (risks #4, #7).
+  - MS-05: Test-plan Phase 5, agent-loop feedback (risks #1, #5).
+  - MS-06: Mutation testing, probably with Stryker — nice-to-have (user, 2026-10-10: "cover only risks listed there + nice to have for mutation tests").
 
 ## Vision recap
 
-Meal Orchestrator (MO) emails a weekly AI meal recommendation but keeps no record of past choices, so a meal the user just ate can be recommended again and nothing helps them catch it. mo-web is a separate, loosely-coupled app that receives MO's weekly delivery, keeps each user's plan history, and shows next to every recommended meal when it last appeared — without changing how MO generates recommendations and without ever becoming a point of failure for MO's email.
+Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that week, keeps each user's plan history, shows when each meal last appeared, and lets the user swap, save and rate meals. M-1 shipped that loop. M-2 adds no user-facing features: it makes the existing rules hard to break, because migrations reach the hosted database before their code merges and mo-web has no monitoring that would notice a silent failure.
 
 ## North star
 
-**S-02: User sees the upcoming plan with "was in your plan N days ago" next to repeat meals** — the north star is the smallest end-to-end flow whose success proves the product works, so it is placed as early as its prerequisites allow; here it is the PRD's Business Logic rule made visible, and with a speed-to-launch goal everything else only matters once this works.
+**S-01: a migration that breaks a plan rule or a date boundary fails a test before it reaches production** — the north star is the smallest item whose success proves the milestone works, so it goes first. Here it covers the test plan's only risk rated high on both impact and likelihood, and it lays down the pinned "today", the RPC contract and the migration replay that later items reuse.
 
 ## At a glance
 
-| ID   | Change ID                  | Outcome (user can …)                                                                                 | Prerequisites    | PRD refs                                                 | Status |
-| ---- | -------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------- | ------ |
-| F-01 | email-link-callback        | (foundation) links in invite and reset emails turn into a signed-in session in mo-web                | —                | FR-003, FR-005, Access Control                           | done   |
-| F-02 | supabase-idle-keepalive    | (foundation) the database stays reachable after a week or more with no activity                      | —                | NFR idle availability                                    | done   |
-| S-01 | mo-weekly-delivery         | user sees the upcoming plan MO just delivered, or an explicit "no upcoming plan yet" state           | —                | FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation | done   |
-| S-02 | recency-annotated-plan     | user sees last week's plan become history and recency notes on repeat meals                          | S-01             | FR-008, FR-011, US-01, US-06                             | done   |
-| S-03 | swap-and-save-plan         | user can swap meals within the week's menu and save the plan until its first day                     | S-01             | FR-009, FR-010, US-01                                    | done   |
-| S-04 | invite-on-first-delivery   | a new MO user gets an invitation, sets a password and logs in to their own dashboard                 | S-01, F-01       | FR-002, FR-003, FR-004, US-02, US-03                     | done   |
-| S-05 | password-reset             | user can reset a forgotten password from an emailed link and log in again                            | F-01             | FR-005, US-04                                            | done   |
-| S-06 | week-resubmission-replace  | a re-sent week from MO replaces only that week's stored recommendation, keeping saved choices        | S-01, S-03       | FR-017, FR-018, US-07                                    | done   |
-| S-07 | plan-history-list          | user can browse all past plans as a simple chronological list                                        | S-02             | FR-012                                                   | done   |
-| S-08 | rate-recent-meals          | user can rate meals from today or the previous 7 days and see their rating in annotations            | S-02             | FR-013, US-08                                            | done   |
-| S-09 | landing-page               | user lands on a styled sign-in page at `/` and can log in or start a password reset                  | S-05             | FR-004, FR-005, US-03, US-04                             | done   |
-| S-10 | expired-link-notice        | user opening an expired or used invite/reset link is told at once and offered a new one              | S-04, S-05       | FR-003, FR-005, US-02, US-04                             | done   |
-| S-11 | recency-from-saved-plans   | user sees recency notes only for meals from plans they saved, never from plans they ignored          | S-02, S-03       | FR-008, FR-010, FR-011, US-01, US-06                     | done   |
-| S-12 | next-week-nearest-upcoming | user always sees the nearest upcoming week under "Next week", even with two future weeks delivered   | S-01, S-03, S-11 | FR-007, FR-009, FR-010                                   | done   |
-| S-13 | rating-ordered-options     | user sees each meal's options ordered by their own ratings: 5/5 first, 1/5 last, whatever MO's score | S-03, S-08       | FR-009, FR-013, US-08                                    | done   |
-
-## Streams
-
-Navigation aid — groups items that share a Prerequisites chain. Canonical ordering still lives in the dependency graph below; this table is the proposed reading order across parallel tracks.
-
-| Stream | Theme             | Chain                                                     | Note                                                                                     |
-| ------ | ----------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| A      | Delivery → memory | `S-01` → `S-02` → `S-07`, `S-08`, `S-11` → `S-12`, `S-13` | Critical path to the north star; speed goal puts every other stream behind or beside it. |
-| B      | Plan editing      | `S-03` → `S-06`                                           | Joins Stream A at `S-01`; runs in parallel with `S-02`; `S-11` (Stream A) needs `S-03`.  |
-| C      | Accounts & access | `F-01` → `S-04`, `S-05` → `S-09`, `S-10`                  | `S-04` joins Stream A at `S-01`; `F-01` and `S-05` can start immediately.                |
-| D      | Operations        | `F-02`                                                    | Standalone; must land before real users rely on weekly delivery.                         |
+| ID   | Change ID                         | Outcome (user can …)                                                                                | Prerequisites | PRD refs | Status      |
+| ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
+| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production          | —             | MS-01    | in-progress |
+| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week | S-01          | MS-02    | proposed    |
+| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API    | S-01          | MS-03    | proposed    |
+| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                  | —             | MS-04    | ready       |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run after the edit               | S-01          | MS-05    | proposed    |
+| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                  | S-01          | MS-06    | proposed    |
 
 ## Baseline
 
-What's already in place in the codebase as of `2026-09-25` (auto-researched + user-confirmed).
-Foundations below assume these are present and do NOT re-scaffold them.
+What's already in place in the codebase as of `2026-10-10` (auto-researched + user-confirmed). The app itself is complete for M-1 (see Milestone History); this inventory covers the test layers M-2 works on.
 
-- **Frontend:** present — Astro 7 + React 19 islands + Tailwind 4 + shadcn/ui (per tech-stack.md); only starter pages exist (landing page, placeholder dashboard, auth forms).
-- **Backend / API:** partial — only the starter's sign-in / sign-up / sign-out routes; no endpoint MO can submit to.
-- **Data:** absent — Supabase client is wired, but there are no migrations, tables or row-level security policies.
-- **Auth:** partial — email/password sign-in, sign-out and middleware gating the dashboard are present; public sign-up still exists in code (disabled in production); no email-link callback, no invitation flow, no password reset.
-- **Deploy / infra:** present — Cloudflare Workers deploy, CI with lint/build, smoke and deploy jobs, production secrets, Resend SMTP for auth emails. Open: the Supabase idle-pause mitigation is not decided.
-- **Observability:** partial — Workers observability is enabled; no error tracking or alerting on failed MO deliveries.
+- **Unit tests:** present — Vitest, 11 files in `src/lib/`; S-01 adds week-selection cases and an in-memory database fake.
+- **Database tests:** present — pgTAP, 6 files; S-01 adds the RPC contract, the Warsaw "today" helper and the date-boundary tests.
+- **HTTP smoke:** present — `scripts/smoke.mjs`, run in CI's smoke job and after deploy.
+- **Migration replay:** partial — being added to CI by S-01 Phase 3.
+- **Browser e2e:** absent — no Playwright in the project or CI.
+- **Agent post-edit hook:** absent — `.claude/settings.json` holds permissions only.
+- **Observability:** partial — Workers observability is on; no alerting (FR-019, parked).
 
 ## Foundations
 
-### F-01: Email-link callback
-
-- **Outcome:** (foundation) links in Supabase auth emails (invitation, password reset) land on a callback that exchanges the link's code for a signed-in session and forwards the user to the right next page.
-- **Change ID:** email-link-callback
-- **Issue:** [#2](https://github.com/malpiszon/meal-orchestrator-web/issues/2)
-- **PRD refs:** FR-003, FR-005, Access Control
-- **Unlocks:** S-04 (invitation acceptance), S-05 (password reset); verification path: a real invitation re-test, as required by the infrastructure risk register.
-- **Prerequisites:** —
-- **Parallel with:** F-02, S-01, S-02, S-03, S-06, S-07, S-08
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Shared by two slices and verifiable on its own; without it both invitation and reset links dead-end on the landing page. Redirect allowlist mistakes break links silently — verify against production.
-- **Handoff to S-04/S-05:** `/api/auth/confirm` verifies `invite` and `recovery` links (`token_hash` + `type`) and forwards both to `/dashboard`, via the constant `AUTH_LINK_DESTINATION` in `src/lib/auth-link.ts`; each slice switches its type's destination to its own set-password page. The route uses up the single-use token on the GET the link opens, so mail scanners that prefetch links (Microsoft Defender Safe Links, corporate gateways) can consume it before the user clicks, and any page can make a victim open the attacker's own link and sign them in as the attacker (login CSRF). Each slice's set-password page should take `token_hash` + `type` on GET and call `verifyOtp` only on the form POST.
-- **Status:** done
-
-### F-02: Supabase idle keep-alive
-
-- **Outcome:** (foundation) the production database stays active through weeks with no user activity, so MO's weekly delivery and the dashboard keep working.
-- **Change ID:** supabase-idle-keepalive
-- **Issue:** [#3](https://github.com/malpiszon/meal-orchestrator-web/issues/3)
-- **PRD refs:** NFR idle availability (added 2026-09-24)
-- **Unlocks:** verification path for S-01 — a weekly delivery after ≥ 7 idle days must still be accepted.
-- **Prerequisites:** —
-- **Parallel with:** F-01, S-01, S-02, S-03, S-04, S-05, S-06, S-07, S-08, S-09
-- **Blockers:** —
-- **Unknowns:**
-  - Scheduled keep-alive ping vs paid database plan (leading option in infrastructure.md: scheduled ping every few days; scheduled CI jobs stop after 60 days without commits in public repos). — Owner: user. Block: no.
-- **Risk:** MO's weekly cadence sits right at the ~7-day pause threshold; a paused database would make MO's delivery fail silently from the user's point of view.
-- **Status:** done
+None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Playwright, S-06 Stryker), so no shared enabler has to land first.
 
 ## Slices
 
-### S-01: MO's weekly delivery reaches the dashboard
+### S-01: Migration and date-rule safety (north star)
 
-- **Outcome:** user can open the dashboard and see the upcoming plan MO just delivered for their email — or an explicit "no upcoming plan yet" state when nothing has arrived.
-- **Change ID:** mo-weekly-delivery
-- **Issue:** [#4](https://github.com/malpiszon/meal-orchestrator-web/issues/4)
-- **PRD refs:** FR-001, FR-002, FR-007, US-01, US-05, NFR data isolation
+- **Outcome:** a migration that changes a plan rule, a grant or a date boundary fails a test (locally and in CI) before it reaches the hosted database, and the previous Worker keeps working against the new schema during the deploy window.
+- **Change ID:** testing-migration-date-rules
+- **Issue:** [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116)
+- **PRD refs:** MS-01
 - **Prerequisites:** —
-- **Parallel with:** F-01, F-02, S-05, S-09
+- **Parallel with:** S-04
 - **Blockers:** —
 - **Unknowns:**
-  - PRD Open Question 1: does MO's payload carry everything needed (e.g. a provider-side meal ID stable across weeks)? Settle on a real MO payload sample during planning. — Owner: user. Block: no.
-  - How MO authenticates its delivery and how a non-2xx response reaches MO's operator for manual retry (MO's email must still succeed). — Owner: user. Block: no.
-  - Accounts: resolved 2026-09-30. MO is the authority, so a delivery for an email mo-web hasn't seen creates that account (unconfirmed, no password, no email sent) and stores the week. No accounts are created manually; before S-04 the dashboard is verified on the dev stack, where a password is set with an Admin API call. Invitation emails are S-04. — Owner: user. Block: no.
-- **Risk:** First slice to introduce data and per-user isolation; the submission shape chosen here constrains meal matching in S-02, so a wrong meal identity is the costliest mistake in the roadmap.
-- **Status:** done
+  - Does `supabase test db` run tests from a directory outside `supabase/tests/`? (Phase 3 spike) — Owner: research. Block: no.
+  - Does `supabase db reset --version` keep CI's service exclusions? (Phase 3 spike) — Owner: research. Block: no.
+- **Risk:** The only High × High risk in the test plan; first because S-02, S-03, S-05 and S-06 reuse its pinned "today", contract test and replay harness.
+- **Status:** in-progress
 
-### S-02: Recency-annotated upcoming plan (north star)
+### S-02: Delivery and re-send integrity
 
-- **Outcome:** user can see last week's plan become history automatically when the next week arrives, and see "was in your plan N days/weeks ago" next to each meal in the upcoming plan that appeared before.
-- **Change ID:** recency-annotated-plan
-- **Issue:** [#6](https://github.com/malpiszon/meal-orchestrator-web/issues/6)
-- **PRD refs:** FR-008, FR-011, US-01, US-06
+- **Outcome:** a 2xx from MO's delivery provably means the week is stored exactly as the contract describes, and a re-sent week changes only what it should; a contract-valid payload stored wrong, or a partial write behind a 2xx, fails a test.
+- **Change ID:** testing-delivery-resend-integrity
+- **Issue:** [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120)
+- **PRD refs:** MS-02
 - **Prerequisites:** S-01
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-09
+- **Parallel with:** S-03, S-04, S-05, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - What counts as "the same meal" across weeks if the payload has no stable meal ID (depends on S-01's resolution of PRD Open Question 1). — Owner: user. Block: no.
-  - How the dashboard shows the in-progress week. S-01 shows only the upcoming plan, so from a plan's first day (Monday) until MO's next delivery the dashboard shows "No upcoming plan yet"; this slice is expected to close that gap (decided 2026-09-30 while planning S-01). — Owner: user. Block: no.
-- **Risk:** Proves the product; the annotation must stay cheap per request (Workers free-plan CPU limit per infrastructure.md) and use the most recent earlier occurrence anywhere in history.
-- **Status:** done
+  - Is the delivery write atomic, so a failure part-way through answers non-2xx and leaves nothing half-written? — Owner: research. Block: no.
+  - Can real dev re-sends serve as fixtures for the changed-week cases? — Owner: user. Block: no.
+- **Risk:** MO alerts only on non-2xx and mo-web has no monitoring, so a 2xx with a bad save goes unnoticed; next in line because the delivery is where every week's data enters.
+- **Status:** proposed
 
-### S-03: Swap and save the upcoming plan
+### S-03: Data isolation sweep
 
-- **Outcome:** user can swap any meal for another option from that week's menu and save the plan as often as they like until its first day, after which it can no longer be changed.
-- **Change ID:** swap-and-save-plan
-- **Issue:** [#7](https://github.com/malpiszon/meal-orchestrator-web/issues/7)
-- **PRD refs:** FR-009, FR-010, US-01
+- **Outcome:** a second user can't read or change another user's plans, choices or ratings, through the app's routes or by calling the database API directly with their own session; a new table, function or grant that leaks fails a test.
+- **Change ID:** testing-data-isolation
+- **Issue:** [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121)
+- **PRD refs:** MS-03
 - **Prerequisites:** S-01
-- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09
+- **Parallel with:** S-02, S-04, S-05, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - Which time zone defines "the plan's first day" for the edit cut-off. Resolved 2026-10-03: Europe/Warsaw for everyone; a plan is editable while its first day is after today there, enforced in Postgres. — Owner: user. Block: no.
-- **Risk:** Date rule is the only lock; getting the cut-off wrong either blocks legitimate edits or lets in-progress plans change.
-- **Handoff from S-02:** `get_plan_recency` (`supabase/migrations/20261002190000_plan_recency.sql`) treats "planned" as `is_recommended`. S-03 must switch that predicate to the user's saved choice and update `supabase/tests/get_plan_recency.test.sql`. While there, consider a partial index or `LATERAL … order by meal_date desc limit 1`, since the lookup currently reads offered-only history rows too. Done in S-03: the predicate is `is_chosen`, served by a partial index on chosen rows only.
-- **Status:** done
+  - Which tables, functions and grants are reachable with the public keys, and which functions run with the owner's rights (skipping row-level security)? — Owner: research. Block: no.
+- **Risk:** Challenges "row-level security is on, so it's safe"; follows S-01 because it walks the function list S-01's contract test pins.
+- **Status:** proposed
 
-### S-04: Invitation on first delivery
+### S-04: Critical-journey e2e
 
-- **Outcome:** a user whose account was created by MO's first delivery for their email (S-01) gets an invitation email, sets a password, logs in, and sees only their own plan. This includes accounts S-01 created before this slice shipped. The public sign-up path is gone.
-- **Change ID:** invite-on-first-delivery
-- **Issue:** [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)
-- **PRD refs:** FR-002, FR-003, FR-004, US-02, US-03
-- **Prerequisites:** S-01, F-01
-- **Parallel with:** F-02, S-02, S-03, S-05, S-06, S-07, S-08, S-09
+- **Outcome:** one real-browser journey on the Workers runtime (delivery → invitation → set password → dashboard → swap → save → rate → sign in again → choices still there) runs as a required CI gate on every PR.
+- **Change ID:** testing-critical-journey-e2e
+- **Issue:** [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122)
+- **PRD refs:** MS-04
+- **Prerequisites:** —
+- **Parallel with:** S-01, S-02, S-03, S-05, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - Supabase must be able to invite an existing, unconfirmed account (the ones S-01 creates). Checked on local Supabase during S-01 Phase 2 (plan row 2.6). — Owner: agent. Block: no.
-- **Risk:** Sequenced after the north star because S-01 already creates accounts on first delivery, so no week is lost while invitations wait; auth email rate limit (30/hour) is ample for 2–4 users but must be re-tested with a real invite.
-- **Handoff from S-05:** the set-password page (`/auth/set-password`, `POST /api/auth/set-password`) is built to be shared. (1) Add `"invite"` to `SET_PASSWORD_LINK_TYPES` (`src/lib/set-password.ts`, which `setPasswordLinkSchema` and `authLinkQuerySchema` are built from) and to the page's `WORDING` map (`src/pages/auth/set-password.astro`), and point `supabase/templates/invite.html` at `{{ .SiteURL }}/auth/set-password?token_hash={{ .TokenHash }}&type=invite`. (2) Then remove the GET `verifyOtp` from `/api/auth/confirm`: forward `invite` like `recovery` in `authLinkRoute` (`src/lib/auth-link.ts`), so no GET uses a token; as with S-05's reset template, paste the production **Invite user** template only after the deploy. (3) A rejected invite password is retried through the same `mo-password-retry` cookie gate (set only when saving fails right after `verifyOtp`, holds that user's id, 10 minutes); a signed-in session alone can't set a password, so keep that gate. (4) Invite only accounts that are still unconfirmed: a delivery-created account may already have claimed itself through "Forgot or never set a password?". (5) Once invitations exist, the sign-in link "Forgot or never set a password?" can become "Forgot password?". (6) Known issue: right after a reset (an invite will behave the same), the redirect to `/dashboard` once got PostgREST `PGRST303 JWT issued at future` on one of the dashboard's two plan queries ("Something went wrong"; a reload fixed it; not reproduced in 15 scripted runs). Candidate follow-up: retry the dashboard plan load once on `PGRST303`.
-- **Status:** done
+  - Does Playwright run against the Workers preview in CI next to local Supabase and Mailpit, and how is the stack reset between runs? — Owner: research. Block: no.
+- **Risk:** The most expensive layer and new tooling; technically independent, but kept after S-02 and S-03 in the test plan's order so it only covers what cheaper layers can't reach.
+- **Status:** ready
 
-### S-05: Password reset
+### S-05: Agent post-edit test hook
 
-- **Outcome:** user can request a reset link by email, set a new password, and log in with it.
-- **Change ID:** password-reset
-- **Issue:** [#5](https://github.com/malpiszon/meal-orchestrator-web/issues/5)
-- **PRD refs:** FR-005, US-04
-- **Prerequisites:** F-01
-- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Small and independent; a good parallel track while the delivery stream is in flight.
-- **Status:** done
-
-### S-06: Re-sent week replaces the stored recommendation
-
-- **Outcome:** when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation and leaves other weeks and history untouched; if the user already saved or swapped that week, each chosen meal still offered is kept (FR-018, folded in 2026-10-06 while planning S-06).
-- **Change ID:** week-resubmission-replace
-- **Issue:** [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)
-- **PRD refs:** FR-017, FR-018, US-07
-- **Prerequisites:** S-01, S-03
-- **Parallel with:** F-02, S-02, S-04, S-05, S-07, S-08, S-09, S-10
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Follows S-03 so the overwrite behaviour over saved/swapped plans is tested against real saved state rather than assumed.
-- **Handoff from S-03:** re-delivery already resets the week: `ingest_weekly_plan` re-creates the option rows with the user's choice back on MO's recommendation and sets `saved_at` to null (`supabase/migrations/20261003120000_plan_choices.sql`; pgTAP in `supabase/tests/plan_choices.test.sql`, smoke step "re-delivery resets the swap"). S-06 should confirm the remaining FR-017 / US-07 behaviour (other weeks and history untouched) rather than rebuild the reset.
-- **Status:** done
-
-### S-07: Browse plan history
-
-- **Outcome:** user can browse their full history of past plans as a simple chronological list.
-- **Change ID:** plan-history-list
-- **Issue:** [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10)
-- **PRD refs:** FR-012
-- **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-08, S-09, S-10, S-11
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Nice-to-have (secondary success criterion); scoped to a plain list with no filtering or search.
-- **Status:** done
-
-### S-08: Rate recently eaten meals
-
-- **Outcome:** user can rate meals dated today or in the previous 7 days, and their own rating appears alongside the recency note on later plans.
-- **Change ID:** rate-recent-meals
-- **Issue:** [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11)
-- **PRD refs:** FR-013, US-08
-- **Prerequisites:** S-02
-- **Parallel with:** F-02, S-03, S-04, S-05, S-06, S-07, S-09, S-10, S-11
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Nice-to-have, last in line under the speed goal; the rating window is governed by each meal's date, not the plan's state, which is easy to get wrong.
-- **Status:** done
-
-### S-09: Landing page
-
-- **Outcome:** user opening `/` lands on a sign-in page that looks finished and matches the rest of the app, logs in from there, or follows "forgot password" into the reset flow; the starter's "10x Astro Starter" page is gone.
-- **Change ID:** landing-page
-- **Issue:** [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18)
-- **PRD refs:** FR-004, FR-005, US-03, US-04
-- **Prerequisites:** S-05
-- **Parallel with:** F-02, S-01, S-02, S-03, S-04, S-06, S-07, S-08, S-10, S-11, S-13
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Not a marketing page: no pitch or ad copy, just a pleasant entry point. Build it through the Core Skills Chain (`/10x-new` → `/10x-research` → `/10x-plan` → `/10x-implement`), then polish with `/10x-ui`. Must not link to `/auth/signup`, which S-04 removed. The login and reset paths from `/` need a test, not only a manual check.
-- **Status:** done
-
-### S-10: Expired link notice on open
-
-- **Outcome:** user who opens an invitation or password-reset link that has expired or was already used sees "this link is invalid or has expired" straight away, before typing a password, with a way to get a new link; a valid link still shows the password form.
-- **Change ID:** expired-link-notice
-- **Issue:** [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67)
-- **PRD refs:** FR-003, FR-005, US-02, US-04
-- **Prerequisites:** S-04, S-05
-- **Parallel with:** F-02, S-06, S-07, S-08, S-09
+- **Outcome:** when an agent edits a migration or `src/lib/`, a post-edit hook runs the matching pgTAP or unit tests and reports a failure in the same loop.
+- **Change ID:** testing-agent-post-edit-hook
+- **Issue:** [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123)
+- **PRD refs:** MS-05
+- **Prerequisites:** S-01
+- **Parallel with:** S-02, S-03, S-04, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - How to tell whether a link is still valid without using up its single-use token (Supabase Auth has no such call; candidate: a database function reading Supabase's own token records and the configured link lifetime, which couples the app to Supabase internals). Confirm on local Supabase while planning. — Owner: agent. Block: no.
-- **Risk:** Requirement change added 2026-10-05, not a bug: S-05/S-04 deliberately use the token only on the form post (mail-scanner prefetch, login CSRF), so expiry surfaced only after submitting. That rule must hold — the check on open must never use the token or sign anyone in — and the post-time error stays as the fallback for a link that expires while the form is open.
-- **Status:** done
+  - How does an edited file map to its tests, and can the hook stay under a minute? — Owner: research. Block: no.
+- **Risk:** Runs the tests the earlier items add, so it comes late; local only, never a CI substitute.
+- **Status:** proposed
 
-### S-11: Recency notes from saved plans only
+### S-06: Mutation testing for unit tests (nice-to-have)
 
-- **Outcome:** user sees "In your plan N days earlier" only for meals from plans they saved (swapped at least once or kept as recommended); a plan they never saved produces no recency notes. That includes past weeks the user never saved or never could (delivered before saving existed, or too late to edit) and the upcoming week before it is saved.
-- **Change ID:** recency-from-saved-plans
-- **Issue:** [#78](https://github.com/malpiszon/meal-orchestrator-web/issues/78)
-- **PRD refs:** FR-008, FR-010, FR-011, US-01, US-06
-- **Prerequisites:** S-02, S-03
-- **Parallel with:** S-07, S-08, S-09
-- **Blockers:** —
-- **Unknowns:** —
-- **Risk:** Requirement change from first user feedback (2026-10-06), not a bug: S-02 counted every past plan, so MO's top picks of an ignored week read as meals the user had. Better no reminder than a false one. The rule is the same everywhere, including earlier days of the upcoming week until it is saved. No hint on the dashboard (decided 2026-10-06; the status line already says "Not saved yet"). A never-saved plan still becomes history (FR-011) and still counts once the user saves it. Applies to all existing history at once, so history from before saving existed (S-03) stops producing notes. Sequenced before S-09 because it stops a wrong statement on the north-star screen.
-- **Status:** done
-
-### S-12: "Next week" shows the nearest upcoming week
-
-- **Outcome:** user always sees the nearest upcoming week under "Next week", even when MO has delivered more than one future week (for example a week sent 14 days ahead by mistake).
-- **Change ID:** next-week-nearest-upcoming
-- **Issue:** [#84](https://github.com/malpiszon/meal-orchestrator-web/issues/84)
-- **PRD refs:** FR-007, FR-009, FR-010
-- **Prerequisites:** S-01, S-03, S-11
-- **Parallel with:** S-07, S-08, S-09, S-13
+- **Outcome:** a developer can run mutation testing over `src/lib/` and see which code changes the unit tests fail to catch, so weak tests are found by a tool instead of by hand.
+- **Change ID:** testing-mutation-stryker
+- **Issue:** [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124)
+- **PRD refs:** MS-06
+- **Prerequisites:** S-01
+- **Parallel with:** S-02, S-03, S-04, S-05
 - **Blockers:** —
 - **Unknowns:**
-  - Is a second future week hidden until the nearer one starts, or shown too (e.g. its own tab)? Settle with `/10x-frame` before planning. — Owner: user. Block: no.
-- **Risk:** Low probability (MO normally delivers only the following week); nice-to-have. Today "Next week" shows the latest future week, S-01's choice, kept by S-02's implementation review. Changing it means reworking the smoke's recency step and the dev walkthrough (`docs/dev-walkthrough.md`), which rely on a later week replacing the saved upcoming one on the dashboard. Found while testing S-07 (2026-10-07).
-- **Status:** done
-
-### S-13: Order meal options by the user's ratings
-
-- **Outcome:** user sees each meal slot's options in "Next week" ordered by their own earlier ratings: a meal they rated 5/5 (😋 Chef's kiss) always comes first and one rated 1/5 (🤢 Never again) always comes last, whatever MO's score.
-- **Change ID:** rating-ordered-options
-- **Issue:** [#93](https://github.com/malpiszon/meal-orchestrator-web/issues/93)
-- **PRD refs:** FR-009, FR-013, US-08
-- **Prerequisites:** S-03, S-08
-- **Parallel with:** S-09, S-12
-- **Blockers:** —
-- **Unknowns:**
-  - Where do meals rated 2/5–4/5 go relative to MO's score and to meals never rated? Settle with `/10x-frame` before planning. — Owner: user. Block: no.
-  - Does the order also change which option is preselected on a plan nobody saved (e.g. MO recommends a meal rated 1/5), or only the order the options are listed in? — Owner: user. Block: no.
-  - Which rating counts when a meal was rated several times: the latest earlier one by meal day, as the "Last rated" note shows (S-08)? — Owner: user. Block: no.
-- **Risk:** Nice-to-have, added at the user's request on 2026-10-08. Today options are listed by MO's score, and the star marks the top score. Putting a 1/5 meal last can move it away from MO's recommendation, so the star, the preselected option and the order must stay readable together. It partly overlaps the parked "smarter tie-break" item. The ratings are already loaded for "Next week" (S-08).
-- **Status:** done
+  - Does Stryker work with this repo's Vitest and TypeScript versions, and is a run fast enough for CI or only for local use? — Owner: research. Block: no.
+- **Risk:** Nice-to-have and first to park if M-2 drags on (top blocker: time); last so it scores the suite the earlier items build. TypeScript only — SQL keeps the manual mutation checks S-01 uses.
+- **Status:** proposed
 
 ## Backlog Handoff
 
-| Roadmap ID | Issue                                                               | Change ID                  | Suggested issue title                                        | Ready for `/10x-plan` | Notes                                              |
-| ---------- | ------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------ | --------------------- | -------------------------------------------------- |
-| F-01       | [#2](https://github.com/malpiszon/meal-orchestrator-web/issues/2)   | email-link-callback        | Exchange email-link codes for sessions                       | done                  | Archived 2026-10-03                                |
-| F-02       | [#3](https://github.com/malpiszon/meal-orchestrator-web/issues/3)   | supabase-idle-keepalive    | Keep the production database awake between weekly deliveries | done                  | Archived 2026-09-29                                |
-| S-01       | [#4](https://github.com/malpiszon/meal-orchestrator-web/issues/4)   | mo-weekly-delivery         | Accept MO's weekly delivery and show it on the dashboard     | done                  | Archived 2026-10-02                                |
-| S-02       | [#6](https://github.com/malpiszon/meal-orchestrator-web/issues/6)   | recency-annotated-plan     | Annotate upcoming meals with recency from history            | done                  | Archived 2026-10-03                                |
-| S-03       | [#7](https://github.com/malpiszon/meal-orchestrator-web/issues/7)   | swap-and-save-plan         | Swap meals within the week's menu and save the plan          | done                  | Archived 2026-10-03                                |
-| S-04       | [#8](https://github.com/malpiszon/meal-orchestrator-web/issues/8)   | invite-on-first-delivery   | Invite new MO users on their first delivery                  | done                  | Archived 2026-10-04                                |
-| S-05       | [#5](https://github.com/malpiszon/meal-orchestrator-web/issues/5)   | password-reset             | Password reset by email                                      | done                  | Archived 2026-10-04                                |
-| S-06       | [#9](https://github.com/malpiszon/meal-orchestrator-web/issues/9)   | week-resubmission-replace  | Replace a re-sent week's recommendation                      | done                  | Merged 2026-10-06 (PR #76)                         |
-| S-07       | [#10](https://github.com/malpiszon/meal-orchestrator-web/issues/10) | plan-history-list          | Chronological list of past plans                             | done                  | Archived 2026-10-07                                |
-| S-08       | [#11](https://github.com/malpiszon/meal-orchestrator-web/issues/11) | rate-recent-meals          | Rate meals from the last 7 days                              | done                  | Merged 2026-10-08 (PR #92)                         |
-| S-09       | [#18](https://github.com/malpiszon/meal-orchestrator-web/issues/18) | landing-page               | Sign-in landing page with login and password reset           | done                  | Merged 2026-10-09 (PR #104)                        |
-| S-10       | [#67](https://github.com/malpiszon/meal-orchestrator-web/issues/67) | expired-link-notice        | Show an expired invite/reset link as soon as it's opened     | done                  | Archived 2026-10-06                                |
-| S-11       | [#78](https://github.com/malpiszon/meal-orchestrator-web/issues/78) | recency-from-saved-plans   | Recency notes only from plans the user saved                 | done                  | Archived 2026-10-07                                |
-| S-12       | [#84](https://github.com/malpiszon/meal-orchestrator-web/issues/84) | next-week-nearest-upcoming | "Next week" shows the nearest upcoming week                  | done                  | Merged 2026-10-08 (PR #99)                         |
-| S-13       | [#93](https://github.com/malpiszon/meal-orchestrator-web/issues/93) | rating-ordered-options     | Order meal options by the user's ratings                     | done                  | Merged 2026-10-09 (PR #112)                        |
+| Roadmap ID | Issue                                                                 | Change ID                         | Suggested issue title                             | Ready for `/10x-plan` | Notes                                               |
+| ---------- | --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------- | --------------------- | --------------------------------------------------- |
+| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules      | Test-plan Phase 1: migration and date-rule safety | in progress           | Phase sub-issues #117 (closed), #118 (closed), #119 |
+| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | no                    | After S-01                                          |
+| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | no                    | After S-01                                          |
+| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | yes                   | Test-plan order puts it after S-02 and S-03         |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | no                    | After S-01                                          |
+| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | no                    | Nice-to-have; after S-01                            |
 
 ## Open Roadmap Questions
 
-1. **Does MO's current per-module data payload contain everything mo-web needs (e.g. a provider-side meal ID), or does MO need a small payload extension?** — Owner: user. Block: none (settled while planning S-01; shapes S-02 and S-03).
-2. **Does MO's payload include macro/nutritional data (e.g. salt) at all?** — Owner: user. Block: parked FR-014, FR-015.
-3. **What format are MO's historical debug-artifact logs in, and are they parseable as a stable source?** — Owner: user. Block: parked FR-016.
-4. **Where is the sending side built — the extra delivery step in MO's own repository, alongside (not replacing) the email?** — Owner: user. Block: none (S-01 is verifiable with a recorded payload; real end-to-end needs MO's side).
+1. **Does MO's payload include macro/nutritional data (e.g. salt) at all?** — Owner: user. Block: parked FR-014, FR-015 (PRD Open Question 2).
+2. **What format are MO's historical debug-artifact logs in, and are they parseable as a stable source?** — Owner: user. Block: parked FR-016 (PRD Open Question 3).
 
 ## Parked
 
+- **Operator alerts on failed jobs or deliveries (FR-019)** — Why parked: nice-to-have; the test plan treats noticing failures in production as observability, not testing (§2). A candidate for a later milestone.
+- **Visual or snapshot tests of shadcn components** — Why parked: test-plan §7; generated components, and the look changes in the parked UI review.
+- **Load and performance tests** — Why parked: test-plan §7; 2–4 users and one delivery a week.
+- **More keep-alive tests** — Why parked: test-plan §7; the smoke already checks the Cron Trigger's success and failure modes.
 - **No AI/LLM use in mo-web** — Why parked: PRD §Non-Goals.
 - **No integration with the food provider's panel** — Why parked: PRD §Non-Goals.
 - **No intermediary delivery layer or automatic retry between MO and mo-web** — Why parked: PRD §Non-Goals; failed deliveries are retried manually.
@@ -350,18 +203,4 @@ Foundations below assume these are present and do NOT re-scaffold them.
 
 ## Done
 
-- **F-02: (foundation) the production database stays active through weeks with no user activity, so MO's weekly delivery and the dashboard keep working.** — Archived 2026-09-29 → `context/archive/2026-09-25-supabase-idle-keepalive/`. Lesson: —.
-- **S-01: user can open the dashboard and see the upcoming plan MO just delivered for their email — or an explicit "no upcoming plan yet" state when nothing has arrived.** — Archived 2026-10-02 → `context/archive/2026-09-30-mo-weekly-delivery/`. Lesson: —.
-- **S-02: user can see last week's plan become history automatically when the next week arrives, and see "was in your plan N days/weeks ago" next to each meal in the upcoming plan that appeared before.** — Archived 2026-10-03 → `context/archive/2026-10-02-recency-annotated-plan/`. Lesson: —.
-- **F-01: (foundation) links in Supabase auth emails (invitation, password reset) land on a callback that exchanges the link's code for a signed-in session and forwards the user to the right next page.** — Archived 2026-10-03 → `context/archive/2026-10-03-email-link-callback/`. Lesson: —.
-- **S-03: user can swap any meal for another option from that week's menu and save the plan as often as they like until its first day, after which it can no longer be changed.** — Archived 2026-10-03 → `context/archive/2026-10-03-swap-and-save-plan/`. Lesson: —.
-- **S-05: user can request a reset link by email, set a new password, and log in with it.** — Archived 2026-10-04 → `context/archive/2026-10-04-password-reset/`. Lesson: —.
-- **S-04: a user whose account was created by MO's first delivery for their email (S-01) gets an invitation email, sets a password, logs in, and sees only their own plan. This includes accounts S-01 created before this slice shipped. The public sign-up path is gone.** — Archived 2026-10-04 → `context/archive/2026-10-04-invite-on-first-delivery/`. Lesson: —.
-- **S-10: user who opens an invitation or password-reset link that has expired or was already used sees "this link is invalid or has expired" straight away, before typing a password, with a way to get a new link; a valid link still shows the password form.** — Archived 2026-10-06 → `context/archive/2026-10-05-expired-link-notice/`. Lesson: —.
-- **S-06: when MO delivers a week it already sent, the latest delivery replaces that week's stored recommendation and leaves other weeks and history untouched; if the user already saved or swapped that week, each chosen meal still offered is kept (FR-018, folded in 2026-10-06 while planning S-06).** — Archived 2026-10-06 → `context/archive/2026-10-06-week-resubmission-replace/`. Lesson: —.
-- **S-11: user sees "In your plan N days earlier" only for meals from plans they saved (swapped at least once or kept as recommended); a plan they never saved produces no recency notes. That includes past weeks the user never saved or never could (delivered before saving existed, or too late to edit) and the upcoming week before it is saved.** — Archived 2026-10-07 → `context/archive/2026-10-07-recency-from-saved-plans/`. Lesson: —.
-- **S-07: user can browse their full history of past plans as a simple chronological list.** — Archived 2026-10-07 → `context/archive/2026-10-07-plan-history-list/`. Lesson: —.
-- **S-08: user can rate meals dated today or in the previous 7 days, and their own rating appears alongside the recency note on later plans.** — Archived 2026-10-08 → `context/archive/2026-10-07-rate-recent-meals/`. Lesson: —.
-- **S-12: user always sees the nearest upcoming week under "Next week", even when MO has delivered more than one future week (for example a week sent 14 days ahead by mistake).** — Archived 2026-10-08 → `context/archive/2026-10-08-next-week-nearest-upcoming/`. Lesson: —.
-- **S-09: user opening `/` lands on a sign-in page that looks finished and matches the rest of the app, logs in from there, or follows "forgot password" into the reset flow; the starter's "10x Astro Starter" page is gone.** — Archived 2026-10-09 → `context/archive/2026-10-08-landing-page/`. Lesson: —.
-- **S-13: user sees each meal slot's options in "Next week" ordered by their own earlier ratings: a meal they rated 5/5 (😋 Chef's kiss) always comes first and one rated 1/5 (🤢 Never again) always comes last, whatever MO's score.** — Archived 2026-10-09 → `context/archive/2026-10-08-rating-ordered-options/`. Lesson: —.
+(`/10x-archive` appends M-2 entries here. M-1's entries are in this file's git history and in `context/archive/`.)
