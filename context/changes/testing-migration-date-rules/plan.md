@@ -402,14 +402,14 @@ The replay adds one `db reset`, a migration and two pgTAP runs to the `smoke` jo
 
 #### Automated
 
-- [ ] 2.1 `npx supabase test db` passes, with full output saved to a log, including `date_boundaries`
-- [ ] 2.2 `npm test` passes, including the new `plans.test.ts` cases
-- [ ] 2.3 `npm run lint` and `npx astro check` pass
+- [x] 2.1 `npx supabase test db` passes, with full output saved to a log, including `date_boundaries`
+- [x] 2.2 `npm test` passes, including the new `plans.test.ts` cases
+- [x] 2.3 `npm run lint` and `npx astro check` pass
 
 #### Manual
 
-- [ ] 2.4 Mutation check (SQL): temporarily change `rate_meal`'s today to `current_date` on the local stack. `date_boundaries` fails at any time of day. Revert.
-- [ ] 2.5 Mutation check (TS): temporarily change `getUpcomingPlan`'s order to `ascending: false`, then `getCurrentPlan`'s `gt` bound to `gte`. A behavioural test fails each time. Revert.
+- [x] 2.4 Mutation check (SQL): temporarily change `rate_meal`'s today to `current_date` on the local stack. `date_boundaries` fails at any time of day. Revert.
+- [x] 2.5 Mutation check (TS): temporarily change `getUpcomingPlan`'s order to `ascending: false`, then `getCurrentPlan`'s `gt` bound to `gte`. A behavioural test fails each time. Revert.
 
 ### Phase 3: Migration replay in CI, docs and cookbook
 
