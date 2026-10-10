@@ -11,6 +11,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:replay": "bash scripts/migration-replay.sh",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

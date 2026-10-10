@@ -1,11 +1,57 @@
 # Testing
 
-| Layer          | Command                           | Where                               | Needs                                    |
-| -------------- | --------------------------------- | ----------------------------------- | ---------------------------------------- |
-| Unit           | `npm test`                        | `src/**/*.test.ts` (Vitest)         | Nothing                                  |
-| Database       | `npx supabase test db`            | `supabase/tests/*.test.sql` (pgTAP) | Local Supabase running                   |
-| Smoke (HTTP)   | `npm run smoke`                   | `scripts/smoke.mjs`                 | A running server and Supabase, see below |
-| Lint and types | `npm run lint`, `npx astro check` |                                     | `npx astro sync` once, as CI does        |
+| Layer            | Command                           | Where                                                     | Needs                                                                    |
+| ---------------- | --------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Unit             | `npm test`                        | `src/**/*.test.ts` (Vitest)                               | Nothing                                                                  |
+| Database         | `npx supabase test db`            | `supabase/tests/*.test.sql` (pgTAP)                       | Local Supabase running                                                   |
+| Migration replay | `npm run test:replay`             | `scripts/migration-replay.sh`, `supabase/replay/` (pgTAP) | Local Supabase running, `psql` or `docker`; **wipes the local database** |
+| Smoke (HTTP)     | `npm run smoke`                   | `scripts/smoke.mjs`                                       | A running server and Supabase, see below                                 |
+| Lint and types   | `npm run lint`, `npx astro check` |                                                           | `npx astro sync` once, as CI does                                        |
+
+## Database tests
+
+Each `supabase/tests/*.test.sql` file runs in one transaction (`begin; select plan(N); … finish(); rollback;`) with its own fixed user UUIDs and emails, inserted into `auth.users`. A file acts as a user with `set local role authenticated` plus `set_config('request.jwt.claims', …, true)`, and sends MO deliveries as `set local role service_role`. Most files build their dates from the real Warsaw today; `date_boundaries.test.sql` pins it ([Pinning today](#pinning-today)). Besides the per-rule files:
+
+- `rpc_contract.test.sql` pins every RPC the Worker calls (argument names and types, return type, EXECUTE grants) and the columns it reads, so a migration pushed before its code merges can't break the deployed Worker. A new or changed RPC adds its rows here.
+- `warsaw_today.test.sql` pins `private.warsaw_date()` at Warsaw midnight in summer and winter time, and fails when any function in `public` or `private` derives a date without `private.warsaw_today()` (`at time zone`, `current_date`, `now()::date`, …). Every SQL date rule calls that helper.
+- `date_boundaries.test.sql` checks the cut-off, the rating window, `week_started` and the late-rating re-pick at their boundary days, with today pinned.
+
+Week selection on the dashboard and in history (`src/lib/services/plans.ts`) is unit-tested with fixed `today` strings against rows, through the in-memory PostgREST fake `src/test/fake-supabase.ts`. The fake throws on any builder method it doesn't implement.
+
+### Pinning today
+
+A test file pins "today" by replacing `private.warsaw_today()` inside its transaction, so the change is rolled back with the file:
+
+```sql
+begin;
+select plan(N);
+
+-- As postgres (the helper's owner), before any `set local role`, or after `reset role`.
+create or replace function private.warsaw_today()
+returns date
+language sql
+stable
+set search_path = ''
+as $$
+  select date '2026-03-30';
+$$;
+```
+
+Pin one date per file, at the top, and build every fixture date from it. Choose a date far from the real one: a function that bypasses the helper then fails on every run, not only near Warsaw midnight. Make the first assertion one the real date would answer differently, so it proves the pin took effect. Locally `postgres` isn't a superuser, so the replacement fails with "must be owner" under another role.
+
+## Migration replay
+
+`npm run test:replay` (`scripts/migration-replay.sh [base-version]`) checks the newest migration over existing rows:
+
+1. `npx supabase db reset --version <base> --local`, where the base defaults to the second-newest file in `supabase/migrations/`;
+2. loads `supabase/replay/seed.sql`, with `psql` against `DB_URL` from `npx supabase status -o env`, or, without `psql` on `PATH`, through `docker exec` into `supabase_db_<project_id>`. The seed creates two users and their history, current, saved and unsaved upcoming weeks and ratings through the RPCs only, then snapshots every slot, the chosen options of saved plans and started weeks, the ratings and each plan's `saved_at`, `week_start` and `week_end` into the `replay_snapshot` schema;
+3. `npx supabase migration up --local`;
+4. `npx supabase test db supabase/replay/checks.test.sql`: the snapshotted choices, ratings and plan dates are unchanged, and every slot is still there with exactly one chosen option;
+5. `npx supabase test db`: the full suite, now over the seeded rows.
+
+Any failing step exits non-zero. The reset **wipes the local database** shared with `npm run dev`, the smoke test and other worktrees, so the script refuses to run unless `MIGRATION_REPLAY_WIPES_LOCAL_DB=1` (the CI step sets it). Afterwards the local database is at the newest migration with only the seed rows, plus the `replay_snapshot` schema, which the next `db reset` removes; re-deliver a week to sign in again ([dev walkthrough](dev-walkthrough.md)).
+
+With no argument only the newest migration runs over the seeded rows: a PR that adds several migrations should also run the script with the newest version on `master` as the base, as the reset applies the others before the seed. An older base replays every migration after it, but no further back than `20261008180000`: the seed calls the RPCs as they are from that version on. The seed creates rows only through RPCs that `rpc_contract.test.sql` pins, so it keeps working at the previous version. The checks live outside `supabase/tests/` on purpose, as the plain `supabase test db` would run them without a snapshot.
 
 ## Smoke test
 
@@ -51,5 +97,5 @@ The smoke test guards the flows end to end; it is not a substitute for unit and 
 `.github/workflows/ci.yml` runs on every push and PR to `master`:
 
 - **ci:** `npm run lint`, `npm test`, `npx astro check`, `npm run build` (with the `SUPABASE_URL` and `SUPABASE_KEY` repository secrets).
-- **smoke:** starts local Supabase with the Supabase CLI (Mailpit included), runs `supabase test db`, builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN`, and runs `npm run smoke` with every variable above set. It then rebuilds against an unreachable `SUPABASE_URL` and runs the smoke with `KEEPALIVE_EXPECT_FAILURE=1`, proving failed pings are reported. No secrets needed. A PR that only changes docs (root-level `*.md`, `docs/`, `context/`, `.claude/`) skips this job; the **changes** job decides (renames count both paths), pushes to `master` always run it, and so does a PR whose **changes** job fails.
+- **smoke:** starts local Supabase with the Supabase CLI (Mailpit included), runs `supabase test db`, builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN`, and runs `npm run smoke` with every variable above set. It then rebuilds against an unreachable `SUPABASE_URL` and runs the smoke with `KEEPALIVE_EXPECT_FAILURE=1`, proving failed pings are reported. Last, as it resets the database, "Migration replay over seeded data" runs `npm run test:replay` (see [Migration replay](#migration-replay)). No secrets needed. A PR that only changes docs (root-level `*.md`, `docs/`, `context/`, `.claude/`) skips this job; the **changes** job decides (renames count both paths), pushes to `master` always run it, and so does a PR whose **changes** job fails.
 - **deploy** (pushes to `master` only, after both jobs pass): `npx wrangler deploy`, then a post-deploy smoke against production. It checks that `/auth/signin` loads, `/dashboard` redirects, a wrong sign-in reaches Supabase (`error=invalid_credentials`, not `not_configured`), and a token-less `POST /api/mo/deliveries` answers 401. There, 503 means the Worker secrets are missing; 403 or a challenge page means Cloudflare bot protection is blocking MO.
