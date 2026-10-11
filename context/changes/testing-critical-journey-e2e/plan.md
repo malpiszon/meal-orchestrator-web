@@ -279,15 +279,15 @@ None: no schema or app change. The manually created `e2e-test@example.com` stays
 
 #### Automated
 
-- [x] 2.1 Lint passes: `npm run lint`
-- [x] 2.2 Type check passes: `npx astro check`
-- [x] 2.3 Journey passes locally: `npx playwright test tests/e2e/critical-journey.spec.ts`
-- [x] 2.4 Full suite passes twice in a row with no cleanup in between: `npx playwright test`
+- [x] 2.1 Lint passes: `npm run lint` — 906aea0
+- [x] 2.2 Type check passes: `npx astro check` — 906aea0
+- [x] 2.3 Journey passes locally: `npx playwright test tests/e2e/critical-journey.spec.ts` — 906aea0
+- [x] 2.4 Full suite passes twice in a row with no cleanup in between: `npx playwright test` — 906aea0
 
 #### Manual
 
-- [x] 2.5 Break one step on purpose (e.g. change the expected face label) and confirm the failure names the step and leaves a trace in `playwright-report/`; then revert
-- [x] 2.6 `npx playwright show-report` shows the steps as readable `test.step` names
+- [x] 2.5 Break one step on purpose (e.g. change the expected face label) and confirm the failure names the step and leaves a trace in `playwright-report/`; then revert — 906aea0
+- [x] 2.6 `npx playwright show-report` shows the steps as readable `test.step` names — 906aea0
 
 ### Phase 3: CI gate and docs
 

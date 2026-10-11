@@ -6,7 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { todayInWarsaw } from "@/lib/plans";
-import { signIn } from "./support/auth";
+import { setPassword, signIn } from "./support/auth";
 import { deliverWeek, nextMonday, thisMonday } from "./support/deliveries";
 import { readInvitationLink } from "./support/mailpit";
 
@@ -36,7 +36,9 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
   request,
   baseURL,
 }) => {
-  const email = `e2e-journey-${Date.now()}@example.com`;
+  // Mailpit polling (up to 15 s), two deliveries and a sign-out/sign-in cycle on a cold preview.
+  test.slow();
+  const email = `e2e-journey-${randomUUID()}@example.com`;
   const password = `e2e-${randomUUID()}`;
   const today = todayInWarsaw(new Date());
 
@@ -53,14 +55,7 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
   });
 
   await test.step("setting a password lands on the dashboard", async () => {
-    // Same hydration retry as signIn: a value typed before the island hydrates is lost.
-    await expect(async () => {
-      await page.getByLabel("New password", { exact: true }).fill("");
-      await page.getByLabel("New password", { exact: true }).fill(password);
-      await page.getByRole("button", { name: "Save password" }).click();
-      await page.waitForURL((url) => !url.pathname.startsWith("/auth/set-password"), { timeout: 5_000 });
-    }).toPass();
-    await expect(page.getByRole("heading", { name: "Your meals" })).toBeVisible();
+    await setPassword(page, password);
     await expect(page.getByText("Something went wrong")).toBeHidden();
   });
 
@@ -77,25 +72,16 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
     }).toPass();
   });
 
-  // Next week's Monday slot that gets swapped, and the meal swapped in; known after the swap step.
-  let slotName = "";
-  let mealName = "";
-
-  // The radio swapped in, found by its slot's meal type and its meal's name.
-  const swappedRadio = () =>
-    dayCard(nextWeek, "Monday").getByRole("group", { name: slotName }).getByRole("radio", { name: mealName });
+  // The option swapped in on next week's Monday (a radio's value is its option id); known after the swap step.
+  let optionId = "";
+  const swappedRadio = () => nextWeek.locator(`input[type="radio"][value="${optionId}"]`);
 
   await test.step("swapping a meal saves it", async () => {
-    const unchecked = page.getByRole("radio", { checked: false });
-    const slot = dayCard(nextWeek, "Monday").getByRole("group").filter({ has: unchecked }).first();
-    slotName = ((await slot.locator("legend").textContent()) ?? "").trim();
-    const option = slot.locator("label").filter({ has: unchecked }).first();
-    // The label's first text is the meal name; badges and notes follow it.
-    mealName = ((await option.locator("span").first().textContent()) ?? "").trim();
-    expect(slotName, "the swapped slot's meal type").not.toBe("");
-    expect(mealName, "the swapped-in meal's name").not.toBe("");
+    const unchecked = dayCard(nextWeek, "Monday").getByRole("radio", { checked: false }).first();
+    optionId = (await unchecked.getAttribute("value")) ?? "";
+    expect(optionId, "the swapped-in option's id").not.toBe("");
 
-    // Pinned by name: the "unchecked" locators above would move to another option once this one is checked.
+    // Pinned by id: the "unchecked" locator above would move to another option once this one is checked.
     const radio = swappedRadio();
     await radio.check();
     await expect(radio).toBeChecked();
