@@ -1,4 +1,5 @@
 // @ts-check
+import process from "node:process";
 import { defineConfig, envField } from "astro/config";
 
 import react from "@astrojs/react";
@@ -20,8 +21,19 @@ export default defineConfig({
     react(),
     sitemap(),
     // Browser only: the server SDK sends through Node's HTTP transport, which silently loses events on Workers (`@sentry/cloudflare` covers the Worker, see src/worker.ts).
-    // Source maps stay off until the deploy job uploads them.
-    sentry({ enabled: { client: true, server: false }, sourcemaps: { disable: true } }),
+    // Source maps are generated, uploaded and deleted from dist only when the deploy job provides SENTRY_AUTH_TOKEN.
+    sentry({
+      enabled: { client: true, server: false },
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      release: { name: process.env.SENTRY_RELEASE },
+      sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+      // A failed upload fails the build instead of shipping unreadable stack traces.
+      errorHandler: (err) => {
+        throw err;
+      },
+    }),
   ],
   vite: {
     plugins: [tailwindcss()],

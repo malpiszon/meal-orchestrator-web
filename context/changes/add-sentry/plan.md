@@ -325,29 +325,29 @@ No database changes. Rollout order: create the Sentry project (Phase 1), set the
 
 #### Automated
 
-- [x] 2.1 Lint passes: `npm run lint`
-- [x] 2.2 Unit tests pass: `npm test`
-- [x] 2.3 Types check: `npx astro check`
-- [x] 2.4 Build succeeds without a DSN and no DSN host appears in the client output
-- [x] 2.5 E2E passes with no DSN: `npm run test:e2e`
-- [x] 2.6 Smoke passes against a preview on :4322: `npm run smoke`
+- [x] 2.1 Lint passes: `npm run lint` — 2b15301
+- [x] 2.2 Unit tests pass: `npm test` — 2b15301
+- [x] 2.3 Types check: `npx astro check` — 2b15301
+- [x] 2.4 Build succeeds without a DSN and no DSN host appears in the client output — 2b15301
+- [x] 2.5 E2E passes with no DSN: `npm run test:e2e` — 2b15301
+- [x] 2.6 Smoke passes against a preview on :4322: `npm run smoke` — 2b15301
 
 #### Manual
 
-- [x] 2.7 Client JS size before/after noted on the sub-issue
-- [x] 2.8 Preview built with a temporary DSN: a browser test error produces one scrubbed event
-- [x] 2.9 Preview built without the DSN sends no request to Sentry
+- [x] 2.7 Client JS size before/after noted on the sub-issue — 2b15301
+- [x] 2.8 Preview built with a temporary DSN: a browser test error produces one scrubbed event — 2b15301
+- [x] 2.9 Preview built without the DSN sends no request to Sentry — 2b15301
 
 ### Phase 3: Release, source maps, deploy and docs
 
 #### Automated
 
-- [ ] 3.1 Lint passes: `npm run lint`
-- [ ] 3.2 Unit tests pass: `npm test`
-- [ ] 3.3 Types check: `npx astro check`
-- [ ] 3.4 Build without `SENTRY_AUTH_TOKEN` produces no `.map` files
-- [ ] 3.5 Bundle-size dry-run passes locally
-- [ ] 3.6 Prettier check on changed docs passes
+- [x] 3.1 Lint passes: `npm run lint`
+- [x] 3.2 Unit tests pass: `npm test`
+- [x] 3.3 Types check: `npx astro check`
+- [x] 3.4 Build without `SENTRY_AUTH_TOKEN` produces no `.map` files
+- [x] 3.5 Bundle-size dry-run passes locally
+- [x] 3.6 Prettier check on changed docs passes
 - [ ] 3.7 PR CI (`ci`, `smoke`, `e2e`) is green
 
 #### Manual
