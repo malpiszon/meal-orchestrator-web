@@ -41,7 +41,7 @@ Without the last two, the MO delivery endpoint answers 503. MO reads its token f
 | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | The `deploy` job's `npx wrangler deploy`    |
 | `SENTRY_AUTH_TOKEN`                             | The `deploy` job's build: source-map upload |
 
-`SENTRY_AUTH_TOKEN` is an organization token with release and source-map scope.
+`SENTRY_AUTH_TOKEN` is an organization token with the `org:ci` scope (source-map upload and release creation), the default for organization tokens.
 
 **GitHub repository variables** (not secret; the DSN is public by design):
 

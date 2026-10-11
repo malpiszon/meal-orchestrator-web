@@ -342,17 +342,17 @@ No database changes. Rollout order: create the Sentry project (Phase 1), set the
 
 #### Automated
 
-- [x] 3.1 Lint passes: `npm run lint`
-- [x] 3.2 Unit tests pass: `npm test`
-- [x] 3.3 Types check: `npx astro check`
-- [x] 3.4 Build without `SENTRY_AUTH_TOKEN` produces no `.map` files
-- [x] 3.5 Bundle-size dry-run passes locally
-- [x] 3.6 Prettier check on changed docs passes
+- [x] 3.1 Lint passes: `npm run lint` — 32b3d36
+- [x] 3.2 Unit tests pass: `npm test` — 32b3d36
+- [x] 3.3 Types check: `npx astro check` — 32b3d36
+- [x] 3.4 Build without `SENTRY_AUTH_TOKEN` produces no `.map` files — 32b3d36
+- [x] 3.5 Bundle-size dry-run passes locally — 32b3d36
+- [x] 3.6 Prettier check on changed docs passes — 32b3d36
 - [ ] 3.7 PR CI (`ci`, `smoke`, `e2e`) is green
 
 #### Manual
 
-- [ ] 3.8 GitHub secret and variables set; Sentry IP-storage and scrubbing settings on
+- [x] 3.8 GitHub secret and variables set; Sentry IP-storage and scrubbing settings on
 - [ ] 3.9 After merge, the `deploy` job is green
 - [ ] 3.10 Sentry shows a release named after the merge SHA with artifacts
 - [ ] 3.11 Production browser test error has a source-mapped trace and no personal data
