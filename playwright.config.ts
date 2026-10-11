@@ -7,6 +7,12 @@ import { defineConfig, devices } from "@playwright/test";
 // loadEnvFile never overrides a variable that is already set.
 if (existsSync(".env")) process.loadEnvFile(".env");
 
+// The helpers reset a password and create accounts with the service-role key: never against a hosted project.
+const supabaseHost = process.env.SUPABASE_URL ? new URL(process.env.SUPABASE_URL).hostname : undefined;
+if (supabaseHost && !["127.0.0.1", "localhost"].includes(supabaseHost)) {
+  throw new Error(`e2e runs only against local Supabase; SUPABASE_URL points at ${supabaseHost}`);
+}
+
 // 4321 is the `astro preview` default; E2E_PORT overrides it (4321 is where `astro dev` usually runs locally).
 // An empty E2E_PORT (as in .env.example) means unset.
 const PORT = process.env.E2E_PORT ? Number(process.env.E2E_PORT) : 4321;
@@ -22,7 +28,8 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["html", { open: "never" }]],
   use: {
     baseURL,
-    // Traces record typed values, including passwords: keep test-only credentials wherever a report is shared.
+    // Traces record typed values and request headers (passwords, the MO_INGEST_TOKEN bearer): keep test-only
+    // credentials wherever a report is shared.
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

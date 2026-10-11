@@ -150,7 +150,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # E2E_PORT unset: the preview runs on 4321, the host of the invitation links (site_url in supabase/config.toml).
       - run: npx playwright test
-      - if: failure()
+      # Also after a pass, when a test failed and passed on retry: any retained trace means a failure to look at.
+      - if: ${{ !cancelled() && hashFiles('test-results/**/trace.zip') != '' }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report

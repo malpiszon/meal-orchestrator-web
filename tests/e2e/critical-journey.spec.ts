@@ -40,6 +40,7 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
   test.slow();
   const email = `e2e-journey-${randomUUID()}@example.com`;
   const password = `e2e-${randomUUID()}`;
+  // Fixed for the run: a run crossing Sunday midnight in Warsaw sees next week start mid-run and fails once; the retry recomputes it.
   const today = todayInWarsaw(new Date());
 
   await test.step("MO delivers this week and next week", async () => {

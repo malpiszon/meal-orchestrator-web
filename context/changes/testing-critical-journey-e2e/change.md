@@ -1,7 +1,7 @@
 ---
 change_id: testing-critical-journey-e2e
 title: Critical-journey e2e as a CI gate (S-04)
-status: implemented
+status: impl_reviewed
 created: 2026-10-11
 updated: 2026-10-11
 archived_at: null

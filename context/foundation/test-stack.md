@@ -18,5 +18,5 @@
 - helpers: tests/e2e/support/ (deliveries.ts, users.ts, mailpit.ts, auth.ts); see docs/testing.md#e2e
 - mailpit: MAILPIT_URL in .env (optional, default http://127.0.0.1:54324); the invitation link is re-hosted on baseURL
 - CI: `e2e` job in .github/workflows/ci.yml (own local Supabase, preview on 4321, test-only E2E_USERNAME e2e-ci@example.com / E2E_PASSWORD in the job env, 1 retry, report uploaded on failure); `deploy` needs it; required check on master
-- browser CLI: playwright-cli (-s=mo-web; launch with `--browser chromium`), command skill at .claude/skills/playwright-cli/SKILL.md
+- browser CLI: playwright-cli (-s=mo-web; launch with `--browser chromium`), command skill at .claude/skills/playwright-cli/SKILL.md (local to each checkout: `.claude/*` is gitignored)
 - updated: 2026-10-11

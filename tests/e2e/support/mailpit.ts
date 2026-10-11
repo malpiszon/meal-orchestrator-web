@@ -13,7 +13,7 @@ interface MailpitMessage {
 
 const TIMEOUT_MS = 15_000;
 const POLL_MS = 500;
-const INVITE_LINK = /\/auth\/set-password\?[^\s"<>]*type=invite/;
+const SET_PASSWORD_LINK = /\/auth\/set-password\?[^\s"<>]*/;
 
 async function readJson<T>(url: string, action: string): Promise<T> {
   const response = await fetch(url);
@@ -38,9 +38,13 @@ export async function readInvitationLink(email: string, baseURL: string): Promis
     if (newest) {
       const message = await readJson<MailpitMessage>(`${mailpit}/api/v1/message/${newest.ID}`, "message read");
       const body = `${message.HTML ?? ""}\n${message.Text ?? ""}`.replaceAll("&amp;", "&");
-      const link = INVITE_LINK.exec(body)?.[0];
-      if (!link) throw new Error(`No invitation link in the newest email to ${email} ("${message.Subject ?? ""}")`);
-      return new URL(link, baseURL).toString();
+      const path = SET_PASSWORD_LINK.exec(body)?.[0];
+      const link = path ? new URL(path, baseURL) : undefined;
+      // Checked by name, not by position: the template's query order isn't part of the contract.
+      if (link?.searchParams.get("type") !== "invite" || !link.searchParams.get("token_hash")) {
+        throw new Error(`No invitation link in the newest email to ${email} ("${message.Subject ?? ""}")`);
+      }
+      return link.toString();
     }
     await sleep(POLL_MS);
   } while (Date.now() < deadline);

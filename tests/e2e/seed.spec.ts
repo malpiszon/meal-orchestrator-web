@@ -1,6 +1,6 @@
 // Risk #4 (context/foundation/test-plan.md): the critical journey breaks in a real browser while the HTTP
 // smoke stays green, e.g. the dashboard shows "Something went wrong". This seed covers the signed-in
-// dashboard render; swap, save and rate are for later specs.
+// dashboard render; save, swap and rate are in critical-journey.spec.ts.
 import { test, expect } from "@playwright/test";
 
 test("signed-in dashboard renders the delivered week and survives a reload (risk #4)", async ({ page }) => {
