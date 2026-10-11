@@ -85,6 +85,8 @@ Shared e2e helpers that deliver weeks relative to today in Warsaw, provision a u
 
 **Contract**: The same output `playwright/.auth/user.json`; the hydration-retry sign-in stays. Re-running on the same day sends an identical delivery (a no-op re-send). The seed spec is unchanged apart from its comment, if needed.
 
+**Addendum (implementation, 2026-10-11)**: "identical" includes `run_id` (`docs/mo-delivery-contract.md`, `docs/api.md:48`), so a unique `run_id` per call and a no-op re-send can't both hold. `deliverWeek` takes an optional `runId` (default unique, `e2e-<uuid>`); `setup` passes `e2e-setup-<weekStart>`, so any re-run in the same week is a no-op re-send rather than a replacement of next week's options.
+
 #### 5. Config and env
 
 **Files**: `playwright.config.ts`, `.env.example`, `package.json`
@@ -263,29 +265,29 @@ None: no schema or app change. The manually created `e2e-test@example.com` stays
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Type check passes: `npx astro check`
-- [x] 1.3 Unit tests unaffected: `npm test`
-- [x] 1.4 Setup and seed pass locally on preview :4322: `npx playwright test`
-- [x] 1.5 Setup and seed pass a second time right away (idempotent provisioning): `npx playwright test`
+- [x] 1.1 Lint passes: `npm run lint` — 90a7b2d
+- [x] 1.2 Type check passes: `npx astro check` — 90a7b2d
+- [x] 1.3 Unit tests unaffected: `npm test` — 90a7b2d
+- [x] 1.4 Setup and seed pass locally on preview :4322: `npx playwright test` — 90a7b2d
+- [x] 1.5 Setup and seed pass a second time right away (idempotent provisioning): `npx playwright test` — 90a7b2d
 
 #### Manual
 
-- [x] 1.6 Delete the `E2E_USERNAME` user in Studio (or use a new `E2E_USERNAME`), re-run `npx playwright test`, and it passes, which shows the empty-stack case works
+- [x] 1.6 Delete the `E2E_USERNAME` user in Studio (or use a new `E2E_USERNAME`), re-run `npx playwright test`, and it passes, which shows the empty-stack case works — 90a7b2d
 
 ### Phase 2: Critical-journey spec
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Type check passes: `npx astro check`
-- [ ] 2.3 Journey passes locally: `npx playwright test tests/e2e/critical-journey.spec.ts`
-- [ ] 2.4 Full suite passes twice in a row with no cleanup in between: `npx playwright test`
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Type check passes: `npx astro check`
+- [x] 2.3 Journey passes locally: `npx playwright test tests/e2e/critical-journey.spec.ts`
+- [x] 2.4 Full suite passes twice in a row with no cleanup in between: `npx playwright test`
 
 #### Manual
 
-- [ ] 2.5 Break one step on purpose (e.g. change the expected face label) and confirm the failure names the step and leaves a trace in `playwright-report/`; then revert
-- [ ] 2.6 `npx playwright show-report` shows the steps as readable `test.step` names
+- [x] 2.5 Break one step on purpose (e.g. change the expected face label) and confirm the failure names the step and leaves a trace in `playwright-report/`; then revert
+- [x] 2.6 `npx playwright show-report` shows the steps as readable `test.step` names
 
 ### Phase 3: CI gate and docs
 

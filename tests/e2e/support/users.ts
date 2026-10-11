@@ -10,6 +10,8 @@ interface AdminUserList {
 }
 
 const PER_PAGE = 100;
+// A bound on paging, so a GoTrue that ignored `page` fails setup with a message instead of looping.
+const MAX_PAGES = 20;
 
 function adminConfig(): { url: string; headers: Record<string, string> } {
   const url = process.env.SUPABASE_URL;
@@ -29,7 +31,7 @@ async function failIfNotOk(response: Response, action: string): Promise<void> {
 async function findUser(email: string): Promise<AdminUser | undefined> {
   const { url, headers } = adminConfig();
   const wanted = email.toLowerCase();
-  for (let page = 1; ; page++) {
+  for (let page = 1; page <= MAX_PAGES; page++) {
     const query = new URLSearchParams({ filter: email, page: String(page), per_page: String(PER_PAGE) });
     const response = await fetch(`${url}?${query.toString()}`, { headers });
     await failIfNotOk(response, "Admin user list");
@@ -37,6 +39,7 @@ async function findUser(email: string): Promise<AdminUser | undefined> {
     const match = users.find((user) => user.email?.toLowerCase() === wanted);
     if (match || users.length < PER_PAGE) return match;
   }
+  throw new Error(`Admin user list for ${email} still had full pages after ${MAX_PAGES} pages`);
 }
 
 /**
