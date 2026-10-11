@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-11
 prd_version: —
 main_goal: quality
 top_blocker: time
@@ -51,7 +51,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week | S-01          | MS-02    | ready  |
 | S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API    | S-01          | MS-03    | ready  |
 | S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                  | —             | MS-04    | ready  |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run after the edit               | S-01          | MS-05    | ready  |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back         | S-01          | MS-05    | done   |
 | S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                  | S-01          | MS-06    | ready  |
 
 ## Baseline
@@ -63,7 +63,7 @@ What's already in place in the codebase as of `2026-10-10` (auto-researched + us
 - **HTTP smoke:** present — `scripts/smoke.mjs`, run in CI's smoke job and after deploy.
 - **Migration replay:** present — `npm run test:replay`, run in CI since S-01 (PR #127).
 - **Browser e2e:** absent — no Playwright in the project or CI.
-- **Agent post-edit hook:** absent — `.claude/settings.json` holds permissions only.
+- **Agent post-edit hook:** present — Claude Code hooks in `.claude/settings.json`: related unit and pgTAP tests after each edit, lint, types and tests at the end of each turn (S-05, PR #129).
 - **Observability:** partial — Workers observability is on; no alerting (FR-019, parked).
 
 ## Foundations
@@ -132,7 +132,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 
 ### S-05: Agent post-edit test hook
 
-- **Outcome:** when an agent edits a migration or `src/lib/`, a post-edit hook runs the matching pgTAP or unit tests and reports a failure in the same loop.
+- **Outcome:** when an agent edits `src/lib/` or a pgTAP test, a post-edit hook runs the matching unit or pgTAP tests; when it adds a migration, the end-of-turn hook applies it and runs pgTAP before the agent hands back. Either way the failure reaches the agent in the same loop.
 - **Change ID:** testing-agent-post-edit-hook
 - **Issue:** [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123)
 - **PRD refs:** MS-05
@@ -140,9 +140,9 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Parallel with:** S-02, S-03, S-04, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - How does an edited file map to its tests, and can the hook stay under a minute? — Owner: research. Block: no.
+  - How does an edited file map to its tests, and can the hook stay under a minute? — Owner: research. Block: no. Resolved on #123: `vitest related` and the edited pgTAP file per edit (~3 s); migrations at end of turn, since a migration can't be tested before it is applied.
 - **Risk:** Runs the tests the earlier items add, so it comes late; local only, never a CI substitute.
-- **Status:** ready
+- **Status:** done
 
 ### S-06: Mutation testing for unit tests (nice-to-have)
 
@@ -166,7 +166,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 | S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity` |
 | S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                       |
 | S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | yes                   | Test-plan order puts it after S-02 and S-03       |
-| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | yes                   | Runs the tests S-02 and S-03 add                  |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
 | S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
 
 ## Open Roadmap Questions
@@ -206,3 +206,4 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 (`/10x-archive` appends M-2 entries here. M-1's entries are in this file's git history and in `context/archive/`.)
 
 - **S-01: a migration that changes a plan rule, a grant or a date boundary fails a test (locally and in CI) before it reaches the hosted database, and the previous Worker keeps working against the new schema during the deploy window.** — Archived 2026-10-10 → `context/archive/2026-10-10-testing-migration-date-rules/`. Lesson: —.
+- **S-05: when an agent edits `src/lib/` or a pgTAP test, the matching tests run after the edit; a new migration is applied and tested before the agent hands back.** — Merged 2026-10-10 (PR #129); no change folder to archive (built with `/10x-configure-hook`, decisions on #123). Lesson: —.
