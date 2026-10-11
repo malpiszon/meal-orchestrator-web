@@ -305,21 +305,21 @@ No database changes. Rollout order: create the Sentry project (Phase 1), set the
 
 #### Automated
 
-- [x] 1.1 Lint passes: `npm run lint`
-- [x] 1.2 Unit tests pass, including the new privacy and options tests: `npm test`
-- [x] 1.3 Types check: `npx astro check`
-- [x] 1.4 Build succeeds: `npm run build`
-- [x] 1.5 Worker bundle stays under the free-plan limit (dry-run gzip < 3 MB; sizes noted on the sub-issue)
-- [x] 1.6 Smoke passes against a preview on :4322 with no DSN: `npm run smoke`
-- [x] 1.7 E2E passes with no DSN: `npm run test:e2e`
+- [x] 1.1 Lint passes: `npm run lint` — 92185d6
+- [x] 1.2 Unit tests pass, including the new privacy and options tests: `npm test` — 92185d6
+- [x] 1.3 Types check: `npx astro check` — 92185d6
+- [x] 1.4 Build succeeds: `npm run build` — 92185d6
+- [x] 1.5 Worker bundle stays under the free-plan limit (dry-run gzip < 3 MB; sizes noted on the sub-issue) — 92185d6
+- [x] 1.6 Smoke passes against a preview on :4322 with no DSN: `npm run smoke` — 92185d6
+- [x] 1.7 E2E passes with no DSN: `npm run test:e2e` — 92185d6
 
 #### Manual
 
-- [x] 1.8 Sentry project `mo-web` exists in org `malpiszon` and its DSN is at hand
-- [x] 1.9 Local preview with a temporary DSN: a throwing page produces one scrubbed event
-- [x] 1.10 A token-bearing URL shows no `token_hash` anywhere in the event
-- [x] 1.11 Locally triggered scheduled handler records an OK check-in for `supabase-keepalive`
-- [x] 1.12 Throwaway page and temporary `.dev.vars` entries removed
+- [x] 1.8 Sentry project `mo-web` exists in org `malpiszon` and its DSN is at hand — 92185d6
+- [x] 1.9 Local preview with a temporary DSN: a throwing page produces one scrubbed event — 92185d6
+- [x] 1.10 A token-bearing URL shows no `token_hash` anywhere in the event — 92185d6
+- [x] 1.11 Locally triggered scheduled handler records an OK check-in for `supabase-keepalive` — 92185d6
+- [x] 1.12 Throwaway page and temporary `.dev.vars` entries removed — 92185d6
 
 ### Phase 2: Browser error reporting
 

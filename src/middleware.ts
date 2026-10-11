@@ -34,7 +34,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     return await next();
   } catch (error) {
-    captureException(error);
+    // Unhandled, like the Worker's own captures: Astro only turns it into a 500 page.
+    captureException(error, { mechanism: { handled: false, type: "auto.middleware.astro" } });
     throw error;
   }
 });

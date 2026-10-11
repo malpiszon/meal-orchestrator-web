@@ -10,7 +10,7 @@ export interface SentryEnv {
 // Only the production deploy has a DSN; everywhere else the SDK must stay silent.
 export function sentryOptions(env: SentryEnv): CloudflareOptions {
   if (!env.PUBLIC_SENTRY_DSN) {
-    // `enabled: false` rather than `undefined`: with no options the SDK falls back to `env.SENTRY_DSN`.
+    // `enabled: false` keeps the SDK silent even if a `SENTRY_DSN` var appears, which the SDK reads by itself.
     return { enabled: false };
   }
 

@@ -130,6 +130,33 @@ describe("scrubBreadcrumb", () => {
     expect(scrubBreadcrumb({ message: "signin for anna@example.com" }).message).toBe("signin for [email]");
   });
 
+  it("drops the raw console arguments, keeping the masked message", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "console",
+      message: "mo delivery failed for anna@example.com",
+      data: { arguments: ["mo delivery failed for anna@example.com"], logger: "console" },
+    });
+    expect(scrubbed).toEqual({
+      category: "console",
+      message: "mo delivery failed for [email]",
+      data: { logger: "console" },
+    });
+  });
+
+  it("drops the query and fragment a fetch breadcrumb keeps beside its url", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "fetch",
+      data: { url: CONFIRM_URL, "url.query": "?token_hash=abc123", "url.fragment": "#top", method: "GET" },
+    });
+    expect(scrubbed.data).toEqual({ url: "https://mo-web.example/api/auth/confirm", method: "GET" });
+  });
+
+  it("masks url-encoded emails", () => {
+    expect(scrubBreadcrumb({ message: "GET /history?email=anna%40example.com failed" }).message).toBe(
+      "GET /history?email=[email] failed",
+    );
+  });
+
   it("leaves non-string data untouched", () => {
     const breadcrumb = { category: "fetch", data: { status_code: 500, url: undefined } };
     expect(scrubBreadcrumb(breadcrumb)).toEqual(breadcrumb);

@@ -10,7 +10,8 @@ export const SENTRY_DATA_COLLECTION: DataCollection = {
   httpHeaders: { request: { allow: ["user-agent", "content-type", "accept"] }, response: false },
 };
 
-const EMAIL_PATTERN = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+// `%40`: an address inside an encoded URL that an error message repeats.
+const EMAIL_PATTERN = /[\w.+-]+(?:@|%40)[\w-]+(?:\.[\w-]+)+/gi;
 const BREADCRUMB_URL_KEYS = ["url", "from", "to"] as const;
 
 function maskEmails(text: string): string {
@@ -29,7 +30,13 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
   }
 
   if (scrubbed.data) {
-    const data: Record<string, unknown> = { ...scrubbed.data };
+    // Console breadcrumbs repeat the raw log arguments next to `message`; fetch ones keep the URL's query and fragment.
+    const {
+      arguments: _arguments,
+      "url.query": _query,
+      "url.fragment": _fragment,
+      ...data
+    }: Record<string, unknown> = scrubbed.data;
     for (const key of BREADCRUMB_URL_KEYS) {
       const value = data[key];
       if (typeof value === "string") {
