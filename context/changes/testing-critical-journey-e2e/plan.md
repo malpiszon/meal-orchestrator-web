@@ -295,7 +295,7 @@ None: no schema or app change. The manually created `e2e-test@example.com` stays
 
 - [x] 3.1 Lint passes: `npm run lint`
 - [x] 3.2 Full local suite still passes with the new config: `npx playwright test`
-- [ ] 3.3 The PR's CI run shows `e2e` green alongside `ci` and `smoke`: `gh pr checks`
+- [x] 3.3 The PR's CI run shows `e2e` green alongside `ci` and `smoke`: `gh pr checks`
 - [x] 3.4 `deploy` lists `e2e` in `needs` (checked in the workflow diff)
 
 #### Manual

@@ -8,7 +8,8 @@ import { defineConfig, devices } from "@playwright/test";
 if (existsSync(".env")) process.loadEnvFile(".env");
 
 // 4321 is the `astro preview` default; E2E_PORT overrides it (4321 is where `astro dev` usually runs locally).
-const PORT = Number(process.env.E2E_PORT ?? 4321);
+// An empty E2E_PORT (as in .env.example) means unset.
+const PORT = process.env.E2E_PORT ? Number(process.env.E2E_PORT) : 4321;
 const baseURL = `http://localhost:${PORT}`;
 
 export default defineConfig({

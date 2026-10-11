@@ -105,7 +105,7 @@ Both pass on any date and on a stack where neither user exists yet, and again ri
 - `mailpit.ts`: `readInvitationLink` waits up to 15 s for the newest email to an address and returns its `/auth/set-password?token_hash=…&type=invite` link with the host replaced by Playwright's `baseURL`, as the email links to `site_url` (`http://localhost:4321`), which needn't be where the e2e app runs.
 - `auth.ts`: `signIn` and `setPassword` through the real forms, waiting for the island to hydrate first.
 
-To run locally, with local Supabase running, add to `.env` (`playwright.config.ts` loads it):
+To run locally, install Chromium once (`npx playwright install chromium`; `npm install` doesn't download browsers), and with local Supabase running, add to `.env` (`playwright.config.ts` loads it):
 
 | Variable                                                       | Purpose                                                                               |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
