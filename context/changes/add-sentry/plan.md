@@ -325,18 +325,18 @@ No database changes. Rollout order: create the Sentry project (Phase 1), set the
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Unit tests pass: `npm test`
-- [ ] 2.3 Types check: `npx astro check`
-- [ ] 2.4 Build succeeds without a DSN and no DSN host appears in the client output
-- [ ] 2.5 E2E passes with no DSN: `npm run test:e2e`
-- [ ] 2.6 Smoke passes against a preview on :4322: `npm run smoke`
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Unit tests pass: `npm test`
+- [x] 2.3 Types check: `npx astro check`
+- [x] 2.4 Build succeeds without a DSN and no DSN host appears in the client output
+- [x] 2.5 E2E passes with no DSN: `npm run test:e2e`
+- [x] 2.6 Smoke passes against a preview on :4322: `npm run smoke`
 
 #### Manual
 
-- [ ] 2.7 Client JS size before/after noted on the sub-issue
-- [ ] 2.8 Preview built with a temporary DSN: a browser test error produces one scrubbed event
-- [ ] 2.9 Preview built without the DSN sends no request to Sentry
+- [x] 2.7 Client JS size before/after noted on the sub-issue
+- [x] 2.8 Preview built with a temporary DSN: a browser test error produces one scrubbed event
+- [x] 2.9 Preview built without the DSN sends no request to Sentry
 
 ### Phase 3: Release, source maps, deploy and docs
 

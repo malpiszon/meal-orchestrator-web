@@ -5,6 +5,7 @@ import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import cloudflare from "@astrojs/cloudflare";
+import sentry from "@sentry/astro";
 
 // https://astro.build/config
 export default defineConfig({
@@ -15,7 +16,13 @@ export default defineConfig({
   // Default, pinned on purpose: the cookie-session JSON routes (`readJsonRequest`: /api/plans/*, /api/ratings)
   // parse JSON whatever the Content-Type, so this origin check is what stops cross-site text/plain form posts (CSRF).
   security: { checkOrigin: true },
-  integrations: [react(), sitemap()],
+  integrations: [
+    react(),
+    sitemap(),
+    // Browser only: the server SDK sends through Node's HTTP transport, which silently loses events on Workers (`@sentry/cloudflare` covers the Worker, see src/worker.ts).
+    // Source maps stay off until the deploy job uploads them.
+    sentry({ enabled: { client: true, server: false }, sourcemaps: { disable: true } }),
+  ],
   vite: {
     plugins: [tailwindcss()],
     // Dev server only: lets MO running in Docker deliver to http://host.docker.internal:4321.
