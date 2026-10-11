@@ -293,13 +293,13 @@ None: no schema or app change. The manually created `e2e-test@example.com` stays
 
 #### Automated
 
-- [x] 3.1 Lint passes: `npm run lint`
-- [x] 3.2 Full local suite still passes with the new config: `npx playwright test`
-- [x] 3.3 The PR's CI run shows `e2e` green alongside `ci` and `smoke`: `gh pr checks`
-- [x] 3.4 `deploy` lists `e2e` in `needs` (checked in the workflow diff)
+- [x] 3.1 Lint passes: `npm run lint` — 44610e5
+- [x] 3.2 Full local suite still passes with the new config: `npx playwright test` — 44610e5
+- [x] 3.3 The PR's CI run shows `e2e` green alongside `ci` and `smoke`: `gh pr checks` — 44610e5
+- [x] 3.4 `deploy` lists `e2e` in `needs` (checked in the workflow diff) — 44610e5
 
 #### Manual
 
-- [ ] 3.5 `e2e` appears in `master`'s required status checks (`gh api repos/{owner}/{repo}/branches/master/protection`)
-- [ ] 3.6 A deliberately failing commit on the PR (or a re-run with a broken assertion) fails `e2e` and the uploaded report opens with a trace; then revert
-- [ ] 3.7 Docs read correctly: `docs/testing.md` E2E section, test-plan §3/§4/§5/§6.4/§6.5, `test-stack.md`
+- [x] 3.5 `e2e` appears in `master`'s required status checks (`gh api repos/{owner}/{repo}/branches/master/protection`) — 44610e5
+- [x] 3.6 A deliberately failing commit on the PR (or a re-run with a broken assertion) fails `e2e` and the uploaded report opens with a trace; then revert — 44610e5
+- [x] 3.7 Docs read correctly: `docs/testing.md` E2E section, test-plan §3/§4/§5/§6.4/§6.5, `test-stack.md` — 44610e5
