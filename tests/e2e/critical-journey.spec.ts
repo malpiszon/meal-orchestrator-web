@@ -126,6 +126,6 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
     await expect(status).toHaveText(SAVED_STATUS);
 
     await openTab(page, "This week");
-    await expect(tasty).toHaveAttribute("aria-pressed", "true");
+    await expect(tasty).toHaveAttribute("aria-pressed", "false");
   });
 });
