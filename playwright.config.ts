@@ -3,7 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 // Local secrets (E2E_USERNAME, E2E_PASSWORD, app env) come from the gitignored .env. The e2e helpers in
 // tests/e2e/support also read MO_INGEST_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and the optional MAILPIT_URL.
-// In CI the file is absent and the variables come from the job.
+// In CI the job writes .env (app env and MAILPIT_URL) and sets E2E_USERNAME / E2E_PASSWORD in its env;
+// loadEnvFile never overrides a variable that is already set.
 if (existsSync(".env")) process.loadEnvFile(".env");
 
 // 4321 is the `astro preview` default; E2E_PORT overrides it (4321 is where `astro dev` usually runs locally).
@@ -14,12 +15,14 @@ export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: "html",
+  // The HTML report is what CI uploads on failure; `github` adds failure annotations to the PR.
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["html", { open: "never" }]],
   use: {
     baseURL,
-    trace: "on-first-retry",
+    // Traces record typed values, including passwords: keep test-only credentials wherever a report is shared.
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [

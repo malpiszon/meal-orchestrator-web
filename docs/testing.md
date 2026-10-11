@@ -6,6 +6,7 @@
 | Database         | `npx supabase test db`            | `supabase/tests/*.test.sql` (pgTAP)                       | Local Supabase running                                                   |
 | Migration replay | `npm run test:replay`             | `scripts/migration-replay.sh`, `supabase/replay/` (pgTAP) | Local Supabase running, `psql` or `docker`; **wipes the local database** |
 | Smoke (HTTP)     | `npm run smoke`                   | `scripts/smoke.mjs`                                       | A running server and Supabase, see below                                 |
+| E2E (browser)    | `npm run test:e2e`                | `tests/e2e/` (Playwright, Chromium)                       | Local Supabase running, `.env` as below                                  |
 | Lint and types   | `npm run lint`, `npx astro check` |                                                           | `npx astro sync` once, as CI does                                        |
 
 ## Database tests
@@ -88,9 +89,34 @@ What it covers, each with its error and edge cases (unauthenticated calls, other
 - **Email links:** invitation and reset links opened without using the token, short passwords, used, replaced and made-up tokens, the token-less retry after a refused password, an account created by a delivery claiming itself, and (with `MAILPIT_URL`) one real reset email.
 - **Keep-alive:** fires the Cron Trigger (`/cdn-cgi/handler/scheduled`) and expects success.
 
-Local Supabase sends at most 2 auth emails per hour (`email_sent` in `supabase/config.toml`), so running it with `MAILPIT_URL` more often than that fails the real-email step.
-
 The smoke test guards the flows end to end; it is not a substitute for unit and database tests of new logic.
+
+## E2E
+
+`npm run test:e2e` (`npx playwright test`) runs the Playwright suite in Chromium against a production build served on the Cloudflare runtime (`npm run build && npm run preview`, started by Playwright). Two specs:
+
+- `tests/e2e/critical-journey.spec.ts`: one journey for a new user each run (`e2e-journey-<uuid>@example.com`), in a browser without a stored session. MO delivers this week and next week, the invitation email from Mailpit opens the set-password page, the user sets a password, keeps next week's picks, swaps a meal, rates this Monday's meal, signs out, signs in again and finds the swap and the rating still there. It asserts only what needs a browser (hydrated islands, the save status, the rating toggles, the cookie session); the rules behind them (cut-off, rating window, re-sends, expired links, isolation) are pgTAP and smoke territory and aren't re-checked here.
+- `tests/e2e/seed.spec.ts`: the signed-in dashboard renders an upcoming week and survives a reload. It runs on the session the `setup` project (`tests/e2e/auth.setup.ts`) stores: setup delivers next week for `E2E_USERNAME` (creating the account on an empty stack), sets its password to `E2E_PASSWORD` through the Admin API and signs in.
+
+Both pass on any date and on a stack where neither user exists yet, and again right away; nothing needs resetting between runs. The helpers in `tests/e2e/support/`:
+
+- `deliveries.ts`: `thisMonday`/`nextMonday` from a Warsaw today (`todayInWarsaw`, as the dashboard uses) and `deliverWeek`, which posts `scripts/fixtures/mo-delivery.sample.json` moved to the given week to `/api/mo/deliveries`.
+- `users.ts`: `ensureUserWithPassword` creates or updates a confirmed auth user with a password.
+- `mailpit.ts`: `readInvitationLink` waits up to 15 s for the newest email to an address and returns its `/auth/set-password?token_hash=…&type=invite` link with the host replaced by Playwright's `baseURL`, as the email links to `site_url` (`http://localhost:4321`), which needn't be where the e2e app runs.
+- `auth.ts`: `signIn` and `setPassword` through the real forms, waiting for the island to hydrate first.
+
+To run locally, with local Supabase running, add to `.env` (`playwright.config.ts` loads it):
+
+| Variable                                                       | Purpose                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `E2E_PORT`                                                     | Preview port; defaults to 4321, so set `4322` when `npm run dev` holds 4321           |
+| `E2E_USERNAME`, `E2E_PASSWORD`                                 | The `setup` user, e.g. `e2e-test@example.com`; created or re-provisioned on every run |
+| `MO_INGEST_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | The app's values: the helpers deliver weeks and provision users with them             |
+| `MAILPIT_URL`                                                  | Optional; local Supabase's Mailpit, default `http://127.0.0.1:54324`                  |
+
+Outside CI an already running server on `E2E_PORT` is reused instead of a new build, so stop a stale preview after changing code. Local and CI auth emails aren't rate limited: `email_sent` under `[auth.rate_limit]` in `supabase/config.toml` applies only with `auth.email.smtp` enabled, and the local stack sends through Mailpit with no practical limit, so repeated runs and retries need no email handling.
+
+A failure keeps its trace (`trace: "retain-on-failure"`); `npx playwright show-report` opens the HTML report in `playwright-report/`. Traces record typed values, so a report contains `E2E_PASSWORD` and the journey user's password: use test-only passwords, as CI does.
 
 ## Agent hooks
 
@@ -107,4 +133,5 @@ Claude Code runs two hooks from `.claude/settings.json` (scripts in `.claude/hoo
 
 - **ci:** `npm run lint`, `npm test`, `npx astro check`, `npm run build` (with the `SUPABASE_URL` and `SUPABASE_KEY` repository secrets).
 - **smoke:** starts local Supabase with the Supabase CLI (Mailpit included), runs `supabase test db`, builds, serves the production preview on the Cloudflare runtime with a fixed test `MO_INGEST_TOKEN`, and runs `npm run smoke` with every variable above set. It then rebuilds against an unreachable `SUPABASE_URL` and runs the smoke with `KEEPALIVE_EXPECT_FAILURE=1`, proving failed pings are reported. Last, as it resets the database, "Migration replay over seeded data" runs `npm run test:replay` (see [Migration replay](#migration-replay)). No secrets needed. A PR that only changes docs (root-level `*.md`, `docs/`, `context/`, `.claude/`) skips this job; the **changes** job decides (renames count both paths), pushes to `master` always run it, and so does a PR whose **changes** job fails.
-- **deploy** (pushes to `master` only, after both jobs pass): `npx wrangler deploy`, then a post-deploy smoke against production. It checks that `/auth/signin` loads, `/dashboard` redirects, a wrong sign-in reaches Supabase (`error=invalid_credentials`, not `not_configured`), and a token-less `POST /api/mo/deliveries` answers 401. There, 503 means the Worker secrets are missing; 403 or a challenge page means Cloudflare bot protection is blocking MO.
+- **e2e:** starts its own local Supabase (Mailpit included), writes `.env` and `.dev.vars` with a fixed test `MO_INGEST_TOKEN` and `MAILPIT_URL`, installs Chromium and runs `npx playwright test`, which builds and previews on 4321 (the invitation links' host). `E2E_USERNAME`/`E2E_PASSWORD` are test-only values in the job env. In CI a test gets one retry. On failure the job uploads `playwright-report/` and `test-results/` (traces included) as the `playwright-report` artifact. It skips docs-only PRs the same way as smoke, and is a required status check on `master`.
+- **deploy** (pushes to `master` only, after all three jobs pass): `npx wrangler deploy`, then a post-deploy smoke against production. It checks that `/auth/signin` loads, `/dashboard` redirects, a wrong sign-in reaches Supabase (`error=invalid_credentials`, not `not_configured`), and a token-less `POST /api/mo/deliveries` answers 401. There, 503 means the Worker secrets are missing; 403 or a challenge page means Cloudflare bot protection is blocking MO.

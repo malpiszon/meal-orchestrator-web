@@ -33,7 +33,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
-  # Docs-only PRs skip smoke; a skipped job still satisfies required checks. Pushes to master always run it (deploy needs it).
+  # Docs-only PRs skip smoke and e2e; a skipped job still satisfies required checks. Pushes to master always run them (deploy needs them).
   changes:
     runs-on: ubuntu-latest
     outputs:
@@ -50,7 +50,7 @@ jobs:
             exit 0
           fi
           # HEAD is the PR's merge commit; its first parent is master. --no-renames lists both paths of a move.
-          # A failing git diff fails this step (it isn't piped), and smoke then runs anyway.
+          # A failing git diff fails this step (it isn't piped), and smoke and e2e then run anyway.
           changed=$(git diff --no-renames --name-only HEAD^1 HEAD)
           code_files=$(grep -vE '^[^/]+\.md$|^docs/|^context/|^\.claude/' <<< "$changed" || true)
           echo "Non-docs files: ${code_files:-none}"
@@ -113,8 +113,56 @@ jobs:
       - if: always()
         run: supabase stop --no-backup
 
+  e2e:
+    needs: changes
+    # Fail closed, as smoke: if the changes job didn't succeed, run e2e rather than skip it.
+    if: always() && (needs.changes.result != 'success' || needs.changes.outputs.code == 'true')
+    runs-on: ubuntu-latest
+    env:
+      # Test-only values, not secrets: the token is shared by the preview (.env/.dev.vars) and the e2e helpers;
+      # the setup user's password lands in the uploaded traces, which record typed values.
+      MO_INGEST_TOKEN: ci-e2e-mo-ingest-token
+      E2E_USERNAME: e2e-ci@example.com
+      E2E_PASSWORD: ci-e2e-test-password
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      # No version: setup-cli v3 uses the CLI version pinned in package-lock.json.
+      - uses: supabase/setup-cli@v3
+      - run: npm ci
+      - name: Start local Supabase
+        run: |
+          # Mailpit stays on: the journey reads the real invitation email from it.
+          supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,storage-api,postgres-meta,supavisor
+          supabase status -o env | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|MAILPIT_URL|INBUCKET_URL)=' > supabase.env
+      # Before Playwright: its webServer builds the app, and the build and preview read these files.
+      - name: Configure secrets for build, preview and the e2e helpers
+        run: |
+          source supabase.env
+          # Older CLIs name Mailpit's URL INBUCKET_URL; 54324 is its port in supabase/config.toml.
+          MAILPIT_URL="${MAILPIT_URL:-${INBUCKET_URL:-http://127.0.0.1:54324}}"
+          printf 'SUPABASE_URL=%s\nSUPABASE_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nMO_INGEST_TOKEN=%s\nMAILPIT_URL=%s\n' \
+            "$API_URL" "$ANON_KEY" "$SERVICE_ROLE_KEY" "$MO_INGEST_TOKEN" "$MAILPIT_URL" > .env
+          cp .env .dev.vars
+      - run: npx playwright install --with-deps chromium
+      # E2E_PORT unset: the preview runs on 4321, the host of the invitation links (site_url in supabase/config.toml).
+      - run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+      - if: always()
+        run: supabase stop --no-backup
+
   deploy:
-    needs: [ci, smoke]
+    needs: [ci, smoke, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     concurrency:
