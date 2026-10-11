@@ -48,3 +48,11 @@ venv/
 .env
 .env.production
 .wrangler/
+
+# Playwright
+playwright/.auth/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.playwright-cli/

@@ -45,14 +45,14 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                | Prerequisites | PRD refs | Status |
-| ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- | ------------- | -------- | ------ |
-| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production          | —             | MS-01    | done   |
-| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week | S-01          | MS-02    | ready  |
-| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API    | S-01          | MS-03    | ready  |
-| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                  | —             | MS-04    | ready  |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back         | S-01          | MS-05    | done   |
-| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                  | S-01          | MS-06    | ready  |
+| ID   | Change ID                         | Outcome (user can …)                                                                                | Prerequisites | PRD refs | Status      |
+| ---- | --------------------------------- | --------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
+| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production          | —             | MS-01    | done        |
+| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week | S-01          | MS-02    | ready       |
+| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API    | S-01          | MS-03    | ready       |
+| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                  | —             | MS-04    | in-progress |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back         | S-01          | MS-05    | done        |
+| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                  | S-01          | MS-06    | ready       |
 
 ## Baseline
 
@@ -128,7 +128,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Does Playwright run against the Workers preview in CI next to local Supabase and Mailpit, and how is the stack reset between runs? — Owner: research. Block: no.
 - **Risk:** The most expensive layer and new tooling; technically independent, but kept after S-02 and S-03 in the test plan's order so it only covers what cheaper layers can't reach.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-05: Agent post-edit test hook
 
