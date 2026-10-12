@@ -101,7 +101,7 @@ Unhandled errors go to the Sentry project `mo-web`, from the production deploy o
 
 **Set by hand in Sentry** (Project Settings → Security & Privacy): **Prevent Storing of IP Addresses** on, and server-side data scrubbing on. Before the first deploy, also add the GitHub secret and variables above.
 
-**Free plan:** 5,000 errors a month and one cron monitor. The Worker bundle must stay under 3 MB gzip; the `ci` job's dry-run checks it.
+**Free plan:** 5,000 errors a month and one cron monitor. The Worker bundle must stay under Cloudflare's 64 MiB uncompressed limit; the `ci` job's dry-run checks it.
 
 **After a deploy**, check that Sentry lists a release named after the commit SHA with artifacts, that `/_astro/<any>.js.map` answers 404, that `setTimeout(() => { throw new Error("sentry browser test") })` in the browser console on production shows up with a source-mapped stack trace, and that `supabase-keepalive` shows an OK check-in after the next 03:00 UTC run.
 

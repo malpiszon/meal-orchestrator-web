@@ -32,14 +32,14 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      # Needs no Cloudflare credentials. Catches a bundling error from the Sentry packages, or a Worker over the 3 MB gzip free-plan limit, before merge.
+      # Needs no Cloudflare credentials. Catches a bundling error from the Sentry packages, or a Worker over Cloudflare's 64 MiB uncompressed size limit, before merge.
       - name: Worker bundle size
         run: |
           npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/worker-dry-run" | tee "$RUNNER_TEMP/dry-run.log"
-          gzip_kib=$(grep -oE 'gzip: [0-9.]+ KiB' "$RUNNER_TEMP/dry-run.log" | tail -1 | grep -oE '[0-9.]+')
-          echo "Worker gzip size: ${gzip_kib:-unknown} KiB"
-          test -n "$gzip_kib"
-          awk -v kib="$gzip_kib" 'BEGIN { exit !(kib < 3072) }'
+          total_kib=$(grep -oE 'Total Upload: [0-9.]+ KiB' "$RUNNER_TEMP/dry-run.log" | tail -1 | grep -oE '[0-9.]+')
+          echo "Worker size: ${total_kib:-unknown} KiB uncompressed"
+          test -n "$total_kib"
+          awk -v kib="$total_kib" 'BEGIN { exit !(kib < 65536) }'
 
   # Docs-only PRs skip smoke and e2e; a skipped job still satisfies required checks. Pushes to master always run them (deploy needs them).
   changes:

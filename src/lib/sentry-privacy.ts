@@ -69,9 +69,26 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
   if (scrubbed.exception?.values) {
     scrubbed.exception = {
       ...scrubbed.exception,
-      values: scrubbed.exception.values.map((exception) =>
-        exception.value === undefined ? exception : { ...exception, value: maskEmails(exception.value) },
-      ),
+      values: scrubbed.exception.values.map((exception) => {
+        const scrubbedException =
+          exception.value === undefined ? exception : { ...exception, value: maskEmails(exception.value) };
+        const frames = exception.stacktrace?.frames;
+        if (!frames) {
+          return scrubbedException;
+        }
+        // A stackless browser error gets a frame whose filename is the page URL, query included.
+        return {
+          ...scrubbedException,
+          stacktrace: {
+            ...exception.stacktrace,
+            frames: frames.map((frame) =>
+              typeof frame.filename === "string"
+                ? { ...frame, filename: stripQueryAndFragment(frame.filename) }
+                : frame,
+            ),
+          },
+        };
+      }),
     };
   }
 

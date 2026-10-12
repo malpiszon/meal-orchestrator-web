@@ -348,7 +348,7 @@ No database changes. Rollout order: create the Sentry project (Phase 1), set the
 - [x] 3.4 Build without `SENTRY_AUTH_TOKEN` produces no `.map` files — 32b3d36
 - [x] 3.5 Bundle-size dry-run passes locally — 32b3d36
 - [x] 3.6 Prettier check on changed docs passes — 32b3d36
-- [ ] 3.7 PR CI (`ci`, `smoke`, `e2e`) is green
+- [x] 3.7 PR CI (`ci`, `smoke`, `e2e`) is green
 
 #### Manual
 

@@ -71,6 +71,26 @@ describe("scrubEvent", () => {
     ]);
   });
 
+  it("strips query and fragment from stack frame filenames", () => {
+    const scrubbed = scrubEvent(
+      errorEvent({
+        exception: {
+          values: [
+            {
+              type: "Error",
+              stacktrace: {
+                frames: [{ filename: `${CONFIRM_URL}#x`, function: "?" }, { function: "noFilename" }],
+              },
+            },
+          ],
+        },
+      }),
+    );
+    const frames = scrubbed.exception?.values?.[0]?.stacktrace?.frames;
+    expect(frames?.[0]?.filename).toBe(CONFIRM_URL.split("?")[0]);
+    expect(frames?.[1]).toEqual({ function: "noFilename" });
+  });
+
   it("scrubs breadcrumb messages and urls", () => {
     const scrubbed = scrubEvent(
       errorEvent({
