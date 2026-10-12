@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-10-10
-updated: 2026-10-11
+updated: 2026-10-12
 prd_version: —
 main_goal: quality
 top_blocker: time
@@ -46,15 +46,15 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
-| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
-| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
-| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready       |
-| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready       |
-| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
-| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready       |
-| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | in-progress |
+| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status |
+| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ------ |
+| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done   |
+| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready  |
+| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready  |
+| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done   |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done   |
+| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready  |
+| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done   |
 
 ## Baseline
 
@@ -66,7 +66,7 @@ What's already in place in the codebase as of `2026-10-10` (auto-researched + us
 - **Migration replay:** present — `npm run test:replay`, run in CI since S-01 (PR #127).
 - **Browser e2e:** present — Playwright (Chromium) in `tests/e2e/`, run by CI's `e2e` job, a required check that `deploy` waits for (S-04, PR #134).
 - **Agent post-edit hook:** present — Claude Code hooks in `.claude/settings.json`: related unit and pgTAP tests after each edit, lint, types and tests at the end of each turn (S-05, PR #129).
-- **Observability:** partial — Workers observability is on; no error tracking (S-07) and no alerting (FR-019, parked).
+- **Observability:** partial — Workers observability is on; Sentry reports unhandled errors from the Worker and the browser and monitors the keep-alive (S-07, PR #140); no alerting (FR-019, parked).
 
 ## Foundations
 
@@ -170,22 +170,22 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Parallel with:** S-02, S-03, S-06
 - **Blockers:** —
 - **Unknowns:**
-  - Which Sentry setup works for the app on the Workers runtime, including the scheduled keep-alive, and does it fit the Worker size limit? — Owner: research. Block: no.
-  - What may be sent to Sentry: user emails, meal data, request bodies? — Owner: user. Block: no.
+  - Which Sentry setup works for the app on the Workers runtime, including the scheduled keep-alive, and does it fit the Worker size limit? — Owner: research. Block: no. Resolved on #136: `@sentry/cloudflare` wraps the Worker entry, `@sentry/astro` runs browser-only, and the Worker stays far under the size limit.
+  - What may be sent to Sentry: user emails, meal data, request bodies? — Owner: user. Block: no. Resolved on #136: none of them; no user, IP, cookies, bodies or query strings, and emails are masked.
 - **Risk:** Nice-to-have; M-2 can close with it parked. It notices failures in production, where the other items stop them before; alert rules for failed deliveries and keep-alive runs (FR-019) stay parked.
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
-| Roadmap ID | Issue                                                                 | Change ID                         | Suggested issue title                             | Ready for `/10x-plan` | Notes                                                          |
-| ---------- | --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------- | --------------------- | -------------------------------------------------------------- |
-| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules      | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                                    |
-| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity`              |
-| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                                    |
-| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                                    |
-| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                                    |
-| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                              |
-| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                        | Error monitoring with Sentry                      | yes                   | Nice-to-have; change folder exists, run `/10x-plan add-sentry` |
+| Roadmap ID | Issue                                                                 | Change ID                         | Suggested issue title                             | Ready for `/10x-plan` | Notes                                             |
+| ---------- | --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------- |
+| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules      | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                       |
+| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity` |
+| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                       |
+| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                       |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
+| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
+| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                        | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
 
 ## Open Roadmap Questions
 
