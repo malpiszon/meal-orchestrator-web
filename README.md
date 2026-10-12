@@ -10,6 +10,7 @@ Accounts exist only by invitation: MO's first delivery for an email creates the 
 - [TypeScript](https://www.typescriptlang.org/) v6, [Tailwind CSS](https://tailwindcss.com/) v4, [shadcn/ui](https://ui.shadcn.com/)
 - [Supabase](https://supabase.com/): auth, Postgres (row-level security, plan logic in SQL functions)
 - [Cloudflare Workers](https://workers.cloudflare.com/): hosting and the daily keep-alive Cron Trigger
+- [Sentry](https://sentry.io/): error monitoring for the Worker and the browser, plus a cron monitor for the keep-alive
 
 ## Getting started
 
@@ -32,6 +33,8 @@ Fill in `.env`, then copy it to `.dev.vars` (Cloudflare local dev reads secrets 
 | `MO_INGEST_TOKEN`           | Any random string, e.g. `openssl rand -hex 32` | MO deliveries (the bearer token MO sends)   |
 
 All four are server-only secrets declared through Astro's `astro:env`; none reach the client.
+
+The Sentry values (`PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, …) exist only in the deploy job, see [deployment](docs/deployment.md#error-monitoring-sentry). Without a DSN both Sentry SDKs are off, so nothing is needed locally.
 
 ```bash
 cp .env .dev.vars
@@ -86,7 +89,7 @@ A pre-commit hook (husky + lint-staged) runs `eslint --fix` and then `vitest rel
 
 - [Pages and API](docs/api.md): what each page shows and each route does, and the rules behind them (cut-off, re-delivery, recency notes, ratings, email links).
 - [MO delivery contract](docs/mo-delivery-contract.md): the payload, responses and retry policy, for the MO side.
-- [Deployment](docs/deployment.md): secrets, the order of migrations and deploys, Supabase dashboard settings, keep-alive, known risks.
+- [Deployment](docs/deployment.md): secrets, the order of migrations and deploys, Supabase dashboard settings, keep-alive, error monitoring, known risks.
 - [Testing](docs/testing.md): unit, database and smoke tests, and CI.
 - [Dev walkthrough](docs/dev-walkthrough.md): local steps from a first delivery to swaps, history and ratings.
 

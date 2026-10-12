@@ -1,7 +1,9 @@
 import { handle } from "@astrojs/cloudflare/handler";
+import * as Sentry from "@sentry/cloudflare";
 import { pingSupabase } from "@/lib/keepalive";
+import { type SentryEnv, sentryOptions } from "@/lib/sentry";
 
-interface KeepaliveEnv {
+interface KeepaliveEnv extends SentryEnv {
   SUPABASE_URL: string;
   SUPABASE_KEY: string;
 }
@@ -19,14 +21,25 @@ async function scheduled(
   env: KeepaliveEnv,
   ctx: MinimalExecutionContext,
 ): Promise<void> {
-  const promise = pingSupabase(env.SUPABASE_URL, env.SUPABASE_KEY).then(
-    () => {
-      console.log(`keepalive ok (${controller.cron})`);
-    },
-    (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error(`keepalive failed: ${message} (${controller.cron})`);
-      throw error;
+  // The monitor follows the trigger's own cron, so a schedule change in wrangler.jsonc can't leave it stale.
+  const promise = Sentry.withMonitor(
+    "supabase-keepalive",
+    () =>
+      pingSupabase(env.SUPABASE_URL, env.SUPABASE_KEY).then(
+        () => {
+          console.log(`keepalive ok (${controller.cron})`);
+        },
+        (error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`keepalive failed: ${message} (${controller.cron})`);
+          throw error;
+        },
+      ),
+    {
+      schedule: { type: "crontab", value: controller.cron },
+      timezone: "UTC",
+      checkinMargin: 5,
+      maxRuntime: 5,
     },
   );
 
@@ -34,4 +47,4 @@ async function scheduled(
   await promise;
 }
 
-export default { fetch: handle, scheduled };
+export default Sentry.withSentry((env: KeepaliveEnv) => sentryOptions(env), { fetch: handle, scheduled });
