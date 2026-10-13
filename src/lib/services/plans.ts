@@ -35,7 +35,7 @@ export async function getUpcomingPlan(
   );
 
   if (error) {
-    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
+    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`, { cause: error });
   }
   return data;
 }
@@ -64,7 +64,7 @@ export async function getCurrentPlan(
   );
 
   if (error) {
-    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
+    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`, { cause: error });
   }
   return data;
 }
@@ -91,7 +91,7 @@ export async function getPastPlans(
   );
 
   if (error) {
-    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
+    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`, { cause: error });
   }
   // The client is untyped (no generated database types): the rows are the four selected columns.
   return data;
@@ -120,7 +120,7 @@ export async function getPastPlan(
   );
 
   if (error) {
-    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`);
+    throw new Error(`weekly_plans query failed: ${error.code} ${error.message}`, { cause: error });
   }
   return data;
 }
@@ -144,7 +144,9 @@ export async function getPlanRecency(supabase: SupabaseClient, planId: string): 
   );
 
   if (result.error) {
-    throw new Error(`get_plan_recency failed: ${result.error.code} ${result.error.message}`);
+    throw new Error(`get_plan_recency failed: ${result.error.code} ${result.error.message}`, {
+      cause: result.error,
+    });
   }
   // The client is untyped (no generated database types), so the row shape is asserted here.
   const rows = (result.data ?? []) as PlanRecencyRow[];
@@ -158,8 +160,8 @@ export type PlanWriteErrorKind = "not_found" | "plan_locked" | "failed";
 export class PlanWriteError extends Error {
   readonly kind: PlanWriteErrorKind;
 
-  constructor(kind: PlanWriteErrorKind, message: string) {
-    super(message);
+  constructor(kind: PlanWriteErrorKind, message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "PlanWriteError";
     this.kind = kind;
   }
@@ -193,6 +195,7 @@ async function savePlan(
     throw new PlanWriteError(
       planWriteErrorKind(result.error),
       `${fn} failed: ${result.error.code} ${result.error.message}`,
+      { cause: result.error },
     );
   }
   // The client is untyped (no generated database types): the function returns the new saved_at.

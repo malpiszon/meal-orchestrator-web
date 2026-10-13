@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getCurrentPlan, getPastPlan, getPastPlans, getUpcomingPlan } from "@/lib/services/plans";
+import {
+  choosePlanOption,
+  getCurrentPlan,
+  getPastPlan,
+  getPastPlans,
+  getUpcomingPlan,
+  PlanWriteError,
+} from "@/lib/services/plans";
 import { addDays } from "@/lib/plans";
 import { fakeSupabase, type Row } from "@/test/fake-supabase";
 
@@ -132,5 +139,41 @@ describe("getUpcomingPlan", () => {
 
     await expect(loading).resolves.toBe(plan);
     expect(from).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("errors keep the Supabase error as cause", () => {
+  const supabaseError = { code: "57014", message: "canceling statement due to statement timeout", hint: null };
+
+  it("on a read", async () => {
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      gt: () => builder,
+      order: () => builder,
+      limit: () => builder,
+      maybeSingle: () => Promise.resolve({ data: null, error: supabaseError }),
+    };
+    const supabase = { from: () => builder } as unknown as SupabaseClient;
+
+    const failure = await getUpcomingPlan(supabase, "user-1", "2026-10-04").catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toBe(
+      "weekly_plans query failed: 57014 canceling statement due to statement timeout",
+    );
+    expect((failure as Error).cause).toBe(supabaseError);
+  });
+
+  it("on a write", async () => {
+    const supabase = {
+      rpc: () => Promise.resolve({ data: null, error: supabaseError }),
+    } as unknown as SupabaseClient;
+
+    const failure = await choosePlanOption(supabase, "option-1").catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(PlanWriteError);
+    expect((failure as PlanWriteError).kind).toBe("failed");
+    expect((failure as PlanWriteError).cause).toBe(supabaseError);
   });
 });

@@ -8,8 +8,8 @@ export type RatingWriteErrorKind = "not_found" | "not_rateable" | "failed";
 export class RatingWriteError extends Error {
   readonly kind: RatingWriteErrorKind;
 
-  constructor(kind: RatingWriteErrorKind, message: string) {
-    super(message);
+  constructor(kind: RatingWriteErrorKind, message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = "RatingWriteError";
     this.kind = kind;
   }
@@ -47,6 +47,7 @@ export async function rateMeal(
     throw new RatingWriteError(
       ratingWriteErrorKind(result.error),
       `rate_meal failed: ${result.error.code} ${result.error.message}`,
+      { cause: result.error },
     );
   }
   // The client is untyped (no generated database types): the function returns the stored rating or null.
@@ -75,7 +76,9 @@ export async function getPlanRatings(supabase: SupabaseClient, planId: string): 
   );
 
   if (result.error) {
-    throw new Error(`get_plan_ratings failed: ${result.error.code} ${result.error.message}`);
+    throw new Error(`get_plan_ratings failed: ${result.error.code} ${result.error.message}`, {
+      cause: result.error,
+    });
   }
   // The client is untyped (no generated database types), so the row shape is asserted here.
   const rows = (result.data ?? []) as PlanRatingRow[];

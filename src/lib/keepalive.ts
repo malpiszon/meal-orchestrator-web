@@ -15,7 +15,7 @@ export async function pingSupabase(url: string, key: string): Promise<void> {
     const { error } = await client.rpc("keepalive");
 
     if (error) {
-      throw new Error(`pingSupabase: ${error.message}`);
+      throw new Error(`pingSupabase: ${error.message}`, { cause: error });
     }
   }
 }
