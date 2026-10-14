@@ -14,7 +14,7 @@ export const SENTRY_DATA_COLLECTION: DataCollection = {
 const EMAIL_PATTERN = /[\w.+-]+(?:@|%40)[\w-]+(?:\.[\w-]+)+/gi;
 const BREADCRUMB_URL_KEYS = ["url", "from", "to"] as const;
 
-function maskEmails(text: string): string {
+export function maskEmails(text: string): string {
   return text.replace(EMAIL_PATTERN, "[email]");
 }
 

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { json, readJsonRequest } from "@/lib/json-request";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { RatingWriteError, rateMeal } from "@/lib/services/ratings";
 
 export const prerender = false;
@@ -34,8 +35,7 @@ export const POST: APIRoute = async (context) => {
   } catch (error) {
     const kind = error instanceof RatingWriteError ? error.kind : "failed";
     if (kind === "failed") {
-      // Code and message only (the service puts nothing else in its messages); never the body or the user.
-      console.error(`rating save failed: ${error instanceof Error ? error.message : String(error)}`);
+      reportHandledError("rating_save.write", error);
     }
     return json({ error: ERROR_BY_KIND[kind] }, STATUS_BY_KIND[kind]);
   }

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { MO_INGEST_TOKEN } from "astro:env/server";
 import { moDeliverySchema, toOptionRows, type MoDelivery } from "@/lib/mo-delivery";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { createServiceClient } from "@/lib/supabase";
 
 export const prerender = false;
@@ -152,12 +153,17 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: "week_started" }, 409);
   }
   if (result.error) {
-    logStorageError("ingest_weekly_plan", result.error);
+    reportHandledError(
+      "mo_delivery.ingest",
+      new Error(`ingest_weekly_plan failed: ${result.error.code} ${result.error.message}`, { cause: result.error }),
+    );
     return json({ error: "storage_failed" }, 500);
   }
   const planId: unknown = result.data;
   if (typeof planId !== "string") {
-    logStorageError("ingest_weekly_plan", { message: "returned no plan id" });
+    reportHandledError("mo_delivery.ingest", new Error("ingest_weekly_plan returned no plan id"), {
+      code: "no_plan_id",
+    });
     return json({ error: "storage_failed" }, 500);
   }
 

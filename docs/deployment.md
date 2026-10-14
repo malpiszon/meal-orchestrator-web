@@ -85,17 +85,20 @@ curl "http://localhost:8787/__scheduled?cron=0+3+*+*+*"
 
 ## Error monitoring (Sentry)
 
-Unhandled errors go to the Sentry project `mo-web`, from the production deploy only: the DSN exists in no other place (local dev, preview, smoke, e2e and the `ci` job have none, which turns both SDKs off).
+Errors go to the Sentry project `mo-web`, from the production deploy only: the DSN exists in no other place (local dev, preview, smoke, e2e and the `ci` job have none, which turns both SDKs off).
 
 **Reported:**
 
 - Errors thrown in a page, API route or the middleware (`@sentry/cloudflare` in `src/worker.ts`; the middleware captures what Astro would turn into a 500 and rethrows).
 - Errors thrown by the keep-alive, plus a check-in for the cron monitor `supabase-keepalive` on every run (its schedule is the Cron Trigger's); a failed or missing run marks the monitor failed.
 - Uncaught errors in the browser (`@sentry/astro`, client side only; errors only, no tracing or session replay).
+- System faults the app handles: database, PostgREST and Auth errors behind a friendly page, an error code or a fallback (`src/lib/report-handled-error.ts`). Each writes one Worker log line, `<step> failed: <error code> <message>`, and sends one event grouped by step and error code, so each pair is one Sentry issue. The level is `error`, or `warning` when the page still works (the dashboard without recency or ratings, a save whose recency re-read failed). Steps: `mo_delivery.ingest`, `plan_save.write`, `plan_save.recency`, `rating_save.write`, `dashboard.plan_load`, `dashboard.recency_load`, `dashboard.ratings_load`, `history.list_load`, `history.plan_load`, `auth.set_password.update_user`.
 
-**Not reported:** failures the app handles and answers with a success or a friendly message, and `console.error`/`console.warn` lines (those stay in the Worker logs). No alert rules exist beyond the monitor's failure state.
+**Not reported:** user errors (not found, locked, not rateable, week started, invalid input, a weak or repeated password, rate limits), and other `console.error`/`console.warn` lines (those stay in the Worker logs). Invitation, sign-in, link-check and streamed-render failures are only logged until S-09, S-10 and S-11. No alert rules exist beyond the monitor's failure state.
 
-**Privacy:** `src/lib/sentry-privacy.ts` decides what leaves the app. Events carry no user, IP, cookies, request or response bodies, or query strings (an invitation link's `token_hash` is in one), and email-like text is replaced with `[email]`. Events are tagged `environment=production` and `release=<git SHA>`.
+**Volume:** no throttling or sampling. A whole outage groups into one issue per step, and the free plan's spike protection applies. The SDK's Dedupe integration (on by default) drops an event identical to the one the Worker instance sent just before it, so an issue's event count can be lower than the number of failing requests; the Worker logs have every one.
+
+**Privacy:** `src/lib/sentry-privacy.ts` decides what leaves the app. Events carry no user, IP, cookies, request or response bodies, or query strings (an invitation link's `token_hash` is in one), and email-like text is replaced with `[email]`. Handled faults add the tags `step`, `error_code` and `error_hint` (the PostgREST hint, email-masked, at most 200 characters). PostgREST `details` is never sent or logged. Events are tagged `environment=production` and `release=<git SHA>`.
 
 **Source maps:** the `deploy` job's build uploads them with `SENTRY_AUTH_TOKEN` and deletes them from `dist/`; a step then fails the job if any `.map` file is left, so none is served from the assets.
 

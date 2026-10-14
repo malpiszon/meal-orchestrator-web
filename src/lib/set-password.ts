@@ -117,3 +117,11 @@ export function passwordErrorMessage(error: AuthErrorLike | null | undefined): s
   if (error?.status === 429) return RATE_LIMIT_MESSAGE;
   return GENERIC_ERROR_MESSAGE;
 }
+
+/**
+ * Whether an `updateUser` failure is the user's own (a weak or repeated password, or a rate limit)
+ * rather than a system fault: true exactly when `passwordErrorMessage` has a specific message for it.
+ */
+export function isPasswordUserError(error: AuthErrorLike | null | undefined): boolean {
+  return (error?.code ? Object.hasOwn(MESSAGES_BY_CODE, error.code) : false) || error?.status === 429;
+}

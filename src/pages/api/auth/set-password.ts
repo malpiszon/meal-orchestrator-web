@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
+import { reportHandledError } from "@/lib/report-handled-error";
 import {
   FORGOT_PASSWORD_PATH,
+  isPasswordUserError,
   MIN_PASSWORD_LENGTH,
   PASSWORD_RETRY_COOKIE,
   PASSWORD_RETRY_MAX_AGE_SECONDS,
@@ -77,7 +79,11 @@ export const POST: APIRoute = async (context) => {
   // 4. Save the password. On failure the session remains, so the retry needs no token.
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    console.error(`auth set-password: updateUser failed: ${error.code ?? error.status} ${error.message}`);
+    if (isPasswordUserError(error)) {
+      console.error(`auth set-password: updateUser failed: ${error.code ?? error.status} ${error.message}`);
+    } else {
+      reportHandledError("auth.set_password.update_user", error);
+    }
     if (verifiedUserId) {
       context.cookies.set(PASSWORD_RETRY_COOKIE, verifiedUserId, {
         path: "/",

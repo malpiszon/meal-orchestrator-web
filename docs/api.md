@@ -46,7 +46,7 @@ The email templates live in `supabase/templates/` and are wired up in `supabase/
 - **Body:** payload v1, defined by `moDeliverySchema` in `src/lib/mo-delivery.ts`. A sample is in `scripts/fixtures/mo-delivery.sample.json`.
 - **Storage:** one call to the `ingest_weekly_plan` Postgres function through a service-role client. An unknown email first becomes an account, with an invitation (see above).
 - **Re-sending a week:** an identical body (same JSON content, `run_id` included) changes nothing. A changed body for an upcoming week replaces its options (see [re-delivery](#re-delivery)). A changed body for a week that has started (its Monday is today or earlier) is refused with 409 `week_started`, so "This week" never changes. A first delivery of a week that has started is stored.
-- **Responses:** 200 `{"plan_id","week_start","account_created"}`; 400 `invalid_payload` with the validation issues; 401 `unauthorized`; 409 `week_started`; 413 `payload_too_large` over 256 KiB; 500 `storage_failed` (details in the Worker logs); 503 `not_configured` when `SUPABASE_SERVICE_ROLE_KEY` or `MO_INGEST_TOKEN` is missing.
+- **Responses:** 200 `{"plan_id","week_start","account_created"}`; 400 `invalid_payload` with the validation issues; 401 `unauthorized`; 409 `week_started`; 413 `payload_too_large` over 256 KiB; 500 `storage_failed` (logged and reported to Sentry); 503 `not_configured` when `SUPABASE_SERVICE_ROLE_KEY` or `MO_INGEST_TOKEN` is missing.
 
 The full contract for the MO side, with what MO should retry, is [`mo-delivery-contract.md`](mo-delivery-contract.md). To try it against `npm run dev` (rewrite the email to a local user's, or a new one to see provisioning):
 
@@ -64,7 +64,7 @@ The sample's week is in the past; the [dev walkthrough](dev-walkthrough.md) move
 - **"Next week"** is the nearest week whose Monday is after today. A later delivered week is stored but shown only once the nearer one has started. Without one, the tab shows "No upcoming plan yet".
 - **"This week"** is the week whose Monday is today or up to 6 days earlier. It is read-only.
 - **History:** a week is past once its `week_start` is today minus 7 days or earlier. `/history` lists past weeks with "Saved" or "Not saved" ("No past plans yet" when there are none). `/history/<id>` shows "Saved <time>" or "Not saved: suggested picks", and answers 404 "Plan not found" for an id that isn't a UUID, an unknown plan, someone else's plan, and the current or an upcoming week.
-- If the plans can't be loaded (a database error), the dashboard and both history pages answer 200 with "Couldn't load your plan" or "Couldn't load your history". Right after sign-in, PostgREST can reject the new session once with `PGRST303 JWT issued at future`; the plan services retry that error and log `… PGRST303 JWT issued at future, retry n/2 …`.
+- If the plans can't be loaded (a database error), the dashboard and both history pages answer 503 with "Couldn't load your plan" or "Couldn't load your history", and the fault is reported to Sentry. Right after sign-in, PostgREST can reject the new session once with `PGRST303 JWT issued at future`; the plan services retry that error and log `… PGRST303 JWT issued at future, retry n/2 …`.
 
 ## Swapping and saving the upcoming plan
 
@@ -112,4 +112,4 @@ Under each chosen meal from today and the previous 7 days (today minus 7 days to
 | `POST /api/ratings` | `{ optionId, rating }` (`1`-`5` or `null`) | Rates the meal, or clears its rating with `rating: null` |
 
 - **Responses:** 200 `{"rating"}` (the stored rating, or `null` after a clear); 400 `invalid_request` with the validation issues (for example a rating of 6); 401 `unauthorized`; 404 `not_found` (no such option, or someone else's); 409 `not_rateable` (not the chosen option of its slot, or its day is outside the window); 413 `payload_too_large` over 4 KiB; 500 `save_failed`; 503 `not_configured`.
-- The `rate_meal` Postgres function enforces the ownership check, the chosen option and the window; `get_plan_ratings` gives the "Next week" ratings. If the ratings can't be loaded, the dashboard shows the plan without them and logs `dashboard ratings load failed: …`.
+- The `rate_meal` Postgres function enforces the ownership check, the chosen option and the window; `get_plan_ratings` gives the "Next week" ratings. If the ratings can't be loaded, the dashboard shows the plan without them, logs `dashboard.ratings_load failed: …` and reports a warning to Sentry.
