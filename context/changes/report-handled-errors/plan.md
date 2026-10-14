@@ -55,7 +55,7 @@ Verify: unit tests for the helper, the error causes and the A6 classifier. Then 
 
 ## Implementation Approach
 
-A single helper in `src/lib/` owns the policy: what goes to the log line and what goes to Sentry, how a fault is grouped, and which fields are allowed. Each call site gives it a stable step name and the error, and passes level `warning` where the page still works. Services keep their message format but attach the original Supabase error as `cause`. That way the helper can read `code` and `hint` from the cause chain, and Sentry links the original error.
+A single helper in `src/lib/` owns the policy: what goes to the log line and what goes to Sentry, how a fault is grouped, and which fields are allowed. Each call site gives it a stable step name and the error, and passes level `warning` where the page still works. Services keep their message format but attach the original Supabase error as `cause`. That way the helper can read `code` and `hint` from the cause chain; Sentry links the original only when it is an `Error` (see Desired End State).
 
 Step names (stable, also the log-line prefix):
 
@@ -121,7 +121,7 @@ The tests mock `@sentry/cloudflare` and the console. They cover:
 
 **File**: `src/lib/services/plans.ts`, `src/lib/services/ratings.ts`, `src/lib/keepalive.ts`, and their tests (`src/lib/services/plans.test.ts`, `src/lib/services/ratings.test.ts`)
 
-**Intent**: Sentry links the original PostgREST error, and the helper reads its `code` and `hint`. Messages stay the same, so existing logs and tests still match.
+**Intent**: The helper reads the original error's `code` and `hint` from the cause (Sentry links it only when it is an `Error`, not a plain-object PostgREST fault). Messages stay the same, so existing logs and tests still match.
 
 **Contract**:
 

@@ -13,7 +13,7 @@ Sentry (S-07) reports unhandled errors from the Worker and the browser. The only
 
 ## Desired End State
 
-The handled faults behind ten steps each produce a log line and one `handled: true` Sentry event. The steps cover MO delivery storage, plan and rating saves, dashboard and history loads, and set-password `updateUser`. Each event is grouped by `["handled", step, error code]` and links the original Supabase error as its cause. PostgREST `details` is never sent or logged. The dashboard and history pages answer 503 when plans can't be loaded, and the docs describe the new policy.
+The handled faults behind ten steps each produce a log line and one `handled: true` Sentry event. The steps cover MO delivery storage, plan and rating saves, dashboard and history loads, and set-password `updateUser`. Each event is grouped by `["handled", step, error code]` and keeps the original Supabase error as its cause, from which the helper reads the code and hint. Sentry links that cause only when it is an `Error` (an `AuthError`); a PostgREST database fault is a plain object, so its event shows the wrapper exception, whose message carries the original code and message. PostgREST `details` is never sent or logged. The dashboard and history pages answer 503 when plans can't be loaded, and the docs describe the new policy.
 
 ## Key Decisions Made
 
@@ -49,7 +49,7 @@ The handled faults behind ten steps each produce a log line and one `handled: tr
 
 ## Architecture / Approach
 
-Call sites pass a stable step name and the caught error to `reportHandledError(step, error, { level, code })`. The helper walks the `cause` chain for `code`, `status` and `hint`. It writes `<step> failed: <code> <message>` with the stack to `console.error` or `console.warn`, and calls `@sentry/cloudflare`'s `captureException` with a capture context (level, fingerprint, tags). The event reaches the client `withSentry` set up in `src/worker.ts`, and the existing `scrubEvent` masks emails in the messages and the cause chain. The helper itself masks the hint tag, because tags bypass the scrubber.
+Call sites pass a stable step name and the caught error to `reportHandledError(step, error, { level, code })`. The helper walks the `cause` chain for `code`, `status` and `hint`. It writes `<step> failed: <code> <message>` with the stack to `console.error` or `console.warn`, and calls `@sentry/cloudflare`'s `captureException` with a capture context (level, fingerprint, tags). The event reaches the client `withSentry` set up in `src/worker.ts`, and the existing `scrubEvent` masks emails in the messages, including any linked cause. The helper itself masks the hint tag, because tags bypass the scrubber.
 
 ## Phases at a Glance
 
@@ -70,6 +70,6 @@ Call sites pass a stable step name and the caught error to `reportHandledError(s
 
 ## Success Criteria (Summary)
 
-- During a database outage, Sentry shows one issue per affected step with the original PostgREST error linked, and nothing for wrong passwords, locked weeks or bad links.
+- During a database outage, Sentry shows one issue per affected step whose message carries the original PostgREST code and message, and nothing for wrong passwords, locked weeks or bad links.
 - The dashboard and history pages answer 503 when they can't load, so the outage shows in status-based views.
 - No event or log line contains PostgREST `details`, a user or an email.
