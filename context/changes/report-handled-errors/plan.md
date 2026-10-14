@@ -96,7 +96,7 @@ Add the helper and its tests, and give every rebuilt Supabase error its original
 - **Error code:** `options.code` if given. Otherwise the first non-empty string `code` found walking `error` → `error.cause` → …, then `http_<status>` from the first numeric `status`, then `"unknown"`.
 - **Hint:** the first non-empty string `hint` in the same chain, emails masked, cut to 200 characters.
 - **Log line:** `console.error` (level `error`, the default) or `console.warn` (`warning`). The line reads `` `${step} failed: ${code} ${message}` ``, where `message` is the error's message, and the error's stack follows as a second argument.
-- **Sentry:** `captureException(error, { level, fingerprint: ["handled", step, code], tags: { step, error_code: code, error_hint? } })` from `@sentry/cloudflare`.
+- **Sentry:** `captureException(reported, { level, fingerprint: ["handled", step, code], tags: { step, error_code: code, error_hint? } })` from `@sentry/cloudflare`. `reported` is `error` itself when it is an `Error`, and otherwise a new `Error` with the message `<step> failed: <code> <message>` and `error` as its `cause`: Sentry serialises a non-`Error` input whole into `extra`, `details` included, and `scrubEvent` doesn't touch `extra` (full review F1).
 - **Never read:** `details`, request bodies and users.
 
 The tests mock `@sentry/cloudflare` and the console. They cover:
@@ -263,7 +263,7 @@ Rewrite the reporting policy in the docs, and prove on a real Worker build that 
   2. Run `npm run preview` on port 4322.
   3. Run a throwaway listener on port 9876 that prints each envelope.
   4. Deliver a week for a test user and sign in ([dev walkthrough](../../../docs/dev-walkthrough.md)).
-- Dashboard: with `select` on `public.weekly_plans` revoked from `authenticated` in local Postgres, `/dashboard` answers 503 "Couldn't load your plan". Three reloads give three events with the same fingerprint `["handled","dashboard.plan_load","42501"]`, level `error`, tags `step` and `error_code` (`42501`), one exception whose message carries the original code and message (no linked cause: PostgREST errors are plain objects), and no `details` anywhere in the envelope. `/history` gives `history.list_load` the same way.
+- Dashboard: with `select` on `public.weekly_plans` revoked from `authenticated` in local Postgres, `/dashboard` answers 503 "Couldn't load your plan". Three reloads give at least one event (Sentry's Dedupe drops consecutive repeats, see the note below) with the fingerprint `["handled","dashboard.plan_load","42501"]`, level `error`, tags `step` and `error_code` (`42501`), one exception whose message carries the original code and message (no linked cause: PostgREST errors are plain objects), and no `details` anywhere in the envelope. `/history` gives `history.list_load` the same way.
   - Review note (2026-10-14): Sentry's Dedupe integration drops an event identical to the previous one from the same Worker instance, so the run gave 2 events for 3 reloads (1 for 4). The probe holds as "at least one event with that fingerprint"; `docs/deployment.md` § Volume records this.
 - Ratings annotation: with `execute` on `get_plan_ratings` revoked, the dashboard renders (200) and sends one `dashboard.ratings_load` event at level `warning`.
 - Saves and delivery: with `execute` on `choose_plan_option` revoked, a swap answers 500 `save_failed` and sends `plan_save.write`. With `execute` on `ingest_weekly_plan` revoked from `service_role`, an MO delivery answers 500 `storage_failed` and sends `mo_delivery.ingest`.
