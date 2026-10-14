@@ -338,14 +338,14 @@ No database migration and no new secret. Behaviour changes only on failure paths
 
 #### Automated
 
-- [x] 3.1 No doc quotes an old log prefix
-- [x] 3.2 Formatting passes: `npx prettier --check docs/deployment.md docs/api.md`
+- [x] 3.1 No doc quotes an old log prefix — 6cc5145
+- [x] 3.2 Formatting passes: `npx prettier --check docs/deployment.md docs/api.md` — 6cc5145
 
 #### Manual
 
-- [x] 3.3 Probe setup: preview build sending to a local listener, test user signed in
-- [x] 3.4 Dashboard and history plan-load faults: 503, one grouped error event per step, no `details`
-- [x] 3.5 Ratings annotation fault: page renders, one warning event
-- [x] 3.6 Save and delivery faults reported as `plan_save.write` and `mo_delivery.ingest`
-- [x] 3.7 No events for user errors
-- [x] 3.8 Cleanup: grants restored, listener stopped, DSN removed from `.dev.vars`
+- [x] 3.3 Probe setup: preview build sending to a local listener, test user signed in — 6cc5145
+- [x] 3.4 Dashboard and history plan-load faults: 503, one grouped error event per step, no `details` — 6cc5145
+- [x] 3.5 Ratings annotation fault: page renders, one warning event — 6cc5145
+- [x] 3.6 Save and delivery faults reported as `plan_save.write` and `mo_delivery.ingest` — 6cc5145
+- [x] 3.7 No events for user errors — 6cc5145
+- [x] 3.8 Cleanup: grants restored, listener stopped, DSN removed from `.dev.vars` — 6cc5145

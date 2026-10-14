@@ -1,7 +1,7 @@
 ---
 change_id: report-handled-errors
 title: Report handled system faults to Sentry
-status: impl_reviewed
+status: implemented
 created: 2026-10-13
 updated: 2026-10-14
 archived_at: null
