@@ -51,11 +51,12 @@ describe("reportHandledError", () => {
   });
 
   it("skips the empty code of a network failure", () => {
-    const original = Object.assign(postgrestError({ code: "", message: "TypeError: fetch failed" }), { status: 0 });
+    // postgrest-js keeps the status (0) on the response, not on the error.
+    const original = postgrestError({ code: "", message: "TypeError: fetch failed" });
 
     reportHandledError("load", new Error("weekly_plans query failed:  fetch failed", { cause: original }));
 
-    expect(capturedTags().error_code).toBe("http_0");
+    expect(capturedTags().error_code).toBe("unknown");
   });
 
   it("prefers options.code over the error's own code", () => {

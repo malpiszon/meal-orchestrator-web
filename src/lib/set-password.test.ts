@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   AUTH_LINK_LIFETIME_SECONDS,
+  isPasswordUserError,
   MIN_PASSWORD_LENGTH,
   passwordErrorMessage,
   resetRequestSchema,
@@ -128,6 +129,28 @@ describe("passwordErrorMessage", () => {
       expect(passwordErrorMessage(error)).toBe("Something went wrong. Please try again.");
     },
   );
+});
+
+describe("isPasswordUserError", () => {
+  it.each([
+    [{ code: "weak_password", status: 422 }],
+    [{ code: "same_password", status: 422 }],
+    [{ code: "over_email_send_rate_limit", status: 429 }],
+    [{ status: 429 }],
+  ])("is true for the user's own error %o", (error) => {
+    expect(isPasswordUserError(error)).toBe(true);
+  });
+
+  it.each([
+    [{ code: "unexpected_failure", status: 500 }],
+    [{ status: 500 }],
+    [{ code: "unknown_code" }],
+    [{}],
+    [null],
+    [undefined],
+  ])("is false for a system fault or no error: %o", (error) => {
+    expect(isPasswordUserError(error)).toBe(false);
+  });
 });
 
 describe("setPasswordUrl", () => {

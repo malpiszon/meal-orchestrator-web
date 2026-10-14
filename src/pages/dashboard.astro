@@ -15,6 +15,7 @@ import {
   groupPlanOptions,
   todayInWarsaw,
 } from "@/lib/plans";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { getCurrentPlan, getPlanRecency, getUpcomingPlan } from "@/lib/services/plans";
 import { getPlanRatings } from "@/lib/services/ratings";
 import { createClient } from "@/lib/supabase";
@@ -37,9 +38,9 @@ if (supabase && user) {
       getUpcomingPlan(supabase, user.id, today),
     ]);
   } catch (error) {
-    // Code and message only (see the plan services); no user data.
-    console.error(`dashboard plan load failed: ${error instanceof Error ? error.message : String(error)}`);
+    reportHandledError("dashboard.plan_load", error);
     loadFailed = true;
+    Astro.response.status = 503;
   }
   // Notes and earlier ratings only on the upcoming week; "This week" shows its plan without them. Both
   // are annotations: if one fails, the weeks still render, just without it.
@@ -51,7 +52,7 @@ if (supabase && user) {
           upcomingRecency = recency;
         },
         (error: unknown) => {
-          console.error(`dashboard recency load failed: ${error instanceof Error ? error.message : String(error)}`);
+          reportHandledError("dashboard.recency_load", error, { level: "warning" });
         },
       ),
       getPlanRatings(supabase, planId).then(
@@ -59,7 +60,7 @@ if (supabase && user) {
           upcomingRatings = ratings;
         },
         (error: unknown) => {
-          console.error(`dashboard ratings load failed: ${error instanceof Error ? error.message : String(error)}`);
+          reportHandledError("dashboard.ratings_load", error, { level: "warning" });
         },
       ),
     ]);

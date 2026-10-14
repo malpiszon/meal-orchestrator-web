@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { APIContext } from "astro";
 import type { z } from "zod";
 import { json, readJsonRequest } from "@/lib/json-request";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { getPlanRecency, PlanWriteError } from "@/lib/services/plans";
 
 /**
@@ -11,11 +12,6 @@ import { getPlanRecency, PlanWriteError } from "@/lib/services/plans";
 
 const STATUS_BY_KIND = { not_found: 404, plan_locked: 409, failed: 500 } as const;
 const ERROR_BY_KIND = { not_found: "not_found", plan_locked: "plan_locked", failed: "save_failed" } as const;
-
-function logError(step: string, error: unknown): void {
-  // Code and message only (the services put nothing else in their messages); never the body or the user.
-  console.error(`plan save ${step} failed: ${error instanceof Error ? error.message : String(error)}`);
-}
 
 /**
  * Validate the JSON body with `schema`, run `save` with the user's cookie-session client, then answer
@@ -43,7 +39,7 @@ export async function handlePlanSave<S extends z.ZodType<{ planId: string }>>(
   } catch (error) {
     const kind = error instanceof PlanWriteError ? error.kind : "failed";
     if (kind === "failed") {
-      logError("write", error);
+      reportHandledError("plan_save.write", error);
     }
     return json({ error: ERROR_BY_KIND[kind] }, STATUS_BY_KIND[kind]);
   }
@@ -53,7 +49,7 @@ export async function handlePlanSave<S extends z.ZodType<{ planId: string }>>(
   try {
     recency = Object.fromEntries(await getPlanRecency(supabase, input.planId));
   } catch (error) {
-    logError("recency", error);
+    reportHandledError("plan_save.recency", error, { level: "warning" });
   }
 
   return json({ saved_at: savedAt, recency }, 200);

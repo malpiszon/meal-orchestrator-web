@@ -5,6 +5,7 @@ import WeekPlan from "@/components/plan/WeekPlan.astro";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPlanSavedStatus, formatWeekRange, todayInWarsaw } from "@/lib/plans";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { getPastPlan } from "@/lib/services/plans";
 import { createClient } from "@/lib/supabase";
 import type { WeeklyPlan } from "@/types";
@@ -22,9 +23,9 @@ if (parsedId.success && supabase && user) {
     // `null` for an unknown id, someone else's plan, or a week that hasn't ended (see `getPastPlan`).
     plan = await getPastPlan(supabase, user.id, parsedId.data, today);
   } catch (error) {
-    // Code and message only (see the plan services); no user data.
-    console.error(`history load failed: ${error instanceof Error ? error.message : String(error)}`);
+    reportHandledError("history.plan_load", error);
     loadFailed = true;
+    Astro.response.status = 503;
   }
 }
 if (!loadFailed && !plan) {

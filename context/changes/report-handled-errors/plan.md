@@ -26,7 +26,7 @@ Make database, PostgREST and Auth faults that mo-web handles (with a friendly pa
   - is grouped by fingerprint `["handled", <step>, <error code>]`;
   - has level `error` for failures the user sees, and `warning` for annotation fallbacks where the page still works;
   - carries the tags `step` and `error_code`, plus `error_hint` when the error has one;
-  - keeps the original Supabase error as its linked cause.
+  - keeps the original Supabase error as `cause`, which the helper reads; Sentry links it only when it is an `Error` (e.g. an `AuthError`), so a PostgREST fault shows the wrapper exception alone, whose message carries the original code and message.
 - PostgREST `details` never leaves the app, in either the Sentry event or the log line.
 - The dashboard and both history pages answer **503** (same "Couldn't load …" card) when their plans can't be loaded.
 - User errors produce no Sentry event.
@@ -36,7 +36,7 @@ Verify: unit tests for the helper, the error causes and the A6 classifier. Then 
 
 ### Key Discoveries:
 
-- `PostgrestError` extends `Error` and carries `code`, `hint` and `details` (`node_modules/@supabase/postgrest-js/dist/index.d.mts:26`), and Supabase's `AuthError` extends `Error` with `code` and `status`. Both can be passed as `cause` directly. Sentry's default linked-errors integration sends a cause's type and message only. `details` would only travel through the ExtraErrorData integration, which is off and must stay off.
+- `PostgrestError` extends `Error` and carries `code`, `hint` and `details` (`node_modules/@supabase/postgrest-js/dist/index.d.mts:26`), and Supabase's `AuthError` extends `Error` with `code` and `status`. Both can be passed as `cause` directly. But with the default (non-`throwOnError`) client, postgrest-js returns a PostgREST HTTP error response (every DB fault) as a plain object (`error = JSON.parse(body)`, `dist/index.mjs:513`); only transport failures are `PostgrestError` instances (with `code: ""` and no `status`). Sentry's linked-errors integration follows a cause only when `isError(cause)` (`@sentry/core` `aggregate-errors.js:26`), and then sends its type and message only; a plain-object cause is not linked (implementation review F1, 2026-10-13). `details` would only travel through the ExtraErrorData integration, which is off and must stay off.
 - A PostgREST network failure comes back with an empty `code`. The helper has to fall back to `http_<status>` or `unknown`, or the fingerprint would read `["handled", step, ""]`.
 - A6's user errors are exactly the keys of `MESSAGES_BY_CODE` (`src/lib/set-password.ts:98`: `weak_password`, `same_password`, `over_email_send_rate_limit`) plus status 429. `passwordErrorMessage` maps them, and anything else gets the generic message.
 - `docs/api.md:67,115` quote today's log prefixes (`dashboard ratings load failed: …`); they change with the step names.
@@ -263,7 +263,7 @@ Rewrite the reporting policy in the docs, and prove on a real Worker build that 
   2. Run `npm run preview` on port 4322.
   3. Run a throwaway listener on port 9876 that prints each envelope.
   4. Deliver a week for a test user and sign in ([dev walkthrough](../../../docs/dev-walkthrough.md)).
-- Dashboard: with `select` on `public.weekly_plans` revoked from `authenticated` in local Postgres, `/dashboard` answers 503 "Couldn't load your plan". Three reloads give three events with the same fingerprint `["handled","dashboard.plan_load","42501"]`, level `error`, tags `step` and `error_code`, a linked `PostgrestError` cause, and no `details` anywhere in the envelope. `/history` gives `history.list_load` the same way.
+- Dashboard: with `select` on `public.weekly_plans` revoked from `authenticated` in local Postgres, `/dashboard` answers 503 "Couldn't load your plan". Three reloads give three events with the same fingerprint `["handled","dashboard.plan_load","42501"]`, level `error`, tags `step` and `error_code` (`42501`), one exception whose message carries the original code and message (no linked cause: PostgREST errors are plain objects), and no `details` anywhere in the envelope. `/history` gives `history.list_load` the same way.
 - Ratings annotation: with `execute` on `get_plan_ratings` revoked, the dashboard renders (200) and sends one `dashboard.ratings_load` event at level `warning`.
 - Saves and delivery: with `execute` on `choose_plan_option` revoked, a swap answers 500 `save_failed` and sends `plan_save.write`. With `execute` on `ingest_weekly_plan` revoked from `service_role`, an MO delivery answers 500 `storage_failed` and sends `mo_delivery.ingest`.
 - No events for user errors: a 409 `plan_locked` or `not_rateable`, a 404 `/history/<unknown uuid>`, and a 400 delivery send nothing to the listener.
@@ -318,21 +318,21 @@ No database migration and no new secret. Behaviour changes only on failure paths
 
 #### Automated
 
-- [x] 1.1 Helper unit tests pass: `npx vitest run src/lib/report-handled-error.test.ts`
-- [x] 1.2 Service tests assert the cause and pass: `npx vitest run src/lib/services`
-- [x] 1.3 All unit tests pass: `npm test`
-- [x] 1.4 Lint and type-checked rules pass: `npm run lint`
+- [x] 1.1 Helper unit tests pass: `npx vitest run src/lib/report-handled-error.test.ts` — b2afa59
+- [x] 1.2 Service tests assert the cause and pass: `npx vitest run src/lib/services` — b2afa59
+- [x] 1.3 All unit tests pass: `npm test` — b2afa59
+- [x] 1.4 Lint and type-checked rules pass: `npm run lint` — b2afa59
 
 ### Phase 2: Report at the call sites
 
 #### Automated
 
-- [ ] 2.1 A6 classifier tests pass: `npx vitest run src/lib/set-password.test.ts`
-- [ ] 2.2 No in-scope site still logs a handled system fault with a bare `console.error`
-- [ ] 2.3 All unit tests pass: `npm test`
-- [ ] 2.4 Lint and type-checked rules pass: `npm run lint`
-- [ ] 2.5 Production build succeeds: `npm run build`
-- [ ] 2.6 Smoke test passes against a preview on port 4322: `npm run smoke`
+- [x] 2.1 A6 classifier tests pass: `npx vitest run src/lib/set-password.test.ts`
+- [x] 2.2 No in-scope site still logs a handled system fault with a bare `console.error`
+- [x] 2.3 All unit tests pass: `npm test`
+- [x] 2.4 Lint and type-checked rules pass: `npm run lint`
+- [x] 2.5 Production build succeeds: `npm run build`
+- [x] 2.6 Smoke test passes against a preview on port 4322: `npm run smoke`
 
 ### Phase 3: Docs and runtime proof
 
