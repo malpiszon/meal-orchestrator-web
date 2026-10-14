@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-10-10
-updated: 2026-10-13
+updated: 2026-10-14
 prd_version: —
 main_goal: quality
 top_blocker: time
@@ -50,19 +50,19 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
-| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
-| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
-| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready       |
-| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready       |
-| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
-| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready       |
-| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
-| S-08 | report-handled-errors             | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | in-progress |
-| S-09 | auth-fault-visibility             | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | proposed    |
-| S-10 | mo-invitation-failure-visible     | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | proposed    |
-| S-11 | streamed-render-errors            | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | ready       |
+| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status |
+| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ------ |
+| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done   |
+| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready  |
+| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready  |
+| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done   |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done   |
+| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready  |
+| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done   |
+| S-08 | report-handled-errors             | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done   |
+| S-09 | auth-fault-visibility             | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | ready  |
+| S-10 | mo-invitation-failure-visible     | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready  |
+| S-11 | streamed-render-errors            | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | ready  |
 
 ## Baseline
 
@@ -74,7 +74,7 @@ What's already in place in the codebase as of `2026-10-10` (auto-researched + us
 - **Migration replay:** present — `npm run test:replay`, run in CI since S-01 (PR #127).
 - **Browser e2e:** present — Playwright (Chromium) in `tests/e2e/`, run by CI's `e2e` job, a required check that `deploy` waits for (S-04, PR #134).
 - **Agent post-edit hook:** present — Claude Code hooks in `.claude/settings.json`: related unit and pgTAP tests after each edit, lint, types and tests at the end of each turn (S-05, PR #129).
-- **Observability:** partial — Workers observability is on; Sentry reports unhandled errors from the Worker and the browser and monitors the keep-alive (S-07, PR #140); handled failures and errors after streaming starts are not reported (`context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md`, S-08 to S-11); no alerting (FR-019, parked).
+- **Observability:** partial — Workers observability is on; Sentry reports unhandled errors from the Worker and the browser and monitors the keep-alive (S-07, PR #140), and database, PostgREST and set-password Auth faults the app handles, grouped by step and error code (S-08, PR #153); other Auth faults, invitation failures and errors after streaming starts are not reported yet (`context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md`, S-09 to S-11); no alerting (FR-019, parked).
 
 ## Foundations
 
@@ -193,9 +193,9 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Parallel with:** S-02, S-03, S-06, S-11
 - **Blockers:** —
 - **Unknowns:**
-  - Which error fields can be sent without user data (PostgREST `details` can echo row values), and does grouping keep an outage inside the free plan's 5,000 events a month? — Owner: research. Block: no.
+  - Which error fields can be sent without user data (PostgREST `details` can echo row values), and does grouping keep an outage inside the free plan's 5,000 events a month? — Owner: research. Block: no. Resolved on #143: only the code, an email-masked hint and the message; non-`Error` inputs are wrapped so `details` is never sent; one issue per step and code, and Sentry's Dedupe drops repeats within an isolate.
 - **Risk:** The core of the audit; first because S-09 and S-10 route their system faults through its helper and policy. Too broad a capture rule floods the event budget, so it reports system faults only (decided 2026-10-12).
-- **Status:** in-progress
+- **Status:** done
 
 ### S-09: Auth faults visible
 
@@ -209,7 +209,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Which Auth error codes mean the link really expired or was used, and which are system faults? — Owner: research. Block: no.
 - **Risk:** Two of the three critical findings (X1, A1). It must not reveal which accounts exist, and must not report the normal signed-out case, or it becomes noise.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-10: MO invitation failure surfaced
 
@@ -223,7 +223,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Does MO accept a new response field (`invitation_sent`) and a new error code without a change on its side, and should it alert on them? — Owner: user. Block: no.
 - **Risk:** The third critical finding (D1): today a user can get an account with no invitation and nobody knows. It changes the delivery contract, so `docs/mo-delivery-contract.md` changes with it; re-inviting or retrying stays parked. Touches the delivery route that S-02 tests, so sequence the two branches if they overlap.
-- **Status:** proposed
+- **Status:** ready
 
 ### S-11: Streamed render errors captured
 
@@ -250,9 +250,9 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 | S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
 | S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
 | S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                        | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
-| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors             | Report handled system faults to Sentry            | yes                   | Run `/10x-plan report-handled-errors`             |
-| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility             | Make Auth faults visible                          | no                    | After S-08                                        |
-| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible     | Surface MO invitation failures                    | no                    | After S-08; changes the MO contract               |
+| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors             | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                       |
+| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility             | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`             |
+| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible     | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route    |
 | S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors            | Capture errors in streamed pages                  | yes                   | Independent; any time                             |
 
 ## Open Roadmap Questions
