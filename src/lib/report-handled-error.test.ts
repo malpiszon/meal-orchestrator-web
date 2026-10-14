@@ -164,7 +164,8 @@ describe("reportHandledError", () => {
     expect(reported).toBeInstanceOf(Error);
     expect((reported as Error).message).toBe("load failed: 23505 duplicate key");
     expect((reported as Error).cause).toBe(failure);
-    expect(JSON.stringify(reported)).not.toContain("secret-details");
+    // Sentry sends an Error's message and own fields; the plain object stays only in `cause`, which it doesn't send.
+    expect(Object.keys(reported as Error)).toEqual([]);
     expect(error).toHaveBeenCalledWith("load failed: 23505 duplicate key", undefined);
   });
 });
