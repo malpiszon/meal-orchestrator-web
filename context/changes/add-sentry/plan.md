@@ -357,4 +357,4 @@ No database changes. Rollout order: create the Sentry project (Phase 1), set the
 - [x] 3.10 Sentry shows a release named after the merge SHA with artifacts
 - [x] 3.11 Production browser test error has a source-mapped trace and no personal data
 - [x] 3.12 A production `.js.map` URL answers 404
-- [ ] 3.13 The `supabase-keepalive` monitor shows an OK check-in from production
+- [x] 3.13 The `supabase-keepalive` monitor shows an OK check-in from production
