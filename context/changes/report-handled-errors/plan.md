@@ -327,12 +327,12 @@ No database migration and no new secret. Behaviour changes only on failure paths
 
 #### Automated
 
-- [x] 2.1 A6 classifier tests pass: `npx vitest run src/lib/set-password.test.ts`
-- [x] 2.2 No in-scope site still logs a handled system fault with a bare `console.error`
-- [x] 2.3 All unit tests pass: `npm test`
-- [x] 2.4 Lint and type-checked rules pass: `npm run lint`
-- [x] 2.5 Production build succeeds: `npm run build`
-- [x] 2.6 Smoke test passes against a preview on port 4322: `npm run smoke`
+- [x] 2.1 A6 classifier tests pass: `npx vitest run src/lib/set-password.test.ts` — 1f2ed8a
+- [x] 2.2 No in-scope site still logs a handled system fault with a bare `console.error` — 1f2ed8a
+- [x] 2.3 All unit tests pass: `npm test` — 1f2ed8a
+- [x] 2.4 Lint and type-checked rules pass: `npm run lint` — 1f2ed8a
+- [x] 2.5 Production build succeeds: `npm run build` — 1f2ed8a
+- [x] 2.6 Smoke test passes against a preview on port 4322: `npm run smoke` — 1f2ed8a
 
 ### Phase 3: Docs and runtime proof
 

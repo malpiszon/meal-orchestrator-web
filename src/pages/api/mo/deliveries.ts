@@ -155,7 +155,7 @@ export const POST: APIRoute = async ({ request }) => {
   if (result.error) {
     reportHandledError(
       "mo_delivery.ingest",
-      new Error(`ingest_weekly_plan failed: ${result.error.message}`, { cause: result.error }),
+      new Error(`ingest_weekly_plan failed: ${result.error.code} ${result.error.message}`, { cause: result.error }),
     );
     return json({ error: "storage_failed" }, 500);
   }
