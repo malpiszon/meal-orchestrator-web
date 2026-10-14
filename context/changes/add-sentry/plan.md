@@ -258,6 +258,8 @@ Make the deploy job the only place the DSN exists, tag events with the git SHA, 
 
 **Implementation Note**: The first three manual items need the merge; record them on the phase sub-issue and close it once they're ticked.
 
+**Addendum (impl-review, 2026-10-14)**: The `ci` job's bundle check fails at 64 MiB uncompressed (Cloudflare's size limit, read from `Total Upload`), not at the 3 MB gzip this phase planned. Its job is to catch a bundling error from the Sentry packages; the Worker is 2608 KiB / 590 KiB gzip, well under the free-plan 3 MB gzip limit, which Cloudflare enforces at deploy anyway.
+
 ---
 
 ## Testing Strategy
