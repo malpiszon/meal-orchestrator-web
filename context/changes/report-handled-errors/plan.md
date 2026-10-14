@@ -107,7 +107,7 @@ The tests mock `@sentry/cloudflare` and the console. They cover:
 - the fingerprint and tags;
 - a hint containing an email being masked;
 - an over-long hint being cut;
-- a `details` field never appearing in the capture arguments or the log line.
+- a `details` field never appearing in the capture context (the second `captureException` argument) or the log line. The captured `Error` may still hold `details` in its `cause`; Sentry sends a linked `Error` cause as type and message only and never sends a plain-object one, which the manual probe's envelope check covers.
 
 #### 2. Email masking export
 
