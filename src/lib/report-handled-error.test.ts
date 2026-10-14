@@ -59,6 +59,22 @@ describe("reportHandledError", () => {
     expect(capturedTags().error_code).toBe("unknown");
   });
 
+  it("stops at a cause that points back into the chain", () => {
+    const outer = new Error("outer");
+    const inner = Object.assign(new Error("inner", { cause: outer }), { code: "57014" });
+    outer.cause = inner;
+
+    reportHandledError("load", outer);
+
+    expect(capturedTags().error_code).toBe("57014");
+  });
+
+  it("ignores a code that isn't a string", () => {
+    reportHandledError("load", Object.assign(new Error("boom"), { code: 500, status: 503 }));
+
+    expect(capturedTags().error_code).toBe("http_503");
+  });
+
   it("prefers options.code over the error's own code", () => {
     reportHandledError("load", postgrestError({ code: "42P01", message: "relation missing" }), { code: "custom" });
 
@@ -132,5 +148,23 @@ describe("reportHandledError", () => {
     const logged = JSON.stringify(error.mock.calls);
     expect(captured).not.toContain("secret-details");
     expect(logged).not.toContain("secret-details");
+  });
+
+  it("wraps a plain-object error, so Sentry never serialises its details", () => {
+    // postgrest-js returns a database fault as a plain object, not an Error.
+    const failure = {
+      code: "23505",
+      message: "duplicate key",
+      details: "Key (email)=(secret-details@example.com) already exists",
+    };
+
+    reportHandledError("load", failure);
+
+    const reported = vi.mocked(captureException).mock.calls[0]?.[0];
+    expect(reported).toBeInstanceOf(Error);
+    expect((reported as Error).message).toBe("load failed: 23505 duplicate key");
+    expect((reported as Error).cause).toBe(failure);
+    expect(JSON.stringify(reported)).not.toContain("secret-details");
+    expect(error).toHaveBeenCalledWith("load failed: 23505 duplicate key", undefined);
   });
 });

@@ -42,6 +42,13 @@ function errorCode(chain: object[]): string {
   return status === undefined ? "unknown" : `http_${status}`;
 }
 
+/** A plain object's `message` (a PostgREST error response), else the value as text. */
+function messageOf(error: unknown): string {
+  const message: unknown =
+    typeof error === "object" && error !== null ? (error as { message?: unknown }).message : undefined;
+  return typeof message === "string" ? message : String(error);
+}
+
 /**
  * Reports a system fault the caller handles (and so never rethrows to the middleware): one log line
  * and one Sentry event grouped by `step` and the error's code. The code is `options.code`, else the
@@ -58,13 +65,17 @@ export function reportHandledError(
   const chain = causeChain(error);
   const code = options.code ?? errorCode(chain);
   const hint = firstString(chain, "hint");
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : messageOf(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
   const log = level === "warning" ? console.warn : console.error;
   log(`${step} failed: ${code} ${message}`, stack);
 
-  captureException(error, {
+  // Sentry serialises a non-Error input whole into `extra` (PostgREST `details` included), which
+  // `scrubEvent` doesn't touch; a cause that isn't an Error is never sent.
+  const reported = error instanceof Error ? error : new Error(`${step} failed: ${code} ${message}`, { cause: error });
+
+  captureException(reported, {
     level,
     fingerprint: ["handled", step, code],
     tags: {
