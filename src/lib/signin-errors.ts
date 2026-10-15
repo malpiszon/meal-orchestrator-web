@@ -1,3 +1,4 @@
+import { isAuthError } from "@supabase/supabase-js";
 import { classifyAuthError, SIGN_IN_QUIET_CODES } from "@/lib/auth-errors";
 
 /** The codes the auth routes put in `/auth/signin?error=…`. */
@@ -14,20 +15,16 @@ export const SIGN_IN_ERROR_MESSAGES: Record<SignInErrorCode, string> = {
   session_unavailable: "We couldn't check your sign-in. Try again in a moment.",
 };
 
-/** The part of a GoTrue (`AuthError`) error used to pick a code. */
-interface AuthErrorLike {
-  code?: string | null;
-}
-
 /** The redirect code for a Supabase Auth sign-in error; the raw message is for the logs only. */
-export function signInErrorCode(error: AuthErrorLike | null | undefined): SignInErrorCode {
-  // The same rule the route's log line uses, so the page and the log agree on a rate limit.
-  if (classifyAuthError(error, SIGN_IN_QUIET_CODES) === "rate_limit") return "rate_limited";
-  switch (error?.code) {
-    case "invalid_credentials":
-      return "invalid_credentials";
-    default:
+export function signInErrorCode(error: unknown): SignInErrorCode {
+  // The same rule the route's log line uses, so the page never blames the user for a reported fault.
+  switch (classifyAuthError(error, SIGN_IN_QUIET_CODES)) {
+    case "rate_limit":
+      return "rate_limited";
+    case "fault":
       return "sign_in_failed";
+    case "quiet":
+      return isAuthError(error) && error.code === "invalid_credentials" ? "invalid_credentials" : "sign_in_failed";
   }
 }
 

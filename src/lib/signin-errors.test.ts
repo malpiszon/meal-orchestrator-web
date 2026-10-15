@@ -1,13 +1,15 @@
-import { AuthApiError } from "@supabase/supabase-js";
+import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 import { SIGN_IN_ERROR_MESSAGES, signInErrorCode, signInErrorMessage } from "@/lib/signin-errors";
 
 describe("signInErrorCode", () => {
   it.each([
-    [{ code: "invalid_credentials" }, "invalid_credentials"],
-    [{ code: "unexpected_failure" }, "sign_in_failed"],
-    [{ code: null }, "sign_in_failed"],
-    [{}, "sign_in_failed"],
+    [new AuthApiError("Invalid login credentials", 400, "invalid_credentials"), "invalid_credentials"],
+    [new AuthApiError("Email not confirmed", 400, "email_not_confirmed"), "sign_in_failed"],
+    [new AuthApiError("boom", 400, "unexpected_failure"), "sign_in_failed"],
+    [new AuthApiError("boom", 500, "invalid_credentials"), "sign_in_failed"],
+    [new AuthRetryableFetchError("unavailable", 503), "sign_in_failed"],
+    [{ code: "invalid_credentials" }, "sign_in_failed"],
     [null, "sign_in_failed"],
   ])("maps %o to %s", (error, expected) => {
     expect(signInErrorCode(error)).toBe(expected);
