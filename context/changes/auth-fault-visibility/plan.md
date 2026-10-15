@@ -402,10 +402,10 @@ No database change. The new code is behind the existing deploy; nothing has to b
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass: `npm test`
-- [ ] 2.2 Lint passes: `npm run lint`
-- [ ] 2.3 Build passes: `npm run build`
-- [ ] 2.4 Smoke passes against a preview build on port 4322
+- [x] 2.1 Unit tests pass: `npm test`
+- [x] 2.2 Lint passes: `npm run lint`
+- [x] 2.3 Build passes: `npm run build`
+- [x] 2.4 Smoke passes against a preview build on port 4322
 
 ### Phase 3: Docs and runtime proof
 

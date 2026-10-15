@@ -1,4 +1,6 @@
 import type { APIRoute } from "astro";
+import { isAuthRateLimit } from "@/lib/auth-errors";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { FORGOT_PASSWORD_PATH, resetRequestSchema } from "@/lib/set-password";
 import { createStatelessClient } from "@/lib/supabase";
 import type { ForgotPasswordErrorCode } from "@/lib/forgot-password-errors";
@@ -29,10 +31,15 @@ export const POST: APIRoute = async (context) => {
 
   // No redirectTo: the recovery template builds the link from {{ .SiteURL }}.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email);
-  // Errors are logged but answered like a success: GoTrue only rate-limits (429) or fails to send
-  // for existing accounts, so showing them would reveal which emails have one.
+  // Every error is answered like a success, so the page never reveals which emails have an account.
+  // GoTrue answers 200 for an unknown email, so any error left is a rate limit or a system fault
+  // (such as an SMTP or provider outage), which is reported (`RESET_EMAIL_QUIET_CODES` is empty).
   if (error) {
-    console.error(`auth forgot-password: resetPasswordForEmail failed: ${error.code ?? error.status} ${error.message}`);
+    if (isAuthRateLimit(error)) {
+      console.warn(`auth forgot-password: rate limited (${error.code ?? error.status})`);
+    } else {
+      reportHandledError("auth.forgot_password", error);
+    }
   }
 
   return context.redirect(`${FORGOT_PASSWORD_PATH}?sent=1`);

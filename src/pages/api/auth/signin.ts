@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
+import { isAuthRateLimit, isAuthSystemFault, SIGN_IN_QUIET_CODES } from "@/lib/auth-errors";
+import { reportHandledError } from "@/lib/report-handled-error";
 import { createClient } from "@/lib/supabase";
 import { signInErrorCode } from "@/lib/signin-errors";
 
@@ -28,8 +30,15 @@ export const POST: APIRoute = async (context) => {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    // The raw Supabase message stays in the Worker logs; the URL only carries a fixed code.
-    console.error(`auth signin: signInWithPassword failed: ${error.code ?? error.status} ${error.message}`);
+    // A wrong password is the user's own, so only a system fault is reported. The raw Supabase
+    // message never reaches the URL, which only carries a fixed code.
+    if (isAuthRateLimit(error)) {
+      console.warn(`auth signin: rate limited (${error.code ?? error.status})`);
+    } else if (isAuthSystemFault(error, SIGN_IN_QUIET_CODES)) {
+      reportHandledError("auth.signin", error);
+    } else {
+      console.info(`auth signin: rejected (${error.code})`);
+    }
     return context.redirect(`/auth/signin?error=${signInErrorCode(error)}`);
   }
 

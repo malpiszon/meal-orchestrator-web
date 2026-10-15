@@ -92,6 +92,13 @@ export type SetPasswordForm = z.infer<typeof setPasswordFormSchema>;
 export const PASSWORD_RETRY_COOKIE = "mo-password-retry";
 export const PASSWORD_RETRY_MAX_AGE_SECONDS = 10 * 60;
 
+/**
+ * Shown on the set-password page when Auth couldn't check the emailed link (or the retry's session)
+ * because of a system fault: the link may still be good, so the user tries again rather than asking
+ * for a new one.
+ */
+export const LINK_CHECK_FAILED_MESSAGE = "Couldn't check your link. Try again in a moment.";
+
 const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 const RATE_LIMIT_MESSAGE = "Too many requests. Please try again later.";
 
