@@ -26,8 +26,6 @@ export function signInErrorCode(error: AuthErrorLike | null | undefined): SignIn
   switch (error?.code) {
     case "invalid_credentials":
       return "invalid_credentials";
-    case "over_request_rate_limit":
-      return "rate_limited";
     default:
       return "sign_in_failed";
   }

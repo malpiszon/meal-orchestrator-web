@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { isAuthRateLimit, isAuthSystemFault, RESET_EMAIL_QUIET_CODES } from "@/lib/auth-errors";
+import { classifyAuthError, RESET_EMAIL_QUIET_CODES } from "@/lib/auth-errors";
 import { reportHandledError } from "@/lib/report-handled-error";
 import { FORGOT_PASSWORD_PATH, resetRequestSchema } from "@/lib/set-password";
 import { createStatelessClient } from "@/lib/supabase";
@@ -36,12 +36,15 @@ export const POST: APIRoute = async (context) => {
   // rejects as malformed (`RESET_EMAIL_QUIET_CODES`), or a system fault (such as an SMTP or provider
   // outage), which is reported.
   if (error) {
-    if (isAuthRateLimit(error)) {
-      console.warn(`auth forgot-password: rate limited (${error.code ?? error.status})`);
-    } else if (isAuthSystemFault(error, RESET_EMAIL_QUIET_CODES)) {
-      reportHandledError("auth.forgot_password", error);
-    } else {
-      console.info(`auth forgot-password: rejected (${error.code})`);
+    switch (classifyAuthError(error, RESET_EMAIL_QUIET_CODES)) {
+      case "fault":
+        reportHandledError("auth.forgot_password", error);
+        break;
+      case "rate_limit":
+        console.warn(`auth forgot-password: rate limited (${error.code ?? error.status})`);
+        break;
+      case "quiet":
+        console.info(`auth forgot-password: rejected (${error.code})`);
     }
   }
 

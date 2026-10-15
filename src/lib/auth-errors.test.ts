@@ -8,6 +8,7 @@ import {
 } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 import {
+  classifyAuthError,
   isAuthRateLimit,
   isAuthSystemFault,
   RESET_EMAIL_QUIET_CODES,
@@ -105,5 +106,27 @@ describe("isAuthRateLimit", () => {
 
   it("is false for a non-AuthError", () => {
     expect(isAuthRateLimit(Object.assign(new Error("slow down"), { status: 429 }))).toBe(false);
+  });
+});
+
+describe("classifyAuthError", () => {
+  it("is fault for a system fault", () => {
+    expect(classifyAuthError(new AuthRetryableFetchError("unavailable", 503), SIGN_IN_QUIET_CODES)).toBe("fault");
+    expect(classifyAuthError(new Error("boom"), SIGN_IN_QUIET_CODES)).toBe("fault");
+  });
+
+  it.each(RATE_LIMIT_CODES)("is rate_limit for a 429 with %s", (code) => {
+    expect(classifyAuthError(new AuthApiError("slow down", 429, code), RESET_EMAIL_QUIET_CODES)).toBe("rate_limit");
+  });
+
+  it("is quiet for a quiet code and a missing session", () => {
+    expect(classifyAuthError(new AuthApiError("expired", 403, "otp_expired"), VERIFY_OTP_QUIET_CODES)).toBe("quiet");
+    expect(classifyAuthError(new AuthSessionMissingError(), SESSION_QUIET_CODES)).toBe("quiet");
+  });
+
+  it("puts a fault before a rate limit: a rate-limit code with no status is a fault", () => {
+    expect(classifyAuthError(new AuthError("odd", undefined, "over_request_rate_limit"), SIGN_IN_QUIET_CODES)).toBe(
+      "fault",
+    );
   });
 });

@@ -5,7 +5,6 @@ import { SIGN_IN_ERROR_MESSAGES, signInErrorCode, signInErrorMessage } from "@/l
 describe("signInErrorCode", () => {
   it.each([
     [{ code: "invalid_credentials" }, "invalid_credentials"],
-    [{ code: "over_request_rate_limit" }, "rate_limited"],
     [{ code: "unexpected_failure" }, "sign_in_failed"],
     [{ code: null }, "sign_in_failed"],
     [{}, "sign_in_failed"],
@@ -15,6 +14,7 @@ describe("signInErrorCode", () => {
   });
 
   it.each([
+    [new AuthApiError("slow down", 429, "over_request_rate_limit")],
     [new AuthApiError("slow down", 429, "over_email_send_rate_limit")],
     [new AuthApiError("slow down", 429, undefined)],
   ])("maps the Auth rate limit %o to rate_limited, as the route logs it", (error) => {

@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { isAuthRateLimit, isAuthSystemFault, VERIFY_OTP_QUIET_CODES } from "@/lib/auth-errors";
-import { readSessionUser } from "@/lib/auth-session";
+import { classifyAuthError, VERIFY_OTP_QUIET_CODES } from "@/lib/auth-errors";
+import { readSessionUser } from "@/lib/services/auth-session";
 import { reportHandledError } from "@/lib/report-handled-error";
 import {
   FORGOT_PASSWORD_PATH,
@@ -67,16 +67,17 @@ export const POST: APIRoute = async (context) => {
     if (error) {
       // Only a dead link is "expired". A rate limit or a fault keeps the link, which is still unused,
       // and sets no retry cookie, since no token was verified.
-      if (isAuthRateLimit(error)) {
-        console.warn(`auth set-password: rate limited (${error.code ?? error.status}, ${type})`);
-        return context.redirect(setPasswordUrl({ link: { token_hash, type }, error: passwordErrorMessage(error) }));
+      switch (classifyAuthError(error, VERIFY_OTP_QUIET_CODES)) {
+        case "fault":
+          reportHandledError("auth.set_password.verify_otp", error);
+          return context.redirect(setPasswordUrl({ link: { token_hash, type }, error: LINK_CHECK_FAILED_MESSAGE }));
+        case "rate_limit":
+          console.warn(`auth set-password: rate limited (${error.code ?? error.status}, ${type})`);
+          return context.redirect(setPasswordUrl({ link: { token_hash, type }, error: passwordErrorMessage(error) }));
+        case "quiet":
+          console.info(`auth set-password: link not usable (${error.code}, ${type})`);
+          return invalidLink();
       }
-      if (isAuthSystemFault(error, VERIFY_OTP_QUIET_CODES)) {
-        reportHandledError("auth.set_password.verify_otp", error);
-        return context.redirect(setPasswordUrl({ link: { token_hash, type }, error: LINK_CHECK_FAILED_MESSAGE }));
-      }
-      console.info(`auth set-password: link not usable (${error.code}, ${type})`);
-      return invalidLink();
     }
     verifiedUserId = data.user?.id;
   } else {

@@ -17,3 +17,13 @@ From `reviews/impl-review-phase-2.md`.
 ## F1: Phase 3, `docs/deployment.md` § Known risks and `docs/api.md`
 
 An Auth outage that hits the token-less set-password retry produces 3 events in 2 issues. `auth.session` fires for the POST (middleware), then `auth.set_password.session` fires for the route's own `getUser()`, then `auth.session` fires again for the redirected GET. This was accepted rather than adding a locals flag. In `docs/api.md`, write that the page then shows "Couldn't check your link. Try again in a moment." with no form, plus the "Ask for a new link" fallback, and that a reload after the outage brings the form back.
+
+From `reviews/impl-review.md` (full plan).
+
+## F4: after this change, route-level tests for the Auth fault redirects
+
+The routes' handling of each `classifyAuthError` kind is guarded only by the Phase 3 manual probe. Add tests, either for the routes themselves or for a lib helper that picks the redirect, covering: a `verifyOtp` fault keeps the link with `LINK_CHECK_FAILED_MESSAGE` and sets no retry cookie; a fault on the token-less path gives `LINK_CHECK_FAILED_MESSAGE` with no link; the middleware adds `?error=session_unavailable` only when `fault` is true.
+
+## F10: outside S-09, set-password errors as fixed codes
+
+`src/pages/auth/set-password.astro` shows whatever text `?error=` carries. React escapes it, so it isn't an XSS, but a crafted link can put any message on the real domain, and `LINK_CHECK_FAILED_MESSAGE` is matched by text equality on that channel. Move the route's redirects to error codes mapped to fixed copy, as `src/lib/signin-errors.ts` does ("the page never shows text taken from the URL"). This predates S-09, so it needs its own roadmap item or issue.

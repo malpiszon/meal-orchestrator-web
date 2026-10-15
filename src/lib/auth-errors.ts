@@ -59,3 +59,12 @@ export function isAuthSystemFault(error: unknown, quietCodes: ReadonlySet<string
   if (!error.code) return !isAuthSessionMissingError(error);
   return !quietCodes.has(error.code);
 }
+
+/** How a call site handles an Auth error: report a fault, warn on a rate limit, or log a quiet outcome. */
+export type AuthErrorKind = "fault" | "rate_limit" | "quiet";
+
+/** The one decision every Auth call site switches on: `isAuthSystemFault` first, then `isAuthRateLimit`. */
+export function classifyAuthError(error: unknown, quietCodes: ReadonlySet<string>): AuthErrorKind {
+  if (isAuthSystemFault(error, quietCodes)) return "fault";
+  return isAuthRateLimit(error) ? "rate_limit" : "quiet";
+}

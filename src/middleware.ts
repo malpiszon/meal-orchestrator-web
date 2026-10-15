@@ -1,6 +1,6 @@
 import { captureException } from "@sentry/cloudflare";
 import { defineMiddleware } from "astro:middleware";
-import { readSessionUser } from "@/lib/auth-session";
+import { readSessionUser } from "@/lib/services/auth-session";
 import { createClient } from "@/lib/supabase";
 
 const PROTECTED_ROUTES = ["/dashboard", "/history"];
@@ -18,19 +18,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     const supabase = createClient(context.request.headers, context.cookies);
 
-    // A session-check fault (an Auth outage) still reads as signed out, but is reported and named on the redirect.
-    let sessionFault = false;
+    // A session-check fault (an Auth outage, reported) or rate limit still reads as signed out, but is
+    // named on the redirect so the sign-in page can say why.
+    let signInNotice = "";
     if (supabase) {
-      const { user, fault } = await readSessionUser(supabase, "auth.session");
+      const { user, fault, rateLimited } = await readSessionUser(supabase, "auth.session");
       context.locals.user = user;
-      sessionFault = fault;
+      if (fault) signInNotice = "?error=session_unavailable";
+      else if (rateLimited) signInNotice = "?error=rate_limited";
     } else {
       context.locals.user = null;
     }
 
     if (PROTECTED_ROUTES.some((route) => context.url.pathname.startsWith(route))) {
       if (!context.locals.user) {
-        return context.redirect(sessionFault ? "/auth/signin?error=session_unavailable" : "/auth/signin");
+        return context.redirect(`/auth/signin${signInNotice}`);
       }
     }
 

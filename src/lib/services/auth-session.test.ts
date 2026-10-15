@@ -7,7 +7,7 @@ import {
   type User,
 } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { readSessionUser } from "@/lib/auth-session";
+import { readSessionUser } from "@/lib/services/auth-session";
 
 vi.mock("@sentry/cloudflare", () => ({ captureException: vi.fn() }));
 
@@ -38,7 +38,11 @@ describe("readSessionUser", () => {
   it("returns the user", async () => {
     const supabase = fakeClient(() => Promise.resolve({ data: { user: USER }, error: null }));
 
-    await expect(readSessionUser(supabase, "auth.session")).resolves.toEqual({ user: USER, fault: false });
+    await expect(readSessionUser(supabase, "auth.session")).resolves.toEqual({
+      user: USER,
+      fault: false,
+      rateLimited: false,
+    });
     expect(captureException).not.toHaveBeenCalled();
   });
 
@@ -46,16 +50,33 @@ describe("readSessionUser", () => {
     await expect(readSessionUser(failingWith(new AuthSessionMissingError()), "auth.session")).resolves.toEqual({
       user: null,
       fault: false,
+      rateLimited: false,
     });
     expect(captureException).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it.each(["bad_jwt", "no_authorization"])("reads %s as signed out with a warn line, no report", async (code) => {
+    const failure = new AuthApiError("refused", 403, code);
+
+    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
+      user: null,
+      fault: false,
+      rateLimited: false,
+    });
+    expect(captureException).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(`auth session: signed out by ${code}`);
+  });
+
   it("reads a failed refresh as signed out, with no log or report", async () => {
     const failure = new AuthApiError("Invalid Refresh Token: Refresh Token Not Found", 400, "refresh_token_not_found");
 
-    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({ user: null, fault: false });
+    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
+      user: null,
+      fault: false,
+      rateLimited: false,
+    });
     expect(captureException).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
@@ -64,7 +85,11 @@ describe("readSessionUser", () => {
   it("reports a 503 under the step and flags the fault", async () => {
     const failure = new AuthRetryableFetchError("Service Unavailable", 503);
 
-    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({ user: null, fault: true });
+    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
+      user: null,
+      fault: true,
+      rateLimited: false,
+    });
     expect(captureException).toHaveBeenCalledTimes(1);
     expect(captureException).toHaveBeenCalledWith(
       failure,
@@ -78,7 +103,11 @@ describe("readSessionUser", () => {
   it("logs a rate limit at warn, with no report", async () => {
     const failure = new AuthApiError("Request rate limit reached", 429, "over_request_rate_limit");
 
-    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({ user: null, fault: false });
+    await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
+      user: null,
+      fault: false,
+      rateLimited: true,
+    });
     expect(warn).toHaveBeenCalledWith("auth session: rate limited (over_request_rate_limit)");
     expect(captureException).not.toHaveBeenCalled();
   });
@@ -87,7 +116,11 @@ describe("readSessionUser", () => {
     const failure = new Error("boom");
     const supabase = fakeClient(() => Promise.reject(failure));
 
-    await expect(readSessionUser(supabase, "auth.session")).resolves.toEqual({ user: null, fault: true });
+    await expect(readSessionUser(supabase, "auth.session")).resolves.toEqual({
+      user: null,
+      fault: true,
+      rateLimited: false,
+    });
     expect(captureException).toHaveBeenCalledTimes(1);
     expect(captureException).toHaveBeenCalledWith(
       failure,
