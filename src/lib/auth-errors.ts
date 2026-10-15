@@ -1,6 +1,14 @@
-import { isAuthError, isAuthRetryableFetchError, isAuthSessionMissingError } from "@supabase/supabase-js";
+import {
+  isAuthError,
+  isAuthRefreshDiscardedError,
+  isAuthRetryableFetchError,
+  isAuthSessionMissingError,
+} from "@supabase/supabase-js";
 
-/** `getUser()` codes that mean "signed out" (an expired, revoked or refused session), not an outage. */
+/**
+ * `getUser()` codes that mean "signed out" (an expired, revoked or refused session), not an outage.
+ * `conflict` is a 409 from concurrent refreshes of the same session.
+ */
 export const SESSION_QUIET_CODES: ReadonlySet<string> = new Set([
   "refresh_token_not_found",
   "refresh_token_already_used",
@@ -10,6 +18,7 @@ export const SESSION_QUIET_CODES: ReadonlySet<string> = new Set([
   "user_not_found",
   "user_banned",
   "no_authorization",
+  "conflict",
 ]);
 
 /** `verifyOtp` codes for a dead link: GoTrue answers `otp_expired` for an expired, used or made-up token. */
@@ -40,6 +49,8 @@ export function isAuthRateLimit(error: unknown): boolean {
 export function isAuthSystemFault(error: unknown, quietCodes: ReadonlySet<string>): boolean {
   if (!isAuthError(error)) return true;
   if (isAuthRetryableFetchError(error)) return true;
+  // A refresh that raced a sign-out; auth-js itself treats it as a no-op.
+  if (isAuthRefreshDiscardedError(error)) return false;
   if (error.status === undefined || error.status === 0 || error.status >= 500) return true;
   if (isAuthRateLimit(error)) return false;
   if (!error.code) return !isAuthSessionMissingError(error);

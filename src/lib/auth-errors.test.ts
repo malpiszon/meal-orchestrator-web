@@ -1,5 +1,7 @@
 import {
   AuthApiError,
+  AuthError,
+  AuthRefreshDiscardedError,
   AuthRetryableFetchError,
   AuthSessionMissingError,
   AuthUnknownError,
@@ -33,6 +35,10 @@ describe("isAuthSystemFault", () => {
       expect(isAuthSystemFault(new AuthSessionMissingError(), quietCodes)).toBe(false);
     });
 
+    it("treats a refresh discarded by a concurrent sign-out as normal", () => {
+      expect(isAuthSystemFault(new AuthRefreshDiscardedError(), quietCodes)).toBe(false);
+    });
+
     it.each(RATE_LIMIT_CODES)("treats a 429 %s as normal", (code) => {
       expect(isAuthSystemFault(new AuthApiError("slow down", 429, code), quietCodes)).toBe(false);
     });
@@ -64,6 +70,14 @@ describe("isAuthSystemFault", () => {
     expect(isAuthSystemFault(new AuthApiError("invalid type", 400, "validation_failed"), VERIFY_OTP_QUIET_CODES)).toBe(
       true,
     );
+  });
+
+  it("treats a 429 with no code as a rate limit, not a fault", () => {
+    expect(isAuthSystemFault(new AuthApiError("slow down", 429, undefined), SESSION_QUIET_CODES)).toBe(false);
+  });
+
+  it("treats an Auth error with no status as a fault, even with a quiet code", () => {
+    expect(isAuthSystemFault(new AuthError("odd", undefined, "otp_expired"), VERIFY_OTP_QUIET_CODES)).toBe(true);
   });
 
   it("treats a quiet code as a fault when it comes with a 5xx", () => {

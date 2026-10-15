@@ -393,10 +393,10 @@ No database change. The new code is behind the existing deploy; nothing has to b
 
 #### Automated
 
-- [x] 1.1 Unit tests pass: `npm test`
-- [x] 1.2 Lint passes: `npm run lint`
-- [x] 1.3 Build passes: `npm run build`
-- [x] 1.4 Smoke passes against a preview build on port 4322
+- [x] 1.1 Unit tests pass: `npm test` — eca3a17
+- [x] 1.2 Lint passes: `npm run lint` — eca3a17
+- [x] 1.3 Build passes: `npm run build` — eca3a17
+- [x] 1.4 Smoke passes against a preview build on port 4322 — eca3a17
 
 ### Phase 2: Auth routes
 
