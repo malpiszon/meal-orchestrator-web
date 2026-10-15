@@ -1,6 +1,6 @@
 /** The codes the auth routes put in `/auth/signin?error=…`. */
 export type SignInErrorCode =
-  "invalid_credentials" | "rate_limited" | "not_configured" | "sign_in_failed" | "invalid_link";
+  "invalid_credentials" | "rate_limited" | "not_configured" | "sign_in_failed" | "invalid_link" | "session_unavailable";
 
 /** Fixed text per code. The page never shows text taken from the URL. */
 export const SIGN_IN_ERROR_MESSAGES: Record<SignInErrorCode, string> = {
@@ -9,6 +9,7 @@ export const SIGN_IN_ERROR_MESSAGES: Record<SignInErrorCode, string> = {
   not_configured: "Sign-in isn't configured on this server.",
   sign_in_failed: "Couldn't sign you in. Try again in a moment.",
   invalid_link: "This link is invalid or has expired. Ask for a new one.",
+  session_unavailable: "We couldn't check your sign-in. Try again in a moment.",
 };
 
 /** The part of a GoTrue (`AuthError`) error used to pick a code. */

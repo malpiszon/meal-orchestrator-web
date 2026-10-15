@@ -21,13 +21,21 @@ describe("signInErrorMessage", () => {
     ["not_configured", "Sign-in isn't configured on this server."],
     ["sign_in_failed", "Couldn't sign you in. Try again in a moment."],
     ["invalid_link", "This link is invalid or has expired. Ask for a new one."],
+    ["session_unavailable", "We couldn't check your sign-in. Try again in a moment."],
   ])("maps %s to its fixed message", (code, expected) => {
     expect(signInErrorMessage(code)).toBe(expected);
   });
 
   it("has a message for every code", () => {
     expect(Object.keys(SIGN_IN_ERROR_MESSAGES).sort()).toEqual(
-      ["invalid_credentials", "invalid_link", "not_configured", "rate_limited", "sign_in_failed"].sort(),
+      [
+        "invalid_credentials",
+        "invalid_link",
+        "not_configured",
+        "rate_limited",
+        "session_unavailable",
+        "sign_in_failed",
+      ].sort(),
     );
   });
 
