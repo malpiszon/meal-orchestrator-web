@@ -1,3 +1,5 @@
+import { isAuthRateLimit } from "@/lib/auth-errors";
+
 /** The codes the auth routes put in `/auth/signin?error=…`. */
 export type SignInErrorCode =
   "invalid_credentials" | "rate_limited" | "not_configured" | "sign_in_failed" | "invalid_link" | "session_unavailable";
@@ -19,6 +21,8 @@ interface AuthErrorLike {
 
 /** The redirect code for a Supabase Auth sign-in error; the raw message is for the logs only. */
 export function signInErrorCode(error: AuthErrorLike | null | undefined): SignInErrorCode {
+  // Any 429 or `*_rate_limit` code, the same rule the route's log line uses.
+  if (isAuthRateLimit(error)) return "rate_limited";
   switch (error?.code) {
     case "invalid_credentials":
       return "invalid_credentials";

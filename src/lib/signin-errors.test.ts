@@ -1,3 +1,4 @@
+import { AuthApiError } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 import { SIGN_IN_ERROR_MESSAGES, signInErrorCode, signInErrorMessage } from "@/lib/signin-errors";
 
@@ -11,6 +12,13 @@ describe("signInErrorCode", () => {
     [null, "sign_in_failed"],
   ])("maps %o to %s", (error, expected) => {
     expect(signInErrorCode(error)).toBe(expected);
+  });
+
+  it.each([
+    [new AuthApiError("slow down", 429, "over_email_send_rate_limit")],
+    [new AuthApiError("slow down", 429, undefined)],
+  ])("maps the Auth rate limit %o to rate_limited, as the route logs it", (error) => {
+    expect(signInErrorCode(error)).toBe("rate_limited");
   });
 });
 

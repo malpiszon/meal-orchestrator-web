@@ -31,8 +31,11 @@ export const SIGN_IN_QUIET_CODES: ReadonlySet<string> = new Set([
   "user_banned",
 ]);
 
-/** `resetPasswordForEmail` answers 200 for an unknown email, so no code is normal there. */
-export const RESET_EMAIL_QUIET_CODES: ReadonlySet<string> = new Set();
+/**
+ * `resetPasswordForEmail` answers 200 for an unknown email; only an address GoTrue rejects as
+ * malformed (checked before any account lookup, so it reveals nothing) is the user's own.
+ */
+export const RESET_EMAIL_QUIET_CODES: ReadonlySet<string> = new Set(["email_address_invalid"]);
 
 /** Whether an Auth error is a rate limit: status 429, or a code such as `over_request_rate_limit`. */
 export function isAuthRateLimit(error: unknown): boolean {
