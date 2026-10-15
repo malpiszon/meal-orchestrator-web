@@ -1,4 +1,4 @@
-import { isAuthRateLimit } from "@/lib/auth-errors";
+import { classifyAuthError, SIGN_IN_QUIET_CODES } from "@/lib/auth-errors";
 
 /** The codes the auth routes put in `/auth/signin?error=…`. */
 export type SignInErrorCode =
@@ -21,8 +21,8 @@ interface AuthErrorLike {
 
 /** The redirect code for a Supabase Auth sign-in error; the raw message is for the logs only. */
 export function signInErrorCode(error: AuthErrorLike | null | undefined): SignInErrorCode {
-  // Any 429 or `*_rate_limit` code, the same rule the route's log line uses.
-  if (isAuthRateLimit(error)) return "rate_limited";
+  // The same rule the route's log line uses, so the page and the log agree on a rate limit.
+  if (classifyAuthError(error, SIGN_IN_QUIET_CODES) === "rate_limit") return "rate_limited";
   switch (error?.code) {
     case "invalid_credentials":
       return "invalid_credentials";

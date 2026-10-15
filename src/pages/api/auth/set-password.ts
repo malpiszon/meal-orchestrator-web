@@ -82,8 +82,8 @@ export const POST: APIRoute = async (context) => {
     verifiedUserId = data.user?.id;
   } else {
     // 3. No token: only the user whose save was just rejected may retry, not any signed-in session.
-    const { user, fault } = await readSessionUser(supabase, "auth.set_password.session");
-    if (fault) {
+    const { user, failure } = await readSessionUser(supabase, "auth.set_password.session");
+    if (failure !== null) {
       return context.redirect(setPasswordUrl({ error: LINK_CHECK_FAILED_MESSAGE }));
     }
     if (!user || context.cookies.get(PASSWORD_RETRY_COOKIE)?.value !== user.id) {

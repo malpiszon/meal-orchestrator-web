@@ -81,7 +81,7 @@ Success criteria: prettier and the `S-09` grep pass; `npm test` 351/351; lint ha
 - **Location**: src/middleware.ts:33, src/lib/auth-session.ts:29-32
 - **Detail**: A 429 returns `fault: false`, so the redirect goes to plain `/auth/signin`. On a refresh of an expired access token, auth-js also removes the session for a non-retryable error. The user looks signed out, then likely gets `rate_limited` on the next sign-in.
 - **Fix**: Follow-up: return a `rateLimited` flag from `readSessionUser` and redirect with the existing `?error=rate_limited` (still no Sentry event).
-- **Decision**: FIXED — `readSessionUser` returns `rateLimited`; the middleware redirects protected pages to `/auth/signin?error=rate_limited` (no Sentry event); test updated and break-checked red; `docs/api.md` § Pages updated
+- **Decision**: FIXED — `readSessionUser` returns `failure: "fault" | "rate_limit" | null`; a rate limit sends protected pages to `?error=session_unavailable` and the token-less retry to "Couldn't check your link" (the `rate_limited` copy blamed sign-in attempts the user never made; follow-up `/code-review` of 34609e1); only a fault is reported; test break-checked red; `docs/api.md` updated
 
 ### F6 — `bad_jwt` and `no_authorization` at the session check can hide a config fault
 
@@ -132,3 +132,7 @@ Success criteria: prettier and the `S-09` grep pass; `npm test` 351/351; lint ha
 - **Detail**: Escaped, so it isn't an XSS, but a crafted link can show any message on the real domain. This change adds a text-equality check on that channel. Sign-in uses fixed codes instead.
 - **Fix**: Follow-up outside S-09: move set-password to error codes mapped to fixed copy, as in `signin-errors.ts`.
 - **Decision**: FIXED — queued as a follow-up outside S-09 in `follow-ups/review-fixes.md`
+
+## Follow-up code review of 34609e1
+
+`/code-review medium 34609e1` raised 8 items. Fixed: the token-less retry ignored a rate-limited session check (it said "expired"); a rate-limited session check showed "Too many sign-in attempts"; `readSessionUser` returned two exclusive booleans (now one `failure` kind); `signInErrorCode` now uses `classifyAuthError`, so the page and the log agree. Dismissed: fault-before-rate-limit precedence (intended, tested), plain `{code}` objects no longer map to `rate_limited` (F9), `getUser()` on every request (pre-existing, known risk), the per-site switch blocks (log lines differ on purpose).

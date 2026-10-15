@@ -40,8 +40,7 @@ describe("readSessionUser", () => {
 
     await expect(readSessionUser(supabase, "auth.session")).resolves.toEqual({
       user: USER,
-      fault: false,
-      rateLimited: false,
+      failure: null,
     });
     expect(captureException).not.toHaveBeenCalled();
   });
@@ -49,8 +48,7 @@ describe("readSessionUser", () => {
   it("reads a missing session as signed out, with no log or report", async () => {
     await expect(readSessionUser(failingWith(new AuthSessionMissingError()), "auth.session")).resolves.toEqual({
       user: null,
-      fault: false,
-      rateLimited: false,
+      failure: null,
     });
     expect(captureException).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
@@ -62,8 +60,7 @@ describe("readSessionUser", () => {
 
     await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
       user: null,
-      fault: false,
-      rateLimited: false,
+      failure: null,
     });
     expect(captureException).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(`auth session: signed out by ${code}`);
@@ -74,8 +71,7 @@ describe("readSessionUser", () => {
 
     await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
       user: null,
-      fault: false,
-      rateLimited: false,
+      failure: null,
     });
     expect(captureException).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
@@ -87,8 +83,7 @@ describe("readSessionUser", () => {
 
     await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
       user: null,
-      fault: true,
-      rateLimited: false,
+      failure: "fault",
     });
     expect(captureException).toHaveBeenCalledTimes(1);
     expect(captureException).toHaveBeenCalledWith(
@@ -105,8 +100,7 @@ describe("readSessionUser", () => {
 
     await expect(readSessionUser(failingWith(failure), "auth.session")).resolves.toEqual({
       user: null,
-      fault: false,
-      rateLimited: true,
+      failure: "rate_limit",
     });
     expect(warn).toHaveBeenCalledWith("auth session: rate limited (over_request_rate_limit)");
     expect(captureException).not.toHaveBeenCalled();
@@ -118,8 +112,7 @@ describe("readSessionUser", () => {
 
     await expect(readSessionUser(supabase, "auth.session")).resolves.toEqual({
       user: null,
-      fault: true,
-      rateLimited: false,
+      failure: "fault",
     });
     expect(captureException).toHaveBeenCalledTimes(1);
     expect(captureException).toHaveBeenCalledWith(
