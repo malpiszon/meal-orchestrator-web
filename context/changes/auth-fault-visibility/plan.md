@@ -411,18 +411,18 @@ No database change. The new code is behind the existing deploy; nothing has to b
 
 #### Automated
 
-- [ ] 3.1 Formatting passes: `npx prettier --check docs/deployment.md docs/api.md`
-- [ ] 3.2 No doc still promises S-09 for auth failures
+- [x] 3.1 Formatting passes: `npx prettier --check docs/deployment.md docs/api.md`
+- [x] 3.2 No doc still promises S-09 for auth failures
 
 #### Manual
 
-- [ ] 3.3 Probe setup: preview build, local listener, 503 proxy, test user signed in
-- [ ] 3.4 Session outage reported as `auth.session` and shown as `session_unavailable`; recovers on reload
-- [ ] 3.5 Anonymous visit redirects plainly and sends nothing
-- [ ] 3.6 Link fault keeps the link with "try again" and reports `auth.set_password.verify_otp`
-- [ ] 3.7 Wrong password silent; sign-in fault reports `auth.signin`
-- [ ] 3.8 Reset-email fault keeps the success copy and reports `auth.forgot_password`
-- [ ] 3.9 Link-check fault fails open and reports `auth.link_check` at warning
-- [ ] 3.10 Missing service key reported once as `supabase.config`
-- [ ] 3.11 No email, token, password or cookie in any envelope
-- [ ] 3.12 Cleanup: proxy and listener stopped, `.dev.vars` restored
+- [x] 3.3 Probe setup: preview build, local listener, 503 proxy, test user signed in
+- [x] 3.4 Session outage reported as `auth.session` and shown as `session_unavailable`; recovers on reload
+- [x] 3.5 Anonymous visit redirects plainly and sends nothing
+- [x] 3.6 Link fault keeps the link with "try again" and reports `auth.set_password.verify_otp`
+- [x] 3.7 Wrong password silent; sign-in fault reports `auth.signin`
+- [x] 3.8 Reset-email fault keeps the success copy and reports `auth.forgot_password`
+- [x] 3.9 Link-check fault fails open and reports `auth.link_check` at warning
+- [x] 3.10 Missing service key reported once as `supabase.config`
+- [x] 3.11 No email, token, password or cookie in any envelope
+- [x] 3.12 Cleanup: proxy and listener stopped, `.dev.vars` restored
