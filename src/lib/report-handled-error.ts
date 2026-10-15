@@ -69,7 +69,8 @@ export function reportHandledError(
   const stack = error instanceof Error ? error.stack : undefined;
 
   const log = level === "warning" ? console.warn : console.error;
-  log(`${step} failed: ${code} ${message}`, stack);
+  // Auth messages can quote the email; `scrubEvent` masks the event, this masks the log line.
+  log(`${step} failed: ${code} ${maskEmails(message)}`, stack === undefined ? undefined : maskEmails(stack));
 
   // Sentry serialises a non-Error input whole into `extra` (PostgREST `details` included), which
   // `scrubEvent` doesn't touch; a cause that isn't an Error is never sent.

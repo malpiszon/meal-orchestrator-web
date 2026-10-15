@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUTH_LINK_LIFETIME_SECONDS,
   isPasswordUserError,
+  LINK_CHECK_FAILED_MESSAGE,
   MIN_PASSWORD_LENGTH,
   passwordErrorMessage,
   resetRequestSchema,
@@ -11,6 +12,7 @@ import {
   TOKEN_HASH_MAX_LENGTH,
   setPasswordUrl,
 } from "@/lib/set-password";
+import { FORGOT_PASSWORD_ERROR_MESSAGES } from "@/lib/forgot-password-errors";
 
 describe("MIN_PASSWORD_LENGTH", () => {
   it("is 8", () => {
@@ -150,6 +152,14 @@ describe("isPasswordUserError", () => {
     [undefined],
   ])("is false for a system fault or no error: %o", (error) => {
     expect(isPasswordUserError(error)).toBe(false);
+  });
+});
+
+describe("LINK_CHECK_FAILED_MESSAGE", () => {
+  it("asks the user to try again, unlike the invalid-link copy", () => {
+    expect(LINK_CHECK_FAILED_MESSAGE).toBe("Couldn't check your link. Try again in a moment.");
+    expect(LINK_CHECK_FAILED_MESSAGE).not.toBe(FORGOT_PASSWORD_ERROR_MESSAGES.invalid_link);
+    expect(LINK_CHECK_FAILED_MESSAGE).not.toMatch(/expired/i);
   });
 });
 

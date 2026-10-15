@@ -1,8 +1,11 @@
 import type { APIRoute } from "astro";
+import { classifyAuthError, VERIFY_OTP_QUIET_CODES } from "@/lib/auth-errors";
+import { readSessionUser } from "@/lib/services/auth-session";
 import { reportHandledError } from "@/lib/report-handled-error";
 import {
   FORGOT_PASSWORD_PATH,
   isPasswordUserError,
+  LINK_CHECK_FAILED_MESSAGE,
   MIN_PASSWORD_LENGTH,
   PASSWORD_RETRY_COOKIE,
   PASSWORD_RETRY_MAX_AGE_SECONDS,
@@ -62,15 +65,27 @@ export const POST: APIRoute = async (context) => {
     // 2. Verify the emailed token; on success the cookie-bound client holds the user's session.
     const { data, error } = await supabase.auth.verifyOtp({ token_hash, type });
     if (error) {
-      console.error(`auth set-password: verifyOtp failed (${type}): ${error.message}`);
-      return invalidLink();
+      // Only a dead link is "expired". A rate limit or a fault keeps the link, which is still unused,
+      // and sets no retry cookie, since no token was verified.
+      switch (classifyAuthError(error, VERIFY_OTP_QUIET_CODES)) {
+        case "fault":
+          reportHandledError("auth.set_password.verify_otp", error);
+          return context.redirect(setPasswordUrl({ link: { token_hash, type }, error: LINK_CHECK_FAILED_MESSAGE }));
+        case "rate_limit":
+          console.warn(`auth set-password: rate limited (${error.code ?? error.status}, ${type})`);
+          return context.redirect(setPasswordUrl({ link: { token_hash, type }, error: passwordErrorMessage(error) }));
+        case "quiet":
+          console.info(`auth set-password: link not usable (${error.code}, ${type})`);
+          return invalidLink();
+      }
     }
     verifiedUserId = data.user?.id;
   } else {
     // 3. No token: only the user whose save was just rejected may retry, not any signed-in session.
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { user, failure } = await readSessionUser(supabase, "auth.set_password.session");
+    if (failure !== null) {
+      return context.redirect(setPasswordUrl({ error: LINK_CHECK_FAILED_MESSAGE }));
+    }
     if (!user || context.cookies.get(PASSWORD_RETRY_COOKIE)?.value !== user.id) {
       return invalidLink();
     }

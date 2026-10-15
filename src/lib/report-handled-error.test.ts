@@ -129,6 +129,14 @@ describe("reportHandledError", () => {
     expect(capturedTags().error_hint).toBe("Key (email)=([email]) exists");
   });
 
+  it("masks an email in the log line and its stack", () => {
+    reportHandledError("load", new Error('Email address "jan@example.com" cannot be used'));
+
+    const logged = error.mock.calls.map((args) => args.map(String).join(" ")).join("\n");
+    expect(logged).toContain('load failed: unknown Email address "[email]" cannot be used');
+    expect(logged).not.toContain("jan@example.com");
+  });
+
   it("cuts an over-long hint to 200 characters", () => {
     reportHandledError("load", postgrestError({ code: "XX000", message: "boom", hint: "h".repeat(300) }));
 

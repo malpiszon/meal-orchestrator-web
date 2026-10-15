@@ -2,9 +2,16 @@ import { createServerClient, parseCookieHeader } from "@supabase/ssr";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AstroCookies } from "astro";
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY } from "astro:env/server";
+import { reportMissingSecrets } from "@/lib/missing-secrets";
+
+/** The names of the unset secrets among `secrets`; never their values. */
+function missingNames(secrets: Record<string, string | undefined>): string[] {
+  return Object.keys(secrets).filter((name) => !secrets[name]);
+}
 
 export function createClient(requestHeaders: Headers, cookies: AstroCookies) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
+    reportMissingSecrets(missingNames({ SUPABASE_URL, SUPABASE_KEY }));
     return null;
   }
   return createServerClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -30,6 +37,7 @@ export function createClient(requestHeaders: Headers, cookies: AstroCookies) {
  */
 export function createServiceClient(): SupabaseClient | null {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    reportMissingSecrets(missingNames({ SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY }));
     return null;
   }
   return createSupabaseClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -44,6 +52,7 @@ export function createServiceClient(): SupabaseClient | null {
  */
 export function createStatelessClient(): SupabaseClient | null {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
+    reportMissingSecrets(missingNames({ SUPABASE_URL, SUPABASE_KEY }));
     return null;
   }
   return createSupabaseClient(SUPABASE_URL, SUPABASE_KEY, {
