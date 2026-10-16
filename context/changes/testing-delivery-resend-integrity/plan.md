@@ -307,14 +307,14 @@ None: no schema change. The handler move ships with the normal deploy; no deploy
 
 #### Automated
 
-- [ ] 2.1 Unit tests pass
-- [ ] 2.2 Type check passes
-- [ ] 2.3 Lint passes
-- [ ] 2.4 Existing smoke still passes unchanged
+- [x] 2.1 Unit tests pass
+- [x] 2.2 Type check passes
+- [x] 2.3 Lint passes
+- [x] 2.4 Existing smoke still passes unchanged
 
 #### Manual
 
-- [ ] 2.5 Handler move diff shows only the dependency-injection change
+- [x] 2.5 Handler move diff shows only the dependency-injection change
 
 ### Phase 3: Edge-case fixture and smoke round trip
 
