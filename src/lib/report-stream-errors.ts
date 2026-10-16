@@ -1,16 +1,10 @@
-import { captureException, withScope } from "@sentry/cloudflare";
+import { captureException, getIsolationScope, withIsolationScope, withScope, type Scope } from "@sentry/cloudflare";
+import { messageOf } from "@/lib/report-handled-error";
 import { maskEmails } from "@/lib/sentry-privacy";
 
 const STEP = "render.stream";
 
-/** A plain object's `message`, else the value as text. */
-function messageOf(error: unknown): string {
-  const message: unknown =
-    typeof error === "object" && error !== null ? (error as { message?: unknown }).message : undefined;
-  return typeof message === "string" ? message : String(error);
-}
-
-function reportStreamError(error: unknown): void {
+function reportStreamError(error: unknown, isolationScope: Scope): void {
   const message = error instanceof Error ? error.message : messageOf(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
@@ -21,10 +15,14 @@ function reportStreamError(error: unknown): void {
   const reported = error instanceof Error ? error : new Error(`${STEP} failed: ${message}`, { cause: error });
 
   // Unhandled, like the middleware's own capture: the client only gets a cut-off page. The hint takes
-  // either a mechanism or tags, not both, so the tag goes on a scope.
-  withScope((scope) => {
-    scope.setTag("step", STEP);
-    captureException(reported, { mechanism: { handled: false, type: "auto.middleware.astro.stream" } });
+  // either a mechanism or tags, not both, so the tag goes on a scope. Sentry has flushed the request
+  // by now (an HTML response isn't a stream to it); it keeps a late event's send alive through the
+  // request's `waitUntil` only when the request's isolation scope is current, so pin it.
+  withIsolationScope(isolationScope, () => {
+    withScope((scope) => {
+      scope.setTag("step", STEP);
+      captureException(reported, { mechanism: { handled: false, type: "auto.middleware.astro.stream" } });
+    });
   });
 }
 
@@ -33,11 +31,13 @@ function reportStreamError(error: unknown): void {
  * only errors the stream, with no log. This passes the body through unchanged, reports a read
  * failure once, then errors the returned stream with the same error. Status, statusText and headers
  * are kept (the adapter applies cookies to the outgoing response); a cancel reaches the source, so
- * a client disconnect still stops the render. A response without a body is returned as is.
+ * a client disconnect still stops the render. A response without a body is returned as is. Call it
+ * inside the request, so the report runs in the request's Sentry isolation scope.
  */
 export function captureStreamErrors(response: Response): Response {
   if (response.body === null) return response;
 
+  const isolationScope = getIsolationScope();
   const reader = response.body.getReader();
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
@@ -45,7 +45,7 @@ export function captureStreamErrors(response: Response): Response {
       try {
         chunk = await reader.read();
       } catch (error) {
-        reportStreamError(error);
+        reportStreamError(error, isolationScope);
         controller.error(error);
         return;
       }

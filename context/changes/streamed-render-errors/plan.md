@@ -19,7 +19,7 @@ An error thrown by a component after a page has started streaming gives the user
 - The wrapped stream then errors with the same error, so the user sees the same truncated page as today and the connection fails the same way.
 - A clean stream, a redirect (null body), a client disconnect (cancel) and response status and headers are unchanged.
 - `docs/deployment.md` states what is reported, with no stale "until S-11" line.
-- Verified by unit tests and by re-running probe P10 on a preview build: before the change no event, after it one event.
+- Verified by unit tests and by re-running probe P10 on a preview build with a placeholder DSN pointed at a local listener: before the change no event, after it one event.
 
 ### Key Discoveries:
 
@@ -99,7 +99,7 @@ Show the gap before and the capture after on a real Workers build, then correct 
 
 **Intent**: Record the before and after evidence that the fix works on the Cloudflare runtime.
 
-**Contract**: On port 4323 (`ASTRO_PREVIEW_BACKGROUND=1 npx astro preview --port 4323`, per `CLAUDE.local.md`), with a temporary component that throws after about 250 KB has streamed, added to a page and **not committed**. Because the DSN exists only in the deploy job, observe capture through the `console.error` line in the preview log and, for the event itself, a local fake endpoint is not required: the unit tests prove the `captureException` call, the probe proves the log line, the 200 status, the cut-off body and that the stream still errors. Note the commands, the response status and body tail, and the log line, both on the pre-change build (no log) and the post-change build.
+**Contract**: On port 4323 (`ASTRO_PREVIEW_BACKGROUND=1 npx astro preview --port 4323`, per `CLAUDE.local.md`), with a temporary component that throws after about 250 KB has streamed, added to a page and **not committed**. The build sets `PUBLIC_SENTRY_DSN` to a placeholder DSN whose host is a local listener that records each envelope it receives (in the scratchpad, never committed). Sentry flushes an HTML response as soon as the handler returns it, so a stream error is captured after the flush. The probe must show the late event actually arrives, with `step: render.stream` and mechanism `auto.middleware.astro.stream` (review F1, `reviews/impl-review-phase-1.md`). Note the commands, the response status and body tail, the log line and the received event, both on the pre-change build (no log, no event) and the post-change build.
 
 #### 2. Docs
 
@@ -128,6 +128,7 @@ Show the gap before and the capture after on a real Workers build, then correct 
 
 - P10 before the change: status 200, truncated body, no log line (recorded in `probe-p10.md`).
 - P10 after the change: status 200, truncated body, one `render.stream failed:` log line, and the throwing component is removed again (`git status` clean of it).
+- P10 after the change: the local DSN listener receives one event tagged `step: render.stream`, mechanism `auto.middleware.astro.stream`, handled false.
 - `docs/deployment.md` reads correctly, with no leftover "until S-11".
 
 ---
@@ -173,13 +174,13 @@ None: no schema, secret or deploy-order change.
 
 #### Automated
 
-- [x] 1.1 Helper unit tests pass: `npx vitest run src/lib/report-stream-errors.test.ts`
-- [x] 1.2 Full unit suite passes: `npm test`
-- [x] 1.3 Linting and types pass: `npm run lint`
+- [x] 1.1 Helper unit tests pass: `npx vitest run src/lib/report-stream-errors.test.ts` — 99cc47b
+- [x] 1.2 Full unit suite passes: `npm test` — 99cc47b
+- [x] 1.3 Linting and types pass: `npm run lint` — 99cc47b
 
 #### Manual
 
-- [x] 1.4 Reading the middleware diff: both `next()` returns are wrapped, redirects and the catch are untouched.
+- [x] 1.4 Reading the middleware diff: both `next()` returns are wrapped, redirects and the catch are untouched. — 99cc47b
 
 ### Phase 2: Prove with probe P10 and fix the docs
 
@@ -195,3 +196,4 @@ None: no schema, secret or deploy-order change.
 - [ ] 2.5 P10 before the change: status 200, truncated body, no log line (recorded in `probe-p10.md`).
 - [ ] 2.6 P10 after the change: status 200, truncated body, one `render.stream failed:` log line, and the throwing component is removed again (`git status` clean of it).
 - [ ] 2.7 `docs/deployment.md` reads correctly, with no leftover "until S-11".
+- [ ] 2.8 P10 after the change: the local DSN listener receives one event tagged `step: render.stream`, mechanism `auto.middleware.astro.stream`, handled false.

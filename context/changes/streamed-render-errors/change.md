@@ -1,9 +1,9 @@
 ---
 change_id: streamed-render-errors
 title: Capture errors in streamed pages
-status: implementing
+status: impl_reviewed
 created: 2026-10-15
-updated: 2026-10-15
+updated: 2026-10-16
 archived_at: null
 ---
 

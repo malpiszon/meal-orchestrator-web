@@ -16,7 +16,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   try {
     if (context.url.pathname.startsWith(MACHINE_ROUTE_PREFIX)) {
       context.locals.user = null;
-      return captureStreamErrors(await next());
+      // JSON with nothing to render: no stream to watch, and wrapping would drop its Content-Length.
+      return await next();
     }
 
     const supabase = createClient(context.request.headers, context.cookies);
@@ -38,6 +39,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
       }
     }
 
+    // A rewrite (`Astro.rewrite`, `context.rewrite`) runs this middleware again, so the body would be
+    // wrapped twice and one stream error logged twice; the app has none today.
     return captureStreamErrors(await next());
   } catch (error) {
     // Unhandled, like the Worker's own captures: Astro only turns it into a 500 page.
