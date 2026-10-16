@@ -44,5 +44,5 @@ export function isRateable(mealDate: string, today: string): boolean {
  * aren't chosen don't count; a day with no slots is not fully rated.
  */
 export function isDayFullyRated(day: PlanDay): boolean {
-  return day.slots.length > 0 && day.slots.every((slot) => slot.chosen.meal_ratings !== null);
+  return day.slots.length > 0 && day.slots.every((slot) => slot.chosen.meal_ratings != null);
 }
