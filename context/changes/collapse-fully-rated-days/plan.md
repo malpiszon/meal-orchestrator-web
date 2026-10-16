@@ -189,27 +189,27 @@ None: no schema or data change. Deploy is a normal merge to `master`.
 
 #### Automated
 
-- [x] 1.1 Unit tests pass, including the new `isDayFullyRated` cases: `npm test`
-- [x] 1.2 Lint and type-checked rules pass: `npm run lint`
-- [x] 1.3 Production build succeeds: `npm run build`
-- [x] 1.4 Smoke test passes against a preview on :4322: `npm run smoke`
+- [x] 1.1 Unit tests pass, including the new `isDayFullyRated` cases: `npm test` — e04d177
+- [x] 1.2 Lint and type-checked rules pass: `npm run lint` — e04d177
+- [x] 1.3 Production build succeeds: `npm run build` — e04d177
+- [x] 1.4 Smoke test passes against a preview on :4322: `npm run smoke` — e04d177
 
 #### Manual
 
-- [x] 1.5 On "This week" with a day whose meals are all rated, that day shows one line with the day, the check icon and "All rated"; days with an unrated meal and days to come are open
-- [x] 1.6 The collapsed day opens and closes by mouse and by keyboard (Tab to it, Enter/Space), with a visible focus ring
-- [x] 1.7 Inside an opened day, a rating can be changed and cleared, and the faces respond
-- [x] 1.8 Rating the last meal of a day leaves it open until reload; after reload it is collapsed
-- [x] 1.9 `/history/<id>` of a past week with fully rated days shows every day open
-- [x] 1.10 Collapsed line looks right in light and dark mode at phone width (no horizontal scroll)
+- [x] 1.5 On "This week" with a day whose meals are all rated, that day shows one line with the day, the check icon and "All rated"; days with an unrated meal and days to come are open — e04d177
+- [x] 1.6 The collapsed day opens and closes by mouse and by keyboard (Tab to it, Enter/Space), with a visible focus ring — e04d177
+- [x] 1.7 Inside an opened day, a rating can be changed and cleared, and the faces respond — e04d177
+- [x] 1.8 Rating the last meal of a day leaves it open until reload; after reload it is collapsed — e04d177
+- [x] 1.9 `/history/<id>` of a past week with fully rated days shows every day open — e04d177
+- [x] 1.10 Collapsed line looks right in light and dark mode at phone width (no horizontal scroll) — e04d177
 
 ### Phase 2: Browser test for collapsed days
 
 #### Automated
 
-- [ ] 2.1 The new spec and the existing ones pass locally (nothing stale on `E2E_PORT` first): `npm run test:e2e`
-- [ ] 2.2 The new spec passes twice in a row without resetting the stack
-- [ ] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 The new spec and the existing ones pass locally (nothing stale on `E2E_PORT` first): `npm run test:e2e`
+- [x] 2.2 The new spec passes twice in a row without resetting the stack
+- [x] 2.3 Lint passes: `npm run lint`
 
 #### Manual
 
