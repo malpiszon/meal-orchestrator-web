@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   adjustedScore,
+  defaultPlanTab,
   formatDayLabel,
   formatEditableUntil,
   formatPlanSavedStatus,
@@ -358,5 +359,28 @@ describe("formatPlanSavedStatus", () => {
 
   it("names the suggested picks for a plan never saved", () => {
     expect(formatPlanSavedStatus(null)).toBe("Not saved: suggested picks");
+  });
+});
+
+describe("defaultPlanTab", () => {
+  const current = { id: "current-plan" };
+  const unsaved = { saved_at: null };
+  const saved = { saved_at: "2026-10-09T16:42:00Z" };
+
+  it("opens This week when there is no upcoming plan", () => {
+    expect(defaultPlanTab(current, null)).toBe("current");
+  });
+
+  it("opens Next week while the upcoming plan is not saved", () => {
+    expect(defaultPlanTab(current, unsaved)).toBe("upcoming");
+    expect(defaultPlanTab(null, unsaved)).toBe("upcoming");
+  });
+
+  it("opens This week once the upcoming plan is saved and this week has a plan", () => {
+    expect(defaultPlanTab(current, saved)).toBe("current");
+  });
+
+  it("opens Next week for a saved upcoming plan when this week has no plan", () => {
+    expect(defaultPlanTab(null, saved)).toBe("upcoming");
   });
 });

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-export type PlanTab = "current" | "upcoming";
+import type { PlanTab } from "@/types";
 
 interface PlanTabsProps {
   defaultTab: PlanTab;

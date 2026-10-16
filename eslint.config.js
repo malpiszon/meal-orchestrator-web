@@ -96,6 +96,7 @@ const workerConfig = defineConfig({
     "src/pages/api/ratings.ts",
     "src/lib/plan-save.ts",
     "src/lib/postgrest-retry.ts",
+    "src/lib/report-stream-errors.ts",
     "src/lib/services/auth-links.ts",
     "src/lib/services/auth-session.ts",
   ],
