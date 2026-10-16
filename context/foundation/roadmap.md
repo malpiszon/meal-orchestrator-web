@@ -66,7 +66,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready       |
 | S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | in-progress |
 | S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | in-progress |
-| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | ready       |
+| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | in-progress |
 
 ## Baseline
 
@@ -271,7 +271,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Does a day collapse as soon as its last meal is rated, or only the next time the page is opened? — Owner: user. Block: no.
   - What does a collapsed day show: just the day, or the day with its meals' ratings? — Owner: user. Block: no.
 - **Risk:** Touches the week view that rating happens in, so a rating must still save, change and clear inside a day opened again; the change must stay accessible (the collapsed line is a real control that keyboards and screen readers can open).
-- **Status:** ready
+- **Status:** in-progress
 
 ## Backlog Handoff
 

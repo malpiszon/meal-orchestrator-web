@@ -10,7 +10,7 @@ What each page shows and what each route does. Dates and cut-offs are always in 
 | `/auth/signin`          | anyone    | Sign-in form under the logo, with a "Forgot or never set a password?" link; signed in, redirects to `/dashboard`; fixed error messages only   |
 | `/auth/forgot-password` | anyone    | Asks for an email and sends a link to set a new password; answers the same whether or not the account exists; fixed error messages only       |
 | `/auth/set-password`    | anyone    | Where invitation and password-reset emails link (`?token_hash=…&type=invite` or `recovery`): a password form (8+ characters); saving signs in |
-| `/dashboard`            | protected | "Next week" (the upcoming plan, editable) and "This week" (the current plan, read-only, with ratings) tabs                                    |
+| `/dashboard`            | protected | "Next week" (the upcoming plan, editable) and "This week" (the current plan, read-only, with ratings; fully rated days collapsed) tabs        |
 | `/history`              | protected | Past weeks, newest first                                                                                                                      |
 | `/history/<id>`         | protected | One past week, read-only, with ratings                                                                                                        |
 
@@ -107,6 +107,7 @@ Under each chosen meal from today and the previous 7 days (today minus 7 days to
 
 - Only the chosen meal of a slot can be rated (the suggested pick when the plan was never saved; a week first delivered after it started keeps the pick made at delivery), and no meal before its day.
 - Outside that window a stored rating is shown read-only (for example "😋 Chef's kiss"), and other meals show no faces.
+- On "This week", a day whose chosen meals all have a rating opens collapsed to one line, the day and "All rated"; tapping it opens the day with its faces, so ratings can still be changed or cleared. The day collapses the next time the page is loaded, not right after its last rating. `/history/<id>` shows every day open.
 - On "Next week", an option whose meal was rated on an earlier day shows "Last rated 😋 Chef's kiss". It is the rating of the latest earlier day the meal was rated on, not the latest tap, and it doesn't depend on the earlier plan being saved. The same rating orders the slot and decides its suggested pick.
 - **Late ratings:** rating a meal or clearing its rating re-picks every upcoming week of the user that isn't saved and offers that meal, so its suggested picks follow the new rating. Saved plans and weeks that have started are never re-picked. An open "Next week" tab shows the new picks only after a reload; until then "Keep these picks", or a swap of another slot, saves the re-picked choices, not the ones shown.
 

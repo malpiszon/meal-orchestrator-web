@@ -131,7 +131,11 @@ const upcomingDays: EditorDay[] = upcomingPlan
       ) : currentPlan || upcomingPlan ? (
         <PlanTabs client:load defaultTab={defaultTab}>
           <Fragment slot="current">
-            {currentPlan ? <WeekPlan plan={currentPlan} label="This week" today={today} /> : <NothingThisWeek />}
+            {currentPlan ? (
+              <WeekPlan plan={currentPlan} label="This week" today={today} collapseRatedDays />
+            ) : (
+              <NothingThisWeek />
+            )}
           </Fragment>
           <Fragment slot="upcoming">
             {upcomingPlan ? (
