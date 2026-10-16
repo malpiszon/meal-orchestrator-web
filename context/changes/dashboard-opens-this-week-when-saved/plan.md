@@ -203,8 +203,8 @@ None. Existing saved upcoming plans start opening "This week" on deploy, which i
 
 #### Automated
 
-- [x] 2.1 E2E suite passes on port 4325: `E2E_PORT=4325 npm run test:e2e`
-- [x] 2.2 Lint and types pass: `npm run lint` and `npx astro check`
+- [x] 2.1 E2E suite passes on port 4325: `E2E_PORT=4325 npm run test:e2e` — 3d9334f
+- [x] 2.2 Lint and types pass: `npm run lint` and `npx astro check` — 3d9334f
 
 #### Manual
 
