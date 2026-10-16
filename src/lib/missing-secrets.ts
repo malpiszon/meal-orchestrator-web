@@ -11,7 +11,7 @@ export function reportMissingSecrets(names: readonly string[]): void {
   for (const name of names) {
     if (reported.has(name)) continue;
     reported.add(name);
-    reportHandledError("supabase.config", new Error(`Supabase secret not configured: ${name}`), {
+    reportHandledError("supabase.config", new Error(`Secret not configured: ${name}`), {
       code: `missing_${name}`,
     });
   }

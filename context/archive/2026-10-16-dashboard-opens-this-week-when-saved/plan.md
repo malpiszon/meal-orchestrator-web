@@ -208,4 +208,4 @@ None. Existing saved upcoming plans start opening "This week" on deploy, which i
 
 #### Manual
 
-- [ ] 2.3 The CI `e2e` job is green on the PR
+- [x] 2.3 The CI `e2e` job is green on the PR
