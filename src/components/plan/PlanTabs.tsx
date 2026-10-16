@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PlanTab } from "@/types";
 
-export type { PlanTab };
-
 interface PlanTabsProps {
   defaultTab: PlanTab;
   /** "This week" panel, server-rendered by Astro and passed as a named slot. */

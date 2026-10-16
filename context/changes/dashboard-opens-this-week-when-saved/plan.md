@@ -190,14 +190,14 @@ None. Existing saved upcoming plans start opening "This week" on deploy, which i
 
 #### Automated
 
-- [x] 1.1 `defaultPlanTab` unit tests pass: `npx vitest run src/lib/plans.test.ts`
-- [x] 1.2 Whole unit suite passes: `npm test`
-- [x] 1.3 Lint and types pass: `npm run lint` and `npx astro check`
-- [x] 1.4 Build succeeds: `npm run build`
+- [x] 1.1 `defaultPlanTab` unit tests pass: `npx vitest run src/lib/plans.test.ts` — 2be9822
+- [x] 1.2 Whole unit suite passes: `npm test` — 2be9822
+- [x] 1.3 Lint and types pass: `npm run lint` and `npx astro check` — 2be9822
+- [x] 1.4 Build succeeds: `npm run build` — 2be9822
 
 #### Manual
 
-- [x] 1.5 Preview on 4325: unsaved next week opens "Next week", a swap stays there, a reload opens "This week" with the swap kept
+- [x] 1.5 Preview on 4325: unsaved next week opens "Next week", a swap stays there, a reload opens "This week" with the swap kept — 2be9822
 
 ### Phase 2: E2E coverage
 

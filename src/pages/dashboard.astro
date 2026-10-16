@@ -68,6 +68,9 @@ if (supabase && user) {
   }
 }
 
+// Once next week is saved the choosing is done, so the page opens on "This week", where meals are rated.
+const defaultTab = defaultPlanTab(currentPlan, upcomingPlan);
+
 // The editor's props are serialized into the page, so only the fields it shows (no composition or nutrition).
 const upcomingDays: EditorDay[] = upcomingPlan
   ? groupPlanOptions(
@@ -126,8 +129,7 @@ const upcomingDays: EditorDay[] = upcomingPlan
           </CardHeader>
         </Card>
       ) : currentPlan || upcomingPlan ? (
-        // Once next week is saved the choosing is done, so the page opens on "This week", where meals are rated.
-        <PlanTabs client:load defaultTab={defaultPlanTab(currentPlan, upcomingPlan)}>
+        <PlanTabs client:load defaultTab={defaultTab}>
           <Fragment slot="current">
             {currentPlan ? <WeekPlan plan={currentPlan} label="This week" today={today} /> : <NothingThisWeek />}
           </Fragment>
