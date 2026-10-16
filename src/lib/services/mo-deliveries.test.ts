@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import sample from "../../../scripts/fixtures/mo-delivery.sample.json";
 import { reportHandledError } from "@/lib/report-handled-error";
 import { handleMoDelivery } from "@/lib/services/mo-deliveries";
@@ -48,10 +48,25 @@ async function deliver(
 
 const validJson = () => JSON.stringify(sample);
 
+let consoleSpies: MockInstance<(...args: unknown[]) => void>[] = [];
+
+/** The handler logs codes and messages only, never the request body or the email. */
+function expectNoEmailLogged() {
+  const logged = consoleSpies.flatMap((spy) => spy.mock.calls.flat().map(String));
+  expect(logged.length).toBeGreaterThan(0);
+  expect(logged.filter((line) => line.includes(sample.user.email))).toEqual([]);
+}
+
 beforeEach(() => {
   vi.mocked(reportHandledError).mockReset();
-  vi.spyOn(console, "error").mockImplementation(() => undefined);
-  vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  consoleSpies = [
+    vi.spyOn(console, "error").mockImplementation(() => undefined),
+    vi.spyOn(console, "warn").mockImplementation(() => undefined),
+  ];
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("handleMoDelivery configuration", () => {
@@ -105,6 +120,7 @@ describe("handleMoDelivery body size", () => {
     const oversized = JSON.stringify({ ...sampleBody(), padding: "ż".repeat(MAX_BODY_BYTES / 2 + 1) });
     expect(oversized.length).toBeLessThan(MAX_BODY_BYTES);
     const request = deliveryRequest(oversized, { "Content-Length": "100" });
+    expect(request.headers.get("Content-Length")).toBe("100");
 
     const { response, body, rpc } = await deliver(request);
 
@@ -159,6 +175,7 @@ describe("handleMoDelivery storage", () => {
     expect(response.status).toBe(409);
     expect(body).toEqual({ error: "week_started" });
     expect(reportHandledError).not.toHaveBeenCalled();
+    expectNoEmailLogged();
   });
 
   it.each([
@@ -173,6 +190,7 @@ describe("handleMoDelivery storage", () => {
     const [step, reported] = vi.mocked(reportHandledError).mock.calls[0] ?? [];
     expect(step).toBe("mo_delivery.ingest");
     expect((reported as Error).cause).toBe(error);
+    expect((reported as Error).message).not.toContain(sample.user.email);
   });
 
   it("answers 500 storage_failed when the RPC returns no string plan id, reported as no_plan_id", async () => {
@@ -213,6 +231,9 @@ describe("handleMoDelivery success", () => {
       p_week_end: sample.week_end,
       p_run_id: sample.run_id,
     });
+    // One stored option per variant MO sent (the contract's row-per-variant rule); the round trip checks their fields.
+    const variantCount = sample.days.flatMap((day) => day.meals).flatMap((meal) => meal.variants).length;
+    expect(args.p_options).toHaveLength(variantCount);
   });
 
   it("passes p_run_id null when run_id is absent", async () => {
