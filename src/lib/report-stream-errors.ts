@@ -62,8 +62,12 @@ export function captureStreamErrors(response: Response): Response {
       try {
         chunk = await reader.read();
       } catch (error) {
-        reportStreamError(error, scopes);
-        controller.error(error);
+        try {
+          reportStreamError(error, scopes);
+        } finally {
+          // Even if the report itself throws, the reader gets the original error.
+          controller.error(error);
+        }
         return;
       }
       if (chunk.done) {

@@ -134,7 +134,9 @@ describe("captureStreamErrors", () => {
   });
 
   it("keeps status, statusText and headers", () => {
-    const headers = new Headers({ "content-type": "text/html", "set-cookie": "sb=1; Path=/" });
+    const headers = new Headers({ "content-type": "text/html" });
+    headers.append("set-cookie", "sb=1; Path=/");
+    headers.append("set-cookie", "sb.1=2; Path=/");
     const response = new Response(cleanBody(["x"]), { status: 404, statusText: "Not Found", headers });
 
     const wrapped = captureStreamErrors(response);
@@ -143,7 +145,7 @@ describe("captureStreamErrors", () => {
     expect(wrapped.status).toBe(404);
     expect(wrapped.statusText).toBe("Not Found");
     expect(wrapped.headers.get("content-type")).toBe("text/html");
-    expect(wrapped.headers.get("set-cookie")).toBe("sb=1; Path=/");
+    expect(wrapped.headers.getSetCookie()).toEqual(["sb=1; Path=/", "sb.1=2; Path=/"]);
   });
 
   it("forwards a cancel to the source stream", async () => {
@@ -184,6 +186,18 @@ describe("captureStreamErrors", () => {
     // Sentry sends an Error's message and own fields; the original stays only in `cause`, which it doesn't send.
     expect(Object.keys(reported as Error)).toEqual([]);
     expect(error).toHaveBeenCalledWith("render.stream failed: plain object", undefined);
+  });
+
+  it("passes the original error on even when reporting it throws", async () => {
+    const failure = {
+      toString(): string {
+        throw new Error("unprintable");
+      },
+    };
+
+    const { failure: received } = await drain(captureStreamErrors(new Response(failingBody(["x"], failure))));
+
+    expect(received).toBe(failure);
   });
 
   it("wraps a string rejection in an Error", async () => {

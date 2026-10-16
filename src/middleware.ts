@@ -39,6 +39,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       }
     }
 
+    // Every other body is wrapped, JSON routes included (they go out chunked, which is harmless).
     // A rewrite (`Astro.rewrite`, `context.rewrite`) runs this middleware again, so the body would be
     // wrapped twice and one stream error logged twice; the app has none today.
     return captureStreamErrors(await next());
