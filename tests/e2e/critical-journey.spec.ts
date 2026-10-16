@@ -1,14 +1,16 @@
 // Risk #4 (context/foundation/test-plan.md): the critical journey breaks in a real browser while the HTTP
 // smoke stays green. One new user per run goes from MO's delivery and the invitation through keep picks,
-// swap and rate to signing out and back in. It asserts only what needs a browser: hydrated islands, the
-// optimistic save status, the rating toggles and the cookie session. The rules behind them (cut-off,
-// rating window) are covered by pgTAP and the smoke test.
+// swap and rate to signing out and back in. It asserts only what needs a browser: the tab the dashboard
+// opens (unsaved next week, then saved), hydrated islands, the optimistic save status, the rating toggles
+// and the cookie session. The rules behind them (cut-off, rating window, default tab) are covered by pgTAP,
+// the smoke test and unit tests.
 import { randomUUID } from "node:crypto";
-import { test, expect, type Locator, type Page } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { todayInWarsaw } from "@/lib/plans";
 import { setPassword, signIn } from "./support/auth";
 import { deliverWeek, nextMonday, thisMonday } from "./support/deliveries";
 import { readInvitationLink } from "./support/mailpit";
+import { openTab } from "./support/tabs";
 
 // A new user, invited by email: start without the stored session of auth.setup.ts.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -20,15 +22,6 @@ function dayCard(panel: Locator, weekday: string): Locator {
   return panel
     .locator('[data-slot="card"]')
     .filter({ has: panel.page().getByRole("heading", { name: new RegExp(`^${weekday}\\b`) }) });
-}
-
-/** Selects a week's tab; retried because the tabs are an island and a click before it hydrates is lost. */
-async function openTab(page: Page, name: "This week" | "Next week"): Promise<void> {
-  const tab = page.getByRole("tab", { name });
-  await expect(async () => {
-    await tab.click({ timeout: 2_000 });
-    await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 2_000 });
-  }).toPass();
 }
 
 test("a new user saves, swaps and rates meals, and finds them after signing in again (risk #4)", async ({
@@ -58,6 +51,8 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
   await test.step("setting a password lands on the dashboard", async () => {
     await setPassword(page, password);
     await expect(page.getByText("Something went wrong")).toBeHidden();
+    // Next week is not saved yet, so the dashboard opens on it; server-rendered, no click needed.
+    await expect(page.getByRole("tab", { name: "Next week" })).toHaveAttribute("aria-selected", "true");
   });
 
   const nextWeek = page.getByRole("tabpanel", { name: "Next week" });
@@ -119,6 +114,8 @@ test("a new user saves, swaps and rates meals, and finds them after signing in a
 
   await test.step("signing in again with the new password", async () => {
     await signIn(page, email, password);
+    // Next week was saved by the keep and swap steps, so the dashboard opens on this week, to rate.
+    await expect(page.getByRole("tab", { name: "This week" })).toHaveAttribute("aria-selected", "true");
   });
 
   await test.step("the saved swap and the rating are still there", async () => {

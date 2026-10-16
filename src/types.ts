@@ -68,6 +68,9 @@ export interface WeeklyPlan {
   plan_meal_options: PlanMealOption[];
 }
 
+/** A dashboard tab: "This week" (`current`) or "Next week" (`upcoming`). */
+export type PlanTab = "current" | "upcoming";
+
 /** A `weekly_plans` row as the history list reads it: no options. */
 export interface PastPlanSummary {
   id: string;
