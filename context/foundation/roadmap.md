@@ -16,7 +16,7 @@ gh_milestone: "M-2: Regression safety net"
 
 # Roadmap: mo-web
 
-> Derived from `context/foundation/test-plan.md` §3 (2026-10-10) + the user's descriptions of nice-to-have mutation-testing and Sentry items + the observability audit of 2026-10-12 + auto-researched codebase baseline.
+> Derived from `context/foundation/test-plan.md` §3 (2026-10-10) + the user's descriptions of nice-to-have mutation-testing and Sentry items + the observability audit of 2026-10-12 + the user's description of the mid-week dashboard items (2026-10-15) + auto-researched codebase baseline.
 > Edit-in-place; archive when superseded.
 > Slices below are listed in dependency order. The "At a glance" table is the index.
 
@@ -24,9 +24,9 @@ gh_milestone: "M-2: Regression safety net"
 
 **M-2: Regression safety net** — Status: open
 
-- **Intent:** a change that breaks a plan rule, MO's delivery, another user's data or the main journey fails a test before it reaches production, and a system fault that slips through (database, Auth or email outage, a broken render) reaches Sentry instead of looking like a user error or success. The test plan's risks #1–#7 are covered by the cheapest test that gives a real signal, and the audit's critical findings and proven coverage gaps are closed; more scope goes into a later milestone.
-- **Source materials:** `context/foundation/test-plan.md` §3 Phased Rollout (risks in §2), plus the user's descriptions for MS-06 (2026-10-10) and MS-07 (2026-10-11), plus `context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md` §5–§6 for MS-08 to MS-11 (added 2026-10-12).
-- **Done when:** S-01 to S-05 and S-08 to S-11 are `done`, and S-06 and S-07 (nice-to-have) are each either `done` or moved to `## Parked` with their issue closed as not planned.
+- **Intent:** a change that breaks a plan rule, MO's delivery, another user's data or the main journey fails a test before it reaches production, and a system fault that slips through (database, Auth or email outage, a broken render) reaches Sentry instead of looking like a user error or success. The test plan's risks #1–#7 are covered by the cheapest test that gives a real signal, and the audit's critical findings and proven coverage gaps are closed. Two small dashboard changes (MS-12, MS-13, added 2026-10-15) make the mid-week rating routine quicker; more scope goes into a later milestone.
+- **Source materials:** `context/foundation/test-plan.md` §3 Phased Rollout (risks in §2), plus the user's descriptions for MS-06 (2026-10-10) and MS-07 (2026-10-11), plus `context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md` §5–§6 for MS-08 to MS-11 (added 2026-10-12), plus the user's description for MS-12 and MS-13 (2026-10-15).
+- **Done when:** S-01 to S-05 and S-08 to S-13 are `done`, and S-06 and S-07 (nice-to-have) are each either `done` or moved to `## Parked` with their issue closed as not planned.
 - **Scope anchors:**
   - MS-01: Test-plan Phase 1, migration and date-rule safety (risks #1, #5).
   - MS-02: Test-plan Phase 2, delivery and re-send integrity (risks #2, #6).
@@ -39,10 +39,12 @@ gh_milestone: "M-2: Regression safety net"
   - MS-09: Observability audit, auth faults visible (X1, X4, A1–A4); holds two of the three critical findings.
   - MS-10: Observability audit, MO invitation failure surfaced (D1, the third critical finding, plus D3, D4, D6).
   - MS-11: Observability audit, streamed render errors captured (X2, proven by probe P10).
+  - MS-12: The dashboard opens "This week" once next week is saved (user, 2026-10-15: "after the 'next week' was chosen, MO-web opens 'current week'"). Typical week: Monday no upcoming plan, so "This week" for rating; Tuesday afternoon MO delivers, "Next week" for choosing; from Wednesday the user rates again but still lands on "Next week".
+  - MS-13: Fully rated days on "This week" are collapsed (user, 2026-10-15: "days that were fully rated (all meals were rated) are collapsed, so the user doesn't need to scroll down through all the page, especially on Fridays"). "This week" only, not `/history/<id>` (decided 2026-10-15).
 
 ## Vision recap
 
-Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that week, keeps each user's plan history, shows when each meal last appeared, and lets the user swap, save and rate meals. M-1 shipped that loop. M-2 adds no user-facing features: it makes the existing rules hard to break, because migrations reach the hosted database before their code merges, and it makes the failures that still happen visible. Sentry (S-07) sees only thrown errors; the 2026-10-12 audit showed that outages the app handles look like user errors or success.
+Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that week, keeps each user's plan history, shows when each meal last appeared, and lets the user swap, save and rate meals. M-1 shipped that loop. M-2 adds almost no user-facing features (only the two mid-week dashboard changes, S-12 and S-13): it makes the existing rules hard to break, because migrations reach the hosted database before their code merges, and it makes the failures that still happen visible. Sentry (S-07) sees only thrown errors; the 2026-10-12 audit showed that outages the app handles look like user errors or success.
 
 ## North star
 
@@ -50,19 +52,21 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
-| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
-| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
-| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready       |
-| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready       |
-| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
-| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready       |
-| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
-| S-08 | report-handled-errors             | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
-| S-09 | auth-fault-visibility             | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
-| S-10 | mo-invitation-failure-visible     | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready       |
-| S-11 | streamed-render-errors            | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | in-progress |
+| ID   | Change ID                            | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
+| ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
+| S-01 | testing-migration-date-rules         | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
+| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready       |
+| S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready       |
+| S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
+| S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
+| S-06 | testing-mutation-stryker             | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready       |
+| S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
+| S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
+| S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
+| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready       |
+| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | in-progress |
+| S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | ready       |
+| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | ready       |
 
 ## Baseline
 
@@ -239,21 +243,53 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Risk:** A proven gap (probe P10) that every page render shares; independent of the helper, so it can run any time. Fixes the claim at `docs/deployment.md` § Error monitoring that page errors are reported.
 - **Status:** in-progress
 
+### S-12: Dashboard opens "This week" once next week is saved
+
+- **Outcome:** a user who has saved next week (swapped a meal or kept the picks) opens the dashboard on "This week", where they rate what they ate; while next week is unsaved, or when there is no plan for this week, it still opens on "Next week". The other tab stays one tap away.
+- **Change ID:** dashboard-opens-this-week-when-saved
+- **Issue:** [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168)
+- **PRD refs:** MS-12
+- **Prerequisites:** —
+- **Parallel with:** S-02, S-03, S-06, S-10, S-11, S-13
+- **Blockers:** —
+- **Unknowns:**
+  - Right after a save on the open page, does the dashboard switch to "This week", or only the next time it is opened? — Owner: user. Block: no. Resolved on #168: only the next time it is opened. Every swap saves, so the open page stays on "Next week" and the user can keep swapping.
+  - Does a saved week that MO re-sends (it stays saved) still open on "This week", or should a re-delivery send the user back to "Next week" to check the new menu? — Owner: user. Block: no. Resolved on #168: no special case; the tab follows the saved state alone. A saved week (re-sent or not) opens "This week"; an unsaved one opens "Next week".
+- **Risk:** Changes the documented rule in `docs/api.md` § Weeks on the dashboard; a user who wants to keep editing a saved week now needs one more tap, which is accepted because saving is the signal that choosing is done. Covered by the e2e journey, so that test may need its tab step updated.
+- **Status:** ready
+
+### S-13: Fully rated days collapsed on "This week"
+
+- **Outcome:** on "This week", a day whose chosen meals all have a rating is collapsed to a single line that still shows the day and can be opened again, so by Friday the user reaches the meals still to rate without scrolling past the whole week; days with an unrated meal, and days still to come, stay open. `/history/<id>` is unchanged.
+- **Change ID:** collapse-fully-rated-days
+- **Issue:** [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169)
+- **PRD refs:** MS-13
+- **Prerequisites:** —
+- **Parallel with:** S-02, S-03, S-06, S-10, S-11, S-12
+- **Blockers:** —
+- **Unknowns:**
+  - Does a day collapse as soon as its last meal is rated, or only the next time the page is opened? — Owner: user. Block: no.
+  - What does a collapsed day show: just the day, or the day with its meals' ratings? — Owner: user. Block: no.
+- **Risk:** Touches the week view that rating happens in, so a rating must still save, change and clear inside a day opened again; the change must stay accessible (the collapsed line is a real control that keyboards and screen readers can open).
+- **Status:** ready
+
 ## Backlog Handoff
 
-| Roadmap ID | Issue                                                                 | Change ID                         | Suggested issue title                             | Ready for `/10x-plan` | Notes                                             |
-| ---------- | --------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------- |
-| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules      | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                       |
-| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity` |
-| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation            | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                       |
-| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e      | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                       |
-| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook      | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
-| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker          | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
-| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                        | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
-| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors             | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                       |
-| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility             | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`             |
-| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible     | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route    |
-| S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors            | Capture errors in streamed pages                  | yes                   | Independent; any time                             |
+| Roadmap ID | Issue                                                                 | Change ID                            | Suggested issue title                             | Ready for `/10x-plan` | Notes                                                |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- | --------------------- | ---------------------------------------------------- |
+| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules         | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                          |
+| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity    | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity`    |
+| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation               | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                          |
+| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e         | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                          |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook         | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                          |
+| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker             | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                    |
+| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                          |
+| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                          |
+| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`                |
+| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route       |
+| S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors               | Capture errors in streamed pages                  | yes                   | Independent; any time                                |
+| S-12       | [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168) | dashboard-opens-this-week-when-saved | Open "This week" once next week is saved          | yes                   | Run `/10x-plan dashboard-opens-this-week-when-saved` |
+| S-13       | [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169) | collapse-fully-rated-days            | Collapse fully rated days on "This week"          | yes                   | Independent of S-12; any time                        |
 
 ## Open Roadmap Questions
 
