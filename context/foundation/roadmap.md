@@ -64,7 +64,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
 | S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
 | S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready       |
-| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | ready       |
+| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | in-progress |
 | S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | in-progress |
 | S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | ready       |
 
@@ -241,7 +241,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Can the middleware catch errors in the streamed body without breaking streaming, or should streaming be turned off in the adapter? — Owner: research. Block: no.
 - **Risk:** A proven gap (probe P10) that every page render shares; independent of the helper, so it can run any time. Fixes the claim at `docs/deployment.md` § Error monitoring that page errors are reported.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-12: Dashboard opens "This week" once next week is saved
 

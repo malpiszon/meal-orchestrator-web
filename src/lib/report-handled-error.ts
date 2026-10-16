@@ -43,7 +43,7 @@ function errorCode(chain: object[]): string {
 }
 
 /** A plain object's `message` (a PostgREST error response), else the value as text. */
-function messageOf(error: unknown): string {
+export function messageOf(error: unknown): string {
   const message: unknown =
     typeof error === "object" && error !== null ? (error as { message?: unknown }).message : undefined;
   return typeof message === "string" ? message : String(error);
