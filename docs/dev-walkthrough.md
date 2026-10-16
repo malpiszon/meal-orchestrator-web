@@ -4,7 +4,7 @@
 
 The rules behind each step are in [Pages and API](api.md).
 
-1. Deliver the sample for your email and an upcoming week. `start` must be a Monday after today (Europe/Warsaw); the command computes the next one with GNU `date` (on macOS, type the date in) and shifts the day dates to match. The response shows `"account_created":true`.
+1. Deliver the sample for your email and an upcoming week. `start` must be a Monday after today (Europe/Warsaw); the command computes the next one with GNU `date` (on macOS, type the date in) and shifts the day dates to match. The response shows `"account_created":true,"invitation_sent":true`.
 
    ```bash
    jq --arg email you@example.com --arg start "$(TZ=Europe/Warsaw date -d 'next monday' +%F)" '

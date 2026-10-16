@@ -258,9 +258,9 @@ No migration. The new response field is additive; the 500 → 503 change for rej
 
 #### Automated
 
-- [ ] 3.1 Formatting passes: `npx prettier --check docs/mo-delivery-contract.md docs/api.md`
+- [x] 3.1 Formatting passes: `npx prettier --check docs/mo-delivery-contract.md docs/api.md`
 
 #### Manual
 
-- [ ] 3.2 The docs state the same field name, presence rule and status codes as the code
-- [ ] 3.3 No doc still says the invitation failure is "only logged"
+- [x] 3.2 The docs state the same field name, presence rule and status codes as the code
+- [x] 3.3 No doc still says the invitation failure is "only logged"
