@@ -1,8 +1,9 @@
 -- S-06: pins what ingest_weekly_plan does with a week MO delivers again (FR-017, FR-018; see
 -- context/changes/week-resubmission-replace/plan.md): an identical re-send is a no-op, a changed
 -- re-send of a started week is refused, a changed re-send of a saved upcoming week keeps the user's
--- dishes, and no re-send touches another week, another user or the history. Dates are relative to
--- today in Europe/Warsaw, so the test never ages. Run with `npx supabase test db`.
+-- dishes (also when it drops a day or a slot, or changes week_end or provider), and no re-send
+-- touches another week, another user or the history. Dates are relative to today in Europe/Warsaw,
+-- so the test never ages. Run with `npx supabase test db`.
 begin;
 select plan(48);
 

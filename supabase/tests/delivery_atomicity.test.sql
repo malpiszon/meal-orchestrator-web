@@ -1,5 +1,5 @@
--- Test-plan risk #2 (testing-delivery-resend-integrity): "2xx means the week is stored", and any failure
--- part-way through the write answers non-2xx and leaves nothing half-written
+-- S-02 (testing-delivery-resend-integrity): pins test-plan risk #2, "2xx means the week is stored", and
+-- any failure part-way through the write answers non-2xx and leaves nothing half-written
 -- (context/foundation/test-plan.md §2; context/changes/testing-delivery-resend-integrity/plan.md).
 --
 -- A changed re-send of a saved upcoming week makes ingest_weekly_plan update the plan row, delete its
@@ -7,9 +7,11 @@
 -- plan_meal_options constraint on that insert (a score of 11, a duplicate (date, type, variant_index), a
 -- null name). The expected error names that constraint, which proves the call got past the update and
 -- the delete; the snapshot then proves both were rolled back: the plan row, every option row (ids
--- included), the swapped choice and saved_at are exactly as before. The route answers such a failure
--- with 500 storage_failed (docs/mo-delivery-contract.md, Responses). Dates are relative to today in
--- Europe/Warsaw, and no date boundary is involved. Run with `npx supabase test db`.
+-- included), the swapped choice and saved_at are exactly as before. The rollback itself is Postgres's
+-- guarantee (throws_ok runs the call in a subtransaction); what the snapshot pins is that
+-- ingest_weekly_plan has no handler that swallows the insert error and returns normally. The route
+-- answers such a failure with 500 storage_failed (docs/mo-delivery-contract.md, Responses). Dates are
+-- relative to today in Europe/Warsaw, and no date boundary is involved. Run with `npx supabase test db`.
 begin;
 select plan(16);
 

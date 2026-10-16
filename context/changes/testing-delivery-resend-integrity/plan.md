@@ -295,13 +295,13 @@ None: no schema change. The handler move ships with the normal deploy; no deploy
 
 #### Automated
 
-- [x] 1.1 Database tests pass with full output logged
-- [x] 1.2 Atomicity snapshot catches a changed week (spot-check, reverted)
-- [x] 1.3 Lint and format pass
+- [x] 1.1 Database tests pass with full output logged — 79e3870
+- [x] 1.2 Atomicity snapshot catches a changed week (spot-check, reverted) — 79e3870
+- [x] 1.3 Lint and format pass — 79e3870
 
 #### Manual
 
-- [x] 1.4 Contract and PRD wording reads as the shipped behaviour
+- [x] 1.4 Contract and PRD wording reads as the shipped behaviour — 79e3870
 
 ### Phase 2: Handler move and status-mapping unit tests
 

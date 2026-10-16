@@ -196,6 +196,7 @@ A plan moves through three states, clarified during the FR Socrates round and re
   > Update (2026-10-16): the latest submission does not always overwrite. A changed re-send of a week that has already started (its Monday is today or earlier in Europe/Warsaw) is refused, so the week the user is living through never changes; an identical re-send changes nothing. For an upcoming week, a saved plan keeps its choices (FR-018), a never-saved plan and a saved meal whose dish is gone get mo-web's suggested pick (MO's score adjusted by the user's ratings, FR-013) rather than MO's recommendation (see `docs/api.md`, Re-delivery).
 - FR-018: If the user has already saved/swapped their plan for that week (FR-010) before a later re-submission arrives, the re-submission does not overwrite the user's saved choices. Priority: nice-to-have
   > Update (2026-10-06): pulled into M-1 with S-06. The new scores and comments are stored; in each meal slot the user's chosen meal is kept when the re-sent week still offers it, otherwise MO's new recommendation is chosen, and the plan stays saved.
+  > Update (2026-10-16): where the kept dish is gone, the slot gets mo-web's suggested pick (MO's score adjusted by the user's ratings, FR-013), not MO's recommendation; see FR-017.
 
 ### Operations
 
