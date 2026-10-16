@@ -737,7 +737,14 @@ const steps = KEEPALIVE_EXPECT_FAILURE
       [
         "delivery for a new email creates the account",
         () => deliver(newUserDelivery),
-        { status: 200, body: ["account_created: true", (body) => jsonField(body, "account_created") === true] },
+        {
+          status: 200,
+          // Local auth email is not rate limited, so the invitation is sent.
+          body: [
+            "account_created: true, invitation_sent: true",
+            (body) => jsonField(body, "account_created") === true && jsonField(body, "invitation_sent") === true,
+          ],
+        },
       ],
       [
         "current-week delivery for the signed-in user is stored",
@@ -766,7 +773,14 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           upcomingDeliveryPlanId = jsonField(result.body, "plan_id");
           return result;
         },
-        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+        {
+          status: 200,
+          body: [
+            "account_created: false, no invitation_sent",
+            (body) =>
+              jsonField(body, "account_created") === false && !Object.hasOwn(JSON.parse(body), "invitation_sent"),
+          ],
+        },
       ],
       [
         "dashboard shows the recommended meal",

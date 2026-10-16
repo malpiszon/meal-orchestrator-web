@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 import { MO_INGEST_TOKEN } from "astro:env/server";
+import { reportMissingSecrets } from "@/lib/missing-secrets";
 import { moDeliverySchema, toOptionRows, type MoDelivery } from "@/lib/mo-delivery";
+import { isAuthRejection } from "@/lib/mo-delivery-faults";
 import { reportHandledError } from "@/lib/report-handled-error";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -54,10 +56,18 @@ function logStorageError(step: string, error: DbError): void {
   console.error(`mo delivery ${step} failed: ${error.code ?? "unknown"} ${error.message}`);
 }
 
+/** A key the services reject can never succeed on retry: a configuration fault, not a storage one. */
+function configurationFault(error: unknown): Response {
+  reportHandledError("mo_delivery.config", error);
+  return json({ error: "not_configured" }, 503);
+}
+
 export const POST: APIRoute = async ({ request }) => {
   // 1. Configuration.
   const supabase = createServiceClient();
   if (!supabase || !MO_INGEST_TOKEN) {
+    // createServiceClient reports missing Supabase secrets itself.
+    if (!MO_INGEST_TOKEN) reportMissingSecrets(["MO_INGEST_TOKEN"]);
     return json({ error: "not_configured" }, 503);
   }
 
@@ -107,36 +117,57 @@ export const POST: APIRoute = async ({ request }) => {
 
   let result = await ingest();
   let accountCreated = false;
+  let invitationSent = false;
 
   if (result.error?.code === "P0002" && result.error.message === "unknown_user") {
     // Invite the account: GoTrue creates the user and emails the invitation link. `inviteUserByEmail`
     // stores its `data` as user_metadata, so `provisioned_by` is set in app_metadata afterwards.
     const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(delivery.user.email);
+    if (isAuthRejection(inviteError)) return configurationFault(inviteError);
     if (!inviteError) {
       accountCreated = true;
+      invitationSent = true;
       const { error: metadataError } = await supabase.auth.admin.updateUserById(invited.user.id, {
         app_metadata: { provisioned_by: PROVISIONED_BY },
       });
       if (metadataError) logStorageError("updateUserById", metadataError);
     } else if (!EMAIL_EXISTS_CODES.has(inviteError.code ?? "")) {
       // The invitation failed (e.g. the email couldn't be sent): still store the account and the week,
-      // without an invitation. A concurrent delivery may also have just created the account, and
-      // GoTrue reports that race as a generic 500 rather than email_exists; createUser then fails the
-      // same way and the retry below decides, failing as storage_failed if the user still doesn't exist.
-      logStorageError("inviteUserByEmail", inviteError);
+      // without an invitation (`invitation_sent: false` tells MO). A concurrent delivery may also have
+      // just created the account, and GoTrue reports that race as a generic 500 rather than
+      // email_exists; createUser then reports email_exists and the retry below decides.
+      reportHandledError("mo_delivery.invite", inviteError, { level: "warning" });
       const { error: createError } = await supabase.auth.admin.createUser({
         email: delivery.user.email,
         email_confirm: false,
         app_metadata: { provisioned_by: PROVISIONED_BY },
       });
+      if (isAuthRejection(createError)) return configurationFault(createError);
       if (createError && !EMAIL_EXISTS_CODES.has(createError.code ?? "")) {
-        logStorageError("createUser", createError);
+        // No user could be produced, so a second RPC would only fail with unknown_user again.
+        reportHandledError("mo_delivery.provision", createError);
+        return json({ error: "storage_failed" }, 500);
       }
       accountCreated = !createError;
     }
     result = await ingest();
   }
 
+  // PostgrestError carries no HTTP status; a rejected key arrives as a 401 (with code 42501, or none).
+  if (result.error && isAuthRejection({ code: result.error.code, status: result.status })) {
+    // The status on the wrapper keeps a code-less body grouped as http_<status>.
+    return configurationFault(
+      Object.assign(
+        new Error(
+          `ingest_weekly_plan rejected the key: ${result.status} ${result.error.code} ${result.error.message}`,
+          {
+            cause: result.error,
+          },
+        ),
+        { status: result.status },
+      ),
+    );
+  }
   if (result.error?.code === UNTRANSLATABLE_CHARACTER) {
     // e.g. a "\u0000" in a string: valid JSON, but Postgres can't store it, so a retry would never succeed.
     return json(
@@ -168,5 +199,14 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // 5. Success.
-  return json({ plan_id: planId, week_start: delivery.week_start, account_created: accountCreated }, 200);
+  // invitation_sent only for an account this delivery created; an existing user was invited earlier.
+  return json(
+    {
+      plan_id: planId,
+      week_start: delivery.week_start,
+      account_created: accountCreated,
+      ...(accountCreated ? { invitation_sent: invitationSent } : {}),
+    },
+    200,
+  );
 };
