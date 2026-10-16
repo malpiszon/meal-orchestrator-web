@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { MO_INGEST_TOKEN } from "astro:env/server";
 import { reportMissingSecrets } from "@/lib/missing-secrets";
 import { moDeliverySchema, toOptionRows, type MoDelivery } from "@/lib/mo-delivery";
-import { isAuthRejection } from "@/lib/mo-delivery-faults";
+import { isAuthRejection, isGoTrueKeyRejection } from "@/lib/mo-delivery-faults";
 import { reportHandledError } from "@/lib/report-handled-error";
 import { createServiceClient } from "@/lib/supabase";
 
@@ -11,9 +11,6 @@ export const prerender = false;
 const PROVISIONED_BY = "mo-delivery";
 // GoTrue error codes for "a user with this email already exists" (a concurrent delivery created it).
 const EMAIL_EXISTS_CODES = new Set(["email_exists", "user_already_exists"]);
-// GoTrue error codes for a service key it rejects. A GoTrue 403 counts as a wrong key only with one of
-// these; any other 403 keeps its storage path, so one email's fault isn't reported as configuration.
-const GOTRUE_KEY_REJECTION_CODES = new Set(["bad_jwt", "not_admin", "no_authorization"]);
 // Postgres "untranslatable_character": a string Postgres can't store (e.g. "\u0000" in jsonb/text).
 const UNTRANSLATABLE_CHARACTER = "22P05";
 // Postgres "object_not_in_prerequisite_state": ingest_weekly_plan refuses a changed re-send of a started week.
@@ -47,12 +44,6 @@ async function tokensMatch(given: string, expected: string): Promise<boolean> {
 function bearerToken(request: Request): string | null {
   const match = /^Bearer\s+(\S+)\s*$/i.exec(request.headers.get("Authorization") ?? "");
   return match?.[1] ?? null;
-}
-
-/** Whether a GoTrue admin error means the service key is rejected: any 401, or a 403 with a key-error code. */
-function authRejectsKey(error: { code?: string; status?: number } | null): boolean {
-  if (!error || !isAuthRejection(error)) return false;
-  return error.status === 401 || GOTRUE_KEY_REJECTION_CODES.has(error.code ?? "");
 }
 
 /** A key the services reject can never succeed on retry: a configuration fault, not a storage one. */
@@ -122,7 +113,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Invite the account: GoTrue creates the user and emails the invitation link. `inviteUserByEmail`
     // stores its `data` as user_metadata, so `provisioned_by` is set in app_metadata afterwards.
     const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(delivery.user.email);
-    if (authRejectsKey(inviteError)) return configurationFault(inviteError);
+    if (isGoTrueKeyRejection(inviteError)) return configurationFault(inviteError);
     if (!inviteError) {
       accountCreated = true;
       invitationSent = true;
@@ -141,7 +132,7 @@ export const POST: APIRoute = async ({ request }) => {
         email_confirm: false,
         app_metadata: { provisioned_by: PROVISIONED_BY },
       });
-      if (authRejectsKey(createError)) return configurationFault(createError);
+      if (isGoTrueKeyRejection(createError)) return configurationFault(createError);
       if (createError && !EMAIL_EXISTS_CODES.has(createError.code ?? "")) {
         // No user could be produced, so a second RPC would only fail with unknown_user again.
         reportHandledError("mo_delivery.provision", createError);

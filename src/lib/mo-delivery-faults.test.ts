@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAuthRejection } from "@/lib/mo-delivery-faults";
+import { isAuthRejection, isGoTrueKeyRejection } from "@/lib/mo-delivery-faults";
 
 describe("isAuthRejection", () => {
   it.each([401, 403])("treats status %i as an auth rejection", (status) => {
@@ -29,5 +29,30 @@ describe("isAuthRejection", () => {
 
   it.each([[null], [undefined]])("treats %o as not an auth rejection", (error) => {
     expect(isAuthRejection(error)).toBe(false);
+  });
+});
+
+describe("isGoTrueKeyRejection", () => {
+  it("treats a 401 without a code as a key rejection", () => {
+    expect(isGoTrueKeyRejection({ status: 401, message: "Unauthorized" })).toBe(true);
+  });
+
+  it.each(["bad_jwt", "not_admin", "no_authorization"])("treats a 403 with %s as a key rejection", (code) => {
+    expect(isGoTrueKeyRejection({ status: 403, code, message: "forbidden" })).toBe(true);
+  });
+
+  it.each([["email_address_not_authorized"], [undefined]])(
+    "treats a 403 with code %s as not a key rejection",
+    (code) => {
+      expect(isGoTrueKeyRejection({ status: 403, code, message: "forbidden" })).toBe(false);
+    },
+  );
+
+  it.each([
+    [{ status: 500, code: "unexpected_failure", message: "Error sending invite email" }],
+    [{ status: 429, code: "over_email_send_rate_limit", message: "rate limit" }],
+    [null],
+  ])("treats %o as not a key rejection", (error) => {
+    expect(isGoTrueKeyRejection(error)).toBe(false);
   });
 });
