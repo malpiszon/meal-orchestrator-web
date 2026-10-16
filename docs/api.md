@@ -65,6 +65,7 @@ The sample's week is in the past; the [dev walkthrough](dev-walkthrough.md) move
 
 - **"Next week"** is the nearest week whose Monday is after today. A later delivered week is stored but shown only once the nearer one has started. Without one, the tab shows "No upcoming plan yet".
 - **"This week"** is the week whose Monday is today or up to 6 days earlier. It is read-only.
+- **Default tab:** the dashboard opens "This week" once "Next week" is saved and this week has a plan; otherwise it opens "Next week" when there is one. The choice is made when the page opens, so saving on the open page stays on "Next week", and a re-delivered saved week (it stays saved) still opens "This week".
 - **History:** a week is past once its `week_start` is today minus 7 days or earlier. `/history` lists past weeks with "Saved" or "Not saved" ("No past plans yet" when there are none). `/history/<id>` shows "Saved <time>" or "Not saved: suggested picks", and answers 404 "Plan not found" for an id that isn't a UUID, an unknown plan, someone else's plan, and the current or an upcoming week.
 - If the plans can't be loaded (a database error), the dashboard and both history pages answer 503 with "Couldn't load your plan" or "Couldn't load your history", and the fault is reported to Sentry. Right after sign-in, PostgREST can reject the new session once with `PGRST303 JWT issued at future`; the plan services retry that error and log `… PGRST303 JWT issued at future, retry n/2 …`.
 

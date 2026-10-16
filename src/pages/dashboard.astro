@@ -8,6 +8,7 @@ import WeekPlan from "@/components/plan/WeekPlan.astro";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  defaultPlanTab,
   formatDayLabel,
   formatEditableUntil,
   formatSavedAt,
@@ -125,7 +126,8 @@ const upcomingDays: EditorDay[] = upcomingPlan
           </CardHeader>
         </Card>
       ) : currentPlan || upcomingPlan ? (
-        <PlanTabs client:load defaultTab={upcomingPlan ? "upcoming" : "current"}>
+        // Once next week is saved the choosing is done, so the page opens on "This week", where meals are rated.
+        <PlanTabs client:load defaultTab={defaultPlanTab(currentPlan, upcomingPlan)}>
           <Fragment slot="current">
             {currentPlan ? <WeekPlan plan={currentPlan} label="This week" today={today} /> : <NothingThisWeek />}
           </Fragment>

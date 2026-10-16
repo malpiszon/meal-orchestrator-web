@@ -1,4 +1,4 @@
-import { MEAL_TYPES, type MealType, type PlanDay, type PlanSlot } from "@/types";
+import { MEAL_TYPES, type MealType, type PlanDay, type PlanSlot, type PlanTab, type WeeklyPlan } from "@/types";
 
 /**
  * Pure plan-state helpers for the dashboard. No `astro:env` import, so Vitest can load this module.
@@ -214,4 +214,15 @@ export function formatSavedAt(isoTimestamp: string): string {
 /** The eyebrow of a past week: e.g. "Saved Fri 9 Oct, 18:42", or "Not saved: suggested picks". */
 export function formatPlanSavedStatus(savedAt: string | null): string {
   return savedAt ? `Saved ${formatSavedAt(savedAt)}` : "Not saved: suggested picks";
+}
+
+/**
+ * The tab the dashboard opens: "Next week" while it still needs choosing (not saved) or when there is no
+ * "This week" plan; otherwise "This week", where the user rates the meals they had.
+ */
+export function defaultPlanTab(
+  current: Pick<WeeklyPlan, "id"> | null,
+  upcoming: Pick<WeeklyPlan, "saved_at"> | null,
+): PlanTab {
+  return upcoming && (upcoming.saved_at === null || !current) ? "upcoming" : "current";
 }
