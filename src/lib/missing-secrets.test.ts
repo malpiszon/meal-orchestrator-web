@@ -36,7 +36,7 @@ describe("reportMissingSecrets", () => {
     reportMissingSecrets(["SUPABASE_KEY"]);
 
     const [reported, context] = vi.mocked(captureException).mock.calls[0] ?? [];
-    expect((reported as Error).message).toBe("Supabase secret not configured: SUPABASE_KEY");
+    expect((reported as Error).message).toBe("Secret not configured: SUPABASE_KEY");
     expect(context).toEqual({
       level: "error",
       fingerprint: ["handled", "supabase.config", "missing_SUPABASE_KEY"],

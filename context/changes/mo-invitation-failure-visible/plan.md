@@ -242,17 +242,17 @@ No migration. The new response field is additive; the 500 → 503 change for rej
 
 #### Automated
 
-- [x] 2.1 Unit tests pass: `npm test`
-- [x] 2.2 Linting and types pass: `npm run lint`
-- [x] 2.3 Production build succeeds: `npm run build`
-- [x] 2.4 Smoke passes on the preview port: `ASTRO_PREVIEW_BACKGROUND=1 npx astro preview --port 4322` then `BASE_URL=http://localhost:4322 npm run smoke`
+- [x] 2.1 Unit tests pass: `npm test` — 781fe79
+- [x] 2.2 Linting and types pass: `npm run lint` — 781fe79
+- [x] 2.3 Production build succeeds: `npm run build` — 781fe79
+- [x] 2.4 Smoke passes on the preview port: `ASTRO_PREVIEW_BACKGROUND=1 npx astro preview --port 4322` then `BASE_URL=http://localhost:4322 npm run smoke` — 781fe79
 
 #### Manual
 
-- [x] 2.5 With the local stack, a delivery for a new email answers `invitation_sent: true` and an invitation lands in Mailpit
-- [x] 2.6 With the service-role key altered in `.dev.vars`, a delivery answers 503 `not_configured` and the dev server logs a `mo_delivery.config` line
-- [x] 2.7 With `MO_INGEST_TOKEN` removed, a delivery answers 503 and the log shows `missing_MO_INGEST_TOKEN` once
-- [x] 2.8 Forcing the invite to fail (for example by stopping the mail service in the local stack, or pointing `SUPABASE_URL` at a stub) shows a `mo_delivery.invite` warning and a 200 with `invitation_sent: false`
+- [x] 2.5 With the local stack, a delivery for a new email answers `invitation_sent: true` and an invitation lands in Mailpit — 781fe79
+- [x] 2.6 With the service-role key altered in `.dev.vars`, a delivery answers 503 `not_configured` and the dev server logs a `mo_delivery.config` line — 781fe79
+- [x] 2.7 With `MO_INGEST_TOKEN` removed, a delivery answers 503 and the log shows `missing_MO_INGEST_TOKEN` once — 781fe79
+- [x] 2.8 Forcing the invite to fail (for example by stopping the mail service in the local stack, or pointing `SUPABASE_URL` at a stub) shows a `mo_delivery.invite` warning and a 200 with `invitation_sent: false` — 781fe79
 
 ### Phase 3: Docs and contract
 

@@ -777,8 +777,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           status: 200,
           body: [
             "account_created: false, no invitation_sent",
-            (body) =>
-              jsonField(body, "account_created") === false && !Object.hasOwn(JSON.parse(body), "invitation_sent"),
+            (body) => jsonField(body, "account_created") === false && jsonField(body, "invitation_sent") === undefined,
           ],
         },
       ],

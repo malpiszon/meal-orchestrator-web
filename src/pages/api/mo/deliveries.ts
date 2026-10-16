@@ -11,6 +11,9 @@ export const prerender = false;
 const PROVISIONED_BY = "mo-delivery";
 // GoTrue error codes for "a user with this email already exists" (a concurrent delivery created it).
 const EMAIL_EXISTS_CODES = new Set(["email_exists", "user_already_exists"]);
+// GoTrue error codes for a service key it rejects. A GoTrue 403 counts as a wrong key only with one of
+// these; any other 403 keeps its storage path, so one email's fault isn't reported as configuration.
+const GOTRUE_KEY_REJECTION_CODES = new Set(["bad_jwt", "not_admin", "no_authorization"]);
 // Postgres "untranslatable_character": a string Postgres can't store (e.g. "\u0000" in jsonb/text).
 const UNTRANSLATABLE_CHARACTER = "22P05";
 // Postgres "object_not_in_prerequisite_state": ingest_weekly_plan refuses a changed re-send of a started week.
@@ -46,14 +49,10 @@ function bearerToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-interface DbError {
-  code?: string;
-  message: string;
-}
-
-function logStorageError(step: string, error: DbError): void {
-  // Never log the request body or the email; code and message only.
-  console.error(`mo delivery ${step} failed: ${error.code ?? "unknown"} ${error.message}`);
+/** Whether a GoTrue admin error means the service key is rejected: any 401, or a 403 with a key-error code. */
+function authRejectsKey(error: { code?: string; status?: number } | null): boolean {
+  if (!error || !isAuthRejection(error)) return false;
+  return error.status === 401 || GOTRUE_KEY_REJECTION_CODES.has(error.code ?? "");
 }
 
 /** A key the services reject can never succeed on retry: a configuration fault, not a storage one. */
@@ -123,32 +122,35 @@ export const POST: APIRoute = async ({ request }) => {
     // Invite the account: GoTrue creates the user and emails the invitation link. `inviteUserByEmail`
     // stores its `data` as user_metadata, so `provisioned_by` is set in app_metadata afterwards.
     const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(delivery.user.email);
-    if (isAuthRejection(inviteError)) return configurationFault(inviteError);
+    if (authRejectsKey(inviteError)) return configurationFault(inviteError);
     if (!inviteError) {
       accountCreated = true;
       invitationSent = true;
       const { error: metadataError } = await supabase.auth.admin.updateUserById(invited.user.id, {
         app_metadata: { provisioned_by: PROVISIONED_BY },
       });
-      if (metadataError) logStorageError("updateUserById", metadataError);
+      // The account and the invitation exist; only the provisioned_by stamp is missing.
+      if (metadataError) reportHandledError("mo_delivery.provision", metadataError, { level: "warning" });
     } else if (!EMAIL_EXISTS_CODES.has(inviteError.code ?? "")) {
       // The invitation failed (e.g. the email couldn't be sent): still store the account and the week,
       // without an invitation (`invitation_sent: false` tells MO). A concurrent delivery may also have
       // just created the account, and GoTrue reports that race as a generic 500 rather than
       // email_exists; createUser then reports email_exists and the retry below decides.
-      reportHandledError("mo_delivery.invite", inviteError, { level: "warning" });
       const { error: createError } = await supabase.auth.admin.createUser({
         email: delivery.user.email,
         email_confirm: false,
         app_metadata: { provisioned_by: PROVISIONED_BY },
       });
-      if (isAuthRejection(createError)) return configurationFault(createError);
+      if (authRejectsKey(createError)) return configurationFault(createError);
       if (createError && !EMAIL_EXISTS_CODES.has(createError.code ?? "")) {
         // No user could be produced, so a second RPC would only fail with unknown_user again.
         reportHandledError("mo_delivery.provision", createError);
         return json({ error: "storage_failed" }, 500);
       }
       accountCreated = !createError;
+      // Reported only when this delivery created the account: after email_exists the other delivery
+      // owns the invitation (and reports its own failure).
+      if (accountCreated) reportHandledError("mo_delivery.invite", inviteError, { level: "warning" });
     }
     result = await ingest();
   }
@@ -159,7 +161,7 @@ export const POST: APIRoute = async ({ request }) => {
     return configurationFault(
       Object.assign(
         new Error(
-          `ingest_weekly_plan rejected the key: ${result.status} ${result.error.code} ${result.error.message}`,
+          `ingest_weekly_plan rejected the key: ${result.status} ${result.error.code || "-"} ${result.error.message}`,
           {
             cause: result.error,
           },
