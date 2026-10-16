@@ -4,7 +4,7 @@
 -- dishes, and no re-send touches another week, another user or the history. Dates are relative to
 -- today in Europe/Warsaw, so the test never ages. Run with `npx supabase test db`.
 begin;
-select plan(36);
+select plan(48);
 
 -- Day offsets are relative to today in Europe/Warsaw.
 create function pg_temp.d(p_day int) returns date
@@ -23,6 +23,15 @@ create function pg_temp.send(p_email text, p_day int, p_raw jsonb, variadic p_op
 returns uuid
 language sql volatile as $$
   select public.ingest_weekly_plan(p_email, 'ntfy', pg_temp.d(p_day), pg_temp.d(p_day + 4),
+    p_raw->>'v', p_raw, to_jsonb(p_options))
+$$;
+
+-- A delivery with its own provider and week_end (days after week_start).
+create function pg_temp.send_as(p_email text, p_provider text, p_day int, p_end int, p_raw jsonb,
+  variadic p_options jsonb[])
+returns uuid
+language sql volatile as $$
+  select public.ingest_weekly_plan(p_email, p_provider, pg_temp.d(p_day), pg_temp.d(p_day + p_end),
     p_raw->>'v', p_raw, to_jsonb(p_options))
 $$;
 
@@ -387,6 +396,114 @@ select results_eq(
       where plan_id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', -14) order by variant_index $$,
   $$ values ('X', true), ('Y', false) $$,
   'first delivery of a past week stores its options with is_chosen = is_recommended'
+);
+
+-- Saved, day and slot dropped (contract Idempotency "Upcoming week: replaced"; docs/api.md Re-delivery):
+-- A's day-15 week (days 15-17, lunch and dinner) is saved with swaps to Y at day-16 lunch and W at
+-- day-17 dinner. The re-send drops day 15 and day-16 dinner, and now recommends Y at day-17 lunch,
+-- where A kept X.
+set local role service_role;
+select pg_temp.send('resend-a@test.local', 15, '{"week":"up3","v":"1"}',
+  pg_temp.o(15, 'lunch', 0, 'X', 8, true), pg_temp.o(15, 'lunch', 1, 'Y', 7, false),
+  pg_temp.o(15, 'dinner', 0, 'Z', 8, true), pg_temp.o(15, 'dinner', 1, 'W', 7, false),
+  pg_temp.o(16, 'lunch', 0, 'X', 8, true), pg_temp.o(16, 'lunch', 1, 'Y', 7, false),
+  pg_temp.o(16, 'dinner', 0, 'Z', 8, true), pg_temp.o(16, 'dinner', 1, 'W', 7, false),
+  pg_temp.o(17, 'lunch', 0, 'X', 8, true), pg_temp.o(17, 'lunch', 1, 'Y', 7, false),
+  pg_temp.o(17, 'dinner', 0, 'Z', 8, true), pg_temp.o(17, 'dinner', 1, 'W', 7, false));
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-000000000001","role":"authenticated"}', true);
+select public.choose_plan_option(
+  pg_temp.opt_id(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15), 16, 'lunch', 'Y'));
+select public.choose_plan_option(
+  pg_temp.opt_id(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15), 17, 'dinner', 'W'));
+reset role;
+update public.weekly_plans set saved_at = '2026-01-05 00:00+00', received_at = '2026-01-01 00:00+00'
+ where id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15);
+
+delete from snap;
+insert into snap select * from pg_temp.state(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15));
+
+set local role service_role;
+select is(
+  pg_temp.send('resend-a@test.local', 15, '{"week":"up3","v":"2"}',
+    pg_temp.o(16, 'lunch', 0, 'X', 9, true), pg_temp.o(16, 'lunch', 1, 'Y', 6, false),
+    pg_temp.o(17, 'lunch', 0, 'X', 6, false), pg_temp.o(17, 'lunch', 1, 'Y', 9, true),
+    pg_temp.o(17, 'dinner', 0, 'Z', 9, true), pg_temp.o(17, 'dinner', 1, 'W', 6, false)),
+  pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15),
+  'saved, day and slot dropped: a changed re-send returns the same plan_id'
+);
+reset role;
+
+select is_empty(
+  $$ select 1 from public.plan_meal_options
+      where plan_id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)
+        and (meal_date = pg_temp.d(15) or (meal_date = pg_temp.d(16) and meal_type = 'dinner')) $$,
+  'saved, day and slot dropped: the dropped day''s and slot''s options are gone'
+);
+select results_eq(
+  $$ select meal_date - pg_temp.d(0), meal_type, provider_meal_id from public.plan_meal_options
+      where plan_id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15) and is_chosen
+      order by meal_date, meal_type $$,
+  $$ values (16, 'lunch', 'Y'), (17, 'dinner', 'W'), (17, 'lunch', 'X') $$,
+  'saved, day and slot dropped: every remaining slot keeps its chosen dish, X too although Y is now recommended'
+);
+select is(
+  (select saved_at from public.weekly_plans where id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)),
+  '2026-01-05 00:00+00'::timestamptz,
+  'saved, day and slot dropped: saved_at is unchanged'
+);
+select is_empty(
+  $$ select * from pg_temp.bad_slots(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)) $$,
+  'saved, day and slot dropped: one chosen option per slot'
+);
+select results_eq(
+  $$ select * from pg_temp.state(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)) order by ord $$,
+  $$ select * from snap order by ord $$,
+  'saved, day and slot dropped: A''s other weeks and B''s week are untouched'
+);
+
+-- Saved, week_end and provider changed: the same week re-sent by another provider, ending on day 21
+-- (week_start + 6) instead of day 19, with the kept dishes at other variant positions.
+set local role service_role;
+select is(
+  pg_temp.send_as('resend-a@test.local', 'other', 15, 6, '{"week":"up3","v":"3"}',
+    pg_temp.o(16, 'lunch', 0, 'X', 9, true), pg_temp.o(16, 'lunch', 1, 'Q', 8, false),
+    pg_temp.o(16, 'lunch', 2, 'Y', 6, false),
+    pg_temp.o(17, 'lunch', 0, 'Y', 9, true), pg_temp.o(17, 'lunch', 1, 'X', 6, false),
+    pg_temp.o(17, 'dinner', 0, 'W', 6, false), pg_temp.o(17, 'dinner', 1, 'Z', 9, true)),
+  pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15),
+  'saved, week_end and provider changed: a changed re-send returns the same plan_id'
+);
+reset role;
+
+select results_eq(
+  $$ select provider, week_end - week_start, mo_run_id from public.weekly_plans
+      where id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15) $$,
+  $$ values ('other', 6, '3') $$,
+  'saved, week_end and provider changed: the plan row carries the new provider, week_end and run_id'
+);
+select results_eq(
+  $$ select meal_date - pg_temp.d(0), meal_type, variant_index::int, provider_meal_id from public.plan_meal_options
+      where plan_id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15) and is_chosen
+      order by meal_date, meal_type $$,
+  $$ values (16, 'lunch', 2, 'Y'), (17, 'dinner', 0, 'W'), (17, 'lunch', 1, 'X') $$,
+  'saved, week_end and provider changed: the chosen dishes are kept by provider_meal_id'
+);
+select is(
+  (select saved_at from public.weekly_plans where id = pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)),
+  '2026-01-05 00:00+00'::timestamptz,
+  'saved, week_end and provider changed: the plan stays saved, saved_at unchanged'
+);
+select is_empty(
+  $$ select * from pg_temp.bad_slots(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)) $$,
+  'saved, week_end and provider changed: one chosen option per slot'
+);
+select results_eq(
+  $$ select * from pg_temp.state(pg_temp.pid('aaaaaaaa-0000-0000-0000-000000000001', 15)) order by ord $$,
+  $$ select * from snap order by ord $$,
+  'saved, week_end and provider changed: A''s other weeks and B''s week are untouched'
 );
 
 select * from finish();
