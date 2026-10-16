@@ -1,10 +1,23 @@
-import { captureException, getIsolationScope, withIsolationScope, withScope, type Scope } from "@sentry/cloudflare";
+import {
+  captureException,
+  getCurrentScope,
+  getIsolationScope,
+  withIsolationScope,
+  withScope,
+  type Scope,
+} from "@sentry/cloudflare";
 import { messageOf } from "@/lib/report-handled-error";
 import { maskEmails } from "@/lib/sentry-privacy";
 
 const STEP = "render.stream";
 
-function reportStreamError(error: unknown, isolationScope: Scope): void {
+/** The request's Sentry scopes, taken while the request's async context is still current. */
+interface RequestScopes {
+  isolationScope: Scope;
+  currentScope: Scope;
+}
+
+function reportStreamError(error: unknown, { isolationScope, currentScope }: RequestScopes): void {
   const message = error instanceof Error ? error.message : messageOf(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
@@ -15,13 +28,17 @@ function reportStreamError(error: unknown, isolationScope: Scope): void {
   const reported = error instanceof Error ? error : new Error(`${STEP} failed: ${message}`, { cause: error });
 
   // Unhandled, like the middleware's own capture: the client only gets a cut-off page. The hint takes
-  // either a mechanism or tags, not both, so the tag goes on a scope. Sentry has flushed the request
-  // by now (an HTML response isn't a stream to it); it keeps a late event's send alive through the
-  // request's `waitUntil` only when the request's isolation scope is current, so pin it.
+  // either a mechanism or tags, not both, so the tag goes on a forked scope. The body is read outside
+  // the request's async context, where no Sentry client is current (probe P10), so both request
+  // scopes are pinned: the current scope carries the client, and the isolation scope lets Sentry,
+  // which has flushed the request by now (an HTML response isn't a stream to it), keep the late
+  // send alive through the request's `waitUntil`.
   withIsolationScope(isolationScope, () => {
-    withScope((scope) => {
-      scope.setTag("step", STEP);
-      captureException(reported, { mechanism: { handled: false, type: "auto.middleware.astro.stream" } });
+    withScope(currentScope, () => {
+      withScope((scope) => {
+        scope.setTag("step", STEP);
+        captureException(reported, { mechanism: { handled: false, type: "auto.middleware.astro.stream" } });
+      });
     });
   });
 }
@@ -32,12 +49,12 @@ function reportStreamError(error: unknown, isolationScope: Scope): void {
  * failure once, then errors the returned stream with the same error. Status, statusText and headers
  * are kept (the adapter applies cookies to the outgoing response); a cancel reaches the source, so
  * a client disconnect still stops the render. A response without a body is returned as is. Call it
- * inside the request, so the report runs in the request's Sentry isolation scope.
+ * inside the request, so the report runs in the request's Sentry scopes.
  */
 export function captureStreamErrors(response: Response): Response {
   if (response.body === null) return response;
 
-  const isolationScope = getIsolationScope();
+  const scopes: RequestScopes = { isolationScope: getIsolationScope(), currentScope: getCurrentScope() };
   const reader = response.body.getReader();
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
@@ -45,7 +62,7 @@ export function captureStreamErrors(response: Response): Response {
       try {
         chunk = await reader.read();
       } catch (error) {
-        reportStreamError(error, isolationScope);
+        reportStreamError(error, scopes);
         controller.error(error);
         return;
       }

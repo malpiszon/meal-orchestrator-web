@@ -186,14 +186,14 @@ None: no schema, secret or deploy-order change.
 
 #### Automated
 
-- [ ] 2.1 Lint passes: `npm run lint`
-- [ ] 2.2 Unit tests pass: `npm test`
-- [ ] 2.3 Smoke passes against the preview: `BASE_URL=http://localhost:4323 npm run smoke`
-- [ ] 2.4 E2E passes (cookies still set, pages hydrate): `E2E_PORT=4323 npm run test:e2e`
+- [x] 2.1 Lint passes: `npm run lint`
+- [x] 2.2 Unit tests pass: `npm test`
+- [x] 2.3 Smoke passes against the preview: `BASE_URL=http://localhost:4323 npm run smoke`
+- [x] 2.4 E2E passes (cookies still set, pages hydrate): `E2E_PORT=4323 npm run test:e2e`
 
 #### Manual
 
-- [ ] 2.5 P10 before the change: status 200, truncated body, no log line (recorded in `probe-p10.md`).
-- [ ] 2.6 P10 after the change: status 200, truncated body, one `render.stream failed:` log line, and the throwing component is removed again (`git status` clean of it).
-- [ ] 2.7 `docs/deployment.md` reads correctly, with no leftover "until S-11".
-- [ ] 2.8 P10 after the change: the local DSN listener receives one event tagged `step: render.stream`, mechanism `auto.middleware.astro.stream`, handled false.
+- [x] 2.5 P10 before the change: status 200, truncated body, no log line (recorded in `probe-p10.md`).
+- [x] 2.6 P10 after the change: status 200, truncated body, one `render.stream failed:` log line, and the throwing component is removed again (`git status` clean of it).
+- [x] 2.7 `docs/deployment.md` reads correctly, with no leftover "until S-11".
+- [x] 2.8 P10 after the change: the local DSN listener receives one event tagged `step: render.stream`, mechanism `auto.middleware.astro.stream`, handled false.

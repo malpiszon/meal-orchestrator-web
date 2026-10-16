@@ -1,20 +1,32 @@
-import { captureException, getIsolationScope, type Scope } from "@sentry/cloudflare";
+import { captureException, getCurrentScope, getIsolationScope, type Scope } from "@sentry/cloudflare";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { captureStreamErrors } from "@/lib/report-stream-errors";
 
 const setTag = vi.fn();
 
-// `withIsolationScope` records the scope the report ran in, so a test can tell which one was current.
-const reportedIn: unknown[] = [];
+// The scopes made current when the capture ran, so a test can tell which ones they were.
+const capturedIn: { isolationScope?: unknown; currentScope?: unknown }[] = [];
+let isolationScope: unknown;
+let currentScope: unknown;
 
 vi.mock("@sentry/cloudflare", () => ({
-  captureException: vi.fn(),
+  captureException: vi.fn(() => {
+    capturedIn.push({ isolationScope, currentScope });
+  }),
+  getCurrentScope: vi.fn(),
   getIsolationScope: vi.fn(),
-  withIsolationScope: (isolationScope: Scope, callback: (scope: Scope) => unknown) => {
-    reportedIn.push(isolationScope);
-    return callback(isolationScope);
+  withIsolationScope: (scope: Scope, callback: (scope: Scope) => unknown) => {
+    isolationScope = scope;
+    return callback(scope);
   },
-  withScope: (callback: (scope: Scope) => unknown) => callback({ setTag } as unknown as Scope),
+  // `withScope(callback)` forks the current scope; `withScope(scope, callback)` makes `scope` current.
+  withScope: (...args: [(scope: Scope) => unknown] | [Scope, (scope: Scope) => unknown]) => {
+    if (args.length === 2) {
+      currentScope = args[0];
+      return args[1](args[0]);
+    }
+    return args[0]({ setTag } as unknown as Scope);
+  },
 }));
 
 const encoder = new TextEncoder();
@@ -68,8 +80,11 @@ describe("captureStreamErrors", () => {
   afterEach(() => {
     vi.mocked(captureException).mockReset();
     vi.mocked(getIsolationScope).mockReset();
+    vi.mocked(getCurrentScope).mockReset();
     setTag.mockReset();
-    reportedIn.length = 0;
+    capturedIn.length = 0;
+    isolationScope = undefined;
+    currentScope = undefined;
     vi.restoreAllMocks();
   });
 
@@ -90,14 +105,17 @@ describe("captureStreamErrors", () => {
     expect(error).toHaveBeenCalledWith("render.stream failed: component threw", failure.stack);
   });
 
-  it("reports in the isolation scope current when the body was wrapped, not when it was read", async () => {
-    const request = { name: "request" } as unknown as Scope;
-    const later = { name: "default" } as unknown as Scope;
-    vi.mocked(getIsolationScope).mockReturnValueOnce(request).mockReturnValue(later);
+  it("reports in the scopes current when the body was wrapped, not when it was read", async () => {
+    // The body is read outside the request's async context, where no Sentry client is current (probe P10).
+    const requestIsolation = { name: "request isolation" } as unknown as Scope;
+    const requestCurrent = { name: "request current, with the client" } as unknown as Scope;
+    const later = { name: "default, no client" } as unknown as Scope;
+    vi.mocked(getIsolationScope).mockReturnValueOnce(requestIsolation).mockReturnValue(later);
+    vi.mocked(getCurrentScope).mockReturnValueOnce(requestCurrent).mockReturnValue(later);
 
     await drain(captureStreamErrors(new Response(failingBody(["<html>"], new Error("component threw")))));
 
-    expect(reportedIn).toEqual([request]);
+    expect(capturedIn).toEqual([{ isolationScope: requestIsolation, currentScope: requestCurrent }]);
   });
 
   it("delivers a clean stream intact and reports nothing", async () => {
