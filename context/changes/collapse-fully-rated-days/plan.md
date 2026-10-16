@@ -213,4 +213,4 @@ None: no schema or data change. Deploy is a normal merge to `master`.
 
 #### Manual
 
-- [ ] 2.4 CI's e2e job is green on the PR
+- [x] 2.4 CI's e2e job is green on the PR — 78bda50
