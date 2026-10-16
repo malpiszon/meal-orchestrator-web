@@ -207,9 +207,9 @@ None: no schema or data change. Deploy is a normal merge to `master`.
 
 #### Automated
 
-- [x] 2.1 The new spec and the existing ones pass locally (nothing stale on `E2E_PORT` first): `npm run test:e2e`
-- [x] 2.2 The new spec passes twice in a row without resetting the stack
-- [x] 2.3 Lint passes: `npm run lint`
+- [x] 2.1 The new spec and the existing ones pass locally (nothing stale on `E2E_PORT` first): `npm run test:e2e` — 78bda50
+- [x] 2.2 The new spec passes twice in a row without resetting the stack — 78bda50
+- [x] 2.3 Lint passes: `npm run lint` — 78bda50
 
 #### Manual
 
