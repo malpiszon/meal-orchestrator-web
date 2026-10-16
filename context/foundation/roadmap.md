@@ -50,19 +50,19 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status |
-| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ------ |
-| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done   |
-| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready  |
-| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready  |
-| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done   |
-| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done   |
-| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready  |
-| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done   |
-| S-08 | report-handled-errors             | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done   |
-| S-09 | auth-fault-visibility             | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done   |
-| S-10 | mo-invitation-failure-visible     | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready  |
-| S-11 | streamed-render-errors            | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | ready  |
+| ID   | Change ID                         | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
+| ---- | --------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
+| S-01 | testing-migration-date-rules      | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
+| S-02 | testing-delivery-resend-integrity | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready       |
+| S-03 | testing-data-isolation            | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready       |
+| S-04 | testing-critical-journey-e2e      | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
+| S-05 | testing-agent-post-edit-hook      | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
+| S-06 | testing-mutation-stryker          | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready       |
+| S-07 | add-sentry                        | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
+| S-08 | report-handled-errors             | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
+| S-09 | auth-fault-visibility             | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
+| S-10 | mo-invitation-failure-visible     | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready       |
+| S-11 | streamed-render-errors            | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | in-progress |
 
 ## Baseline
 
@@ -237,7 +237,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Can the middleware catch errors in the streamed body without breaking streaming, or should streaming be turned off in the adapter? — Owner: research. Block: no.
 - **Risk:** A proven gap (probe P10) that every page render shares; independent of the helper, so it can run any time. Fixes the claim at `docs/deployment.md` § Error monitoring that page errors are reported.
-- **Status:** ready
+- **Status:** in-progress
 
 ## Backlog Handoff
 

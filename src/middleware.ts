@@ -1,5 +1,6 @@
 import { captureException } from "@sentry/cloudflare";
 import { defineMiddleware } from "astro:middleware";
+import { captureStreamErrors } from "@/lib/report-stream-errors";
 import { readSessionUser } from "@/lib/services/auth-session";
 import { createClient } from "@/lib/supabase";
 
@@ -10,10 +11,12 @@ const MACHINE_ROUTE_PREFIX = "/api/mo/";
 
 export const onRequest = defineMiddleware(async (context, next) => {
   // Astro turns a thrown page or route error into its own 500, so the Worker's Sentry wrapper never sees it.
+  // The catch covers errors before the body streams (frontmatter, endpoints); `captureStreamErrors`
+  // covers errors while it streams (components, island SSR), which happen after `next()` returns.
   try {
     if (context.url.pathname.startsWith(MACHINE_ROUTE_PREFIX)) {
       context.locals.user = null;
-      return await next();
+      return captureStreamErrors(await next());
     }
 
     const supabase = createClient(context.request.headers, context.cookies);
@@ -35,7 +38,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
       }
     }
 
-    return await next();
+    return captureStreamErrors(await next());
   } catch (error) {
     // Unhandled, like the Worker's own captures: Astro only turns it into a 500 page.
     captureException(error, { mechanism: { handled: false, type: "auto.middleware.astro" } });

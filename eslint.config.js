@@ -80,8 +80,8 @@ const scriptsConfig = defineConfig({
 });
 
 // Cron logs, failed MO deliveries, failed dashboard and history loads, rejected email links, rejected sign-ins, failed reset requests,
-// failed password saves, failed plan and rating saves, PGRST303 retries, skipped email-link checks and rate-limited or refused session checks are only observable through
-// Workers Logs.
+// failed password saves, failed plan and rating saves, PGRST303 retries, skipped email-link checks, rate-limited or refused session checks and failed streamed renders
+// are only observable through Workers Logs.
 const workerConfig = defineConfig({
   files: [
     "src/worker.ts",
@@ -96,6 +96,7 @@ const workerConfig = defineConfig({
     "src/pages/api/ratings.ts",
     "src/lib/plan-save.ts",
     "src/lib/postgrest-retry.ts",
+    "src/lib/report-stream-errors.ts",
     "src/lib/services/auth-links.ts",
     "src/lib/services/auth-session.ts",
   ],
