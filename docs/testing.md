@@ -16,8 +16,12 @@ Each `supabase/tests/*.test.sql` file runs in one transaction (`begin; select pl
 - `rpc_contract.test.sql` pins every RPC the Worker calls (argument names and types, return type, EXECUTE grants) and the columns it reads, so a migration pushed before its code merges can't break the deployed Worker. A new or changed RPC adds its rows here.
 - `warsaw_today.test.sql` pins `private.warsaw_date()` at Warsaw midnight in summer and winter time, and fails when any function in `public` or `private` derives a date without `private.warsaw_today()` (`at time zone`, `current_date`, `now()::date`, …). Every SQL date rule calls that helper.
 - `date_boundaries.test.sql` checks the cut-off, the rating window, `week_started` and the late-rating re-pick at their boundary days, with today pinned.
+- `delivery_atomicity.test.sql` re-sends a saved upcoming week with options that fail a `plan_meal_options` constraint on insert (a score of 11, a duplicate `(date, type, variant_index)`, a `null` name), after `ingest_weekly_plan` has updated the plan row and deleted its options. Each case expects the constraint's error and then compares the plan row, every option row, the chosen options and `saved_at` with a snapshot taken before.
+- `week_resubmission.test.sql` holds the re-send rules (identical, never saved, saved, dish gone, started, a dropped day or slot, a changed `week_end` or `provider`); `pg_temp.state(<plan>)` snapshots every other plan and option row, so each case also proves other weeks and users are untouched.
 
 Week selection on the dashboard and in history (`src/lib/services/plans.ts`) is unit-tested with fixed `today` strings against rows, through the in-memory PostgREST fake `src/test/fake-supabase.ts`. The fake throws on any builder method it doesn't implement.
+
+The MO delivery route (`src/pages/api/mo/deliveries.ts`) only reads `MO_INGEST_TOKEN` and creates the service client; its logic is `handleMoDelivery(request, { token, supabase })` in `src/lib/services/mo-deliveries.ts`, so Vitest loads it without `astro:env`. `mo-deliveries.test.ts` gives it a stub client whose `rpc` answers a scripted `{ data, error }` and mocks `reportHandledError`, then checks every status and body in the contract's [Responses](mo-delivery-contract.md#responses-and-retry-policy) table except the provisioning branch (the stub never answers `unknown_user`), and what reaches the RPC (`p_raw` as received, `p_run_id`, one `p_options` row per variant).
 
 ### Pinning today
 
@@ -65,15 +69,15 @@ BASE_URL=http://localhost:4321 MO_INGEST_TOKEN=<the server's token> \
   npm run smoke
 ```
 
-| Variable                    | Required | Purpose                                                                                                        |
-| --------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `BASE_URL`                  | no       | Server under test; defaults to `http://localhost:4321`                                                         |
-| `MO_INGEST_TOKEN`           | yes¹     | Must match the server's token                                                                                  |
-| `SUPABASE_URL`              | yes¹     | The Supabase instance the server uses                                                                          |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes¹     | Creates the smoke user and generates email-link tokens through the Admin API (there is no sign-up)             |
-| `SUPABASE_KEY`              | no       | The anon key; checks that it can't execute `ingest_weekly_plan` directly. Without it: `SKIP  anon grant check` |
-| `MAILPIT_URL`               | no       | Reads one real reset email from local Supabase's Mailpit. Without it: `SKIP  real reset email`                 |
-| `KEEPALIVE_EXPECT_FAILURE`  | no       | `1` runs only the keep-alive check and expects it to fail (CI points a preview at an unreachable Supabase)     |
+| Variable                    | Required | Purpose                                                                                                                                                                                                                      |
+| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BASE_URL`                  | no       | Server under test; defaults to `http://localhost:4321`                                                                                                                                                                       |
+| `MO_INGEST_TOKEN`           | yes¹     | Must match the server's token                                                                                                                                                                                                |
+| `SUPABASE_URL`              | yes¹     | The Supabase instance the server uses                                                                                                                                                                                        |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes¹     | Creates the smoke user and generates email-link tokens through the Admin API (there is no sign-up)                                                                                                                           |
+| `SUPABASE_KEY`              | no       | The anon key; checks that it can't execute `ingest_weekly_plan` directly, and reads plans through PostgREST as their owner for the delivery round trip. Without it: `SKIP  anon grant check` and `SKIP  delivery round trip` |
+| `MAILPIT_URL`               | no       | Reads one real reset email from local Supabase's Mailpit. Without it: `SKIP  real reset email`                                                                                                                               |
+| `KEEPALIVE_EXPECT_FAILURE`  | no       | `1` runs only the keep-alive check and expects it to fail (CI points a preview at an unreachable Supabase)                                                                                                                   |
 
 For a full run the server under test needs `SUPABASE_SERVICE_ROLE_KEY` and `MO_INGEST_TOKEN` configured too.
 
@@ -83,6 +87,7 @@ What it covers, each with its error and edge cases (unauthenticated calls, other
 
 - **Landing and sign-in:** `/` in both states, the sign-in page and its reset link, sign-in, protected pages, sign-out.
 - **MO delivery:** token check, account creation for a new email, deliveries of the past, current, upcoming and a later week, identical and changed re-deliveries, 409 `week_started`.
+- **Delivery round trip** (with `SUPABASE_KEY`, steps named `round trip: …`): snapshots the smoke user's plans and options, delivers `scripts/fixtures/mo-delivery.edge-cases.json` (a contract-valid week of edge cases: 7 days, all six meal types, 10 variants with a top-score tie, empty `composition`, missing, partial and extended `nutrition`, 0, 1 and 5 justifications, unknown keys at every level including `nutrition` and a justification, a `run_id`) to a new email, gives that account a password through the Admin API and signs it in, then reads its plan with `plan_meal_options(*)` through PostgREST. The plan's `provider`, `week_start`, `week_end`, `mo_run_id` and `raw_payload` must equal what was sent, and every option row must equal `expectedOptions(payload)`, which derives the rows from the contract's field table, not from `src/lib/mo-delivery.ts`; a failure prints the first differing path (e.g. `options.<date> lunch #2.nutrition.fat_g`). Another week for the same address in mixed case answers `account_created: false` and the owner then reads both weeks; last, the smoke user's rows equal the snapshot.
 - **Dashboard and history:** "No upcoming plan yet", the "This week" and "Next week" tabs, "Next week" staying on the nearest week, `/history` and `/history/<id>` (including 404s).
 - **Swap and save:** swapping, `plan_locked`, a swap surviving re-deliveries, recency notes only from saved plans.
 - **Ratings:** rating, clearing, `not_rateable`, "Last rated" on "Next week", and rating-ordered options (a 5/5 meal first and re-picked, a 1/5 meal last).

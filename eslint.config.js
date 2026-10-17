@@ -99,6 +99,7 @@ const workerConfig = defineConfig({
     "src/lib/report-stream-errors.ts",
     "src/lib/services/auth-links.ts",
     "src/lib/services/auth-session.ts",
+    "src/lib/services/mo-deliveries.ts",
   ],
   rules: { "no-console": "off" },
 });
