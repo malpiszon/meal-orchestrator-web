@@ -21,7 +21,7 @@ Each `supabase/tests/*.test.sql` file runs in one transaction (`begin; select pl
 
 Week selection on the dashboard and in history (`src/lib/services/plans.ts`) is unit-tested with fixed `today` strings against rows, through the in-memory PostgREST fake `src/test/fake-supabase.ts`. The fake throws on any builder method it doesn't implement.
 
-The MO delivery route (`src/pages/api/mo/deliveries.ts`) only reads `MO_INGEST_TOKEN` and creates the service client; its logic is `handleMoDelivery(request, { token, supabase })` in `src/lib/services/mo-deliveries.ts`, so Vitest loads it without `astro:env`. `mo-deliveries.test.ts` gives it a stub client whose `rpc` answers a scripted `{ data, error }` and mocks `reportHandledError`, then checks every status and body in the contract's [Responses](mo-delivery-contract.md#responses-and-retry-policy) table except the provisioning branch (the stub never answers `unknown_user`), and what reaches the RPC (`p_raw` as received, `p_run_id`).
+The MO delivery route (`src/pages/api/mo/deliveries.ts`) only reads `MO_INGEST_TOKEN` and creates the service client; its logic is `handleMoDelivery(request, { token, supabase })` in `src/lib/services/mo-deliveries.ts`, so Vitest loads it without `astro:env`. `mo-deliveries.test.ts` gives it a stub client whose `rpc` answers a scripted `{ data, error }` and mocks `reportHandledError`, then checks every status and body in the contract's [Responses](mo-delivery-contract.md#responses-and-retry-policy) table except the provisioning branch (the stub never answers `unknown_user`), and what reaches the RPC (`p_raw` as received, `p_run_id`, one `p_options` row per variant).
 
 ### Pinning today
 

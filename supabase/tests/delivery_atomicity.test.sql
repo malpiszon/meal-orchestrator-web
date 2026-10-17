@@ -5,9 +5,11 @@
 -- A changed re-send of a saved upcoming week makes ingest_weekly_plan update the plan row, delete its
 -- option rows and only then insert the new ones. Each case below sends options that fail a
 -- plan_meal_options constraint on that insert (a score of 11, a duplicate (date, type, variant_index), a
--- null name). The expected error names that constraint, which proves the call got past the update and
--- the delete; the snapshot then proves both were rolled back: the plan row, every option row (ids
--- included), the swapped choice and saved_at are exactly as before. The rollback itself is Postgres's
+-- null name). The expected error names that constraint. For the score and null-name cases that proves
+-- the old options were deleted (otherwise the first new row would hit the unique constraint instead);
+-- the duplicate case pins rollback after a unique violation. The snapshot then proves the write was
+-- rolled back: the plan row, every option row (ids included), the swapped choice and saved_at are
+-- exactly as before. The rollback itself is Postgres's
 -- guarantee (throws_ok runs the call in a subtransaction); what the snapshot pins is that
 -- ingest_weekly_plan has no handler that swallows the insert error and returns normally. The route
 -- answers such a failure with 500 storage_failed (docs/mo-delivery-contract.md, Responses). Dates are
