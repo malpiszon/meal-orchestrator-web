@@ -56,7 +56,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
 | S-01 | testing-migration-date-rules         | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
 | S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | in-progress |
-| S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | ready       |
+| S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | in-progress |
 | S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
 | S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
 | S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
@@ -127,7 +127,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Which tables, functions and grants are reachable with the public keys, and which functions run with the owner's rights (skipping row-level security)? — Owner: research. Block: no.
 - **Risk:** Challenges "row-level security is on, so it's safe"; follows S-01 because it walks the function list S-01's contract test pins.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-04: Critical-journey e2e
 
