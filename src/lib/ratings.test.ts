@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isRateable, RATING_FACES, ratingFace } from "@/lib/ratings";
+import { isDayFullyRated, isRateable, RATING_FACES, ratingFace } from "@/lib/ratings";
+import type { MealType, PlanDay, PlanMealOption, PlanSlot } from "@/types";
 
 describe("RATING_FACES", () => {
   it("lists the scale worst first, values 1 to 5", () => {
@@ -50,5 +51,58 @@ describe("isRateable", () => {
     expect(isRateable("2026-10-27", "2026-11-03")).toBe(true);
     expect(isRateable("2026-10-26", "2026-11-03")).toBe(false);
     expect(isRateable("2026-11-01", "2026-11-03")).toBe(true);
+  });
+});
+
+describe("isDayFullyRated", () => {
+  const date = "2026-10-12";
+
+  function option(id: string, rating: number | null, is_chosen = false): PlanMealOption {
+    return {
+      id,
+      meal_date: date,
+      meal_type: "lunch",
+      variant_index: 0,
+      provider_meal_id: id,
+      name: id,
+      composition: null,
+      nutrition: null,
+      score: 5,
+      justifications: [],
+      is_recommended: false,
+      is_chosen,
+      meal_ratings: rating === null ? null : { rating },
+    };
+  }
+
+  /** A slot whose chosen option has `rating`, plus an option that isn't chosen with `otherRating`. */
+  function slot(mealType: MealType, rating: number | null, otherRating: number | null = null): PlanSlot {
+    const chosen = option(`${mealType}/chosen`, rating, true);
+    const other = option(`${mealType}/other`, otherRating);
+    return { mealType, chosen, others: [other], options: [chosen, other], starredIds: [chosen.id] };
+  }
+
+  function day(...slots: PlanSlot[]): PlanDay {
+    return { date, slots };
+  }
+
+  it("every chosen meal rated is fully rated", () => {
+    expect(isDayFullyRated(day(slot("breakfast", 5), slot("lunch", 3)))).toBe(true);
+  });
+
+  it("one chosen meal unrated is not fully rated", () => {
+    expect(isDayFullyRated(day(slot("breakfast", 5), slot("lunch", null)))).toBe(false);
+  });
+
+  it("a rated option that isn't chosen doesn't count", () => {
+    expect(isDayFullyRated(day(slot("breakfast", 5), slot("lunch", null, 4)))).toBe(false);
+  });
+
+  it("a day with no slots is not fully rated", () => {
+    expect(isDayFullyRated(day())).toBe(false);
+  });
+
+  it("the lowest rating, 1, counts as rated", () => {
+    expect(isDayFullyRated(day(slot("breakfast", 1), slot("lunch", 1)))).toBe(true);
   });
 });

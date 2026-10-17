@@ -63,10 +63,10 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
 | S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
 | S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
-| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | ready       |
-| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | in-progress |
-| S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | in-progress |
-| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | ready       |
+| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | in-progress |
+| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | done        |
+| S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | done        |
+| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | in-progress |
 
 ## Baseline
 
@@ -227,7 +227,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Does MO accept a new response field (`invitation_sent`) and a new error code without a change on its side, and should it alert on them? — Owner: user. Block: no.
 - **Risk:** The third critical finding (D1): today a user can get an account with no invitation and nobody knows. It changes the delivery contract, so `docs/mo-delivery-contract.md` changes with it; re-inviting or retrying stays parked. Touches the delivery route that S-02 tests, so sequence the two branches if they overlap.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-11: Streamed render errors captured
 
@@ -241,7 +241,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Can the middleware catch errors in the streamed body without breaking streaming, or should streaming be turned off in the adapter? — Owner: research. Block: no.
 - **Risk:** A proven gap (probe P10) that every page render shares; independent of the helper, so it can run any time. Fixes the claim at `docs/deployment.md` § Error monitoring that page errors are reported.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-12: Dashboard opens "This week" once next week is saved
 
@@ -256,7 +256,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Right after a save on the open page, does the dashboard switch to "This week", or only the next time it is opened? — Owner: user. Block: no. Resolved on #168: only the next time it is opened. Every swap saves, so the open page stays on "Next week" and the user can keep swapping.
   - Does a saved week that MO re-sends (it stays saved) still open on "This week", or should a re-delivery send the user back to "Next week" to check the new menu? — Owner: user. Block: no. Resolved on #168: no special case; the tab follows the saved state alone. A saved week (re-sent or not) opens "This week"; an unsaved one opens "Next week".
 - **Risk:** Changes the documented rule in `docs/api.md` § Weeks on the dashboard; a user who wants to keep editing a saved week now needs one more tap, which is accepted because saving is the signal that choosing is done. Covered by the e2e journey, so that test may need its tab step updated.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-13: Fully rated days collapsed on "This week"
 
@@ -271,25 +271,25 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Does a day collapse as soon as its last meal is rated, or only the next time the page is opened? — Owner: user. Block: no.
   - What does a collapsed day show: just the day, or the day with its meals' ratings? — Owner: user. Block: no.
 - **Risk:** Touches the week view that rating happens in, so a rating must still save, change and clear inside a day opened again; the change must stay accessible (the collapsed line is a real control that keyboards and screen readers can open).
-- **Status:** ready
+- **Status:** in-progress
 
 ## Backlog Handoff
 
-| Roadmap ID | Issue                                                                 | Change ID                            | Suggested issue title                             | Ready for `/10x-plan` | Notes                                                |
-| ---------- | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- | --------------------- | ---------------------------------------------------- |
-| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules         | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                          |
-| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity    | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity`    |
-| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation               | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                          |
-| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e         | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                          |
-| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook         | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                          |
-| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker             | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                    |
-| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                          |
-| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                          |
-| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`                |
-| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route       |
-| S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors               | Capture errors in streamed pages                  | yes                   | Independent; any time                                |
-| S-12       | [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168) | dashboard-opens-this-week-when-saved | Open "This week" once next week is saved          | yes                   | Run `/10x-plan dashboard-opens-this-week-when-saved` |
-| S-13       | [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169) | collapse-fully-rated-days            | Collapse fully rated days on "This week"          | yes                   | Independent of S-12; any time                        |
+| Roadmap ID | Issue                                                                 | Change ID                            | Suggested issue title                             | Ready for `/10x-plan` | Notes                                             |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- | --------------------- | ------------------------------------------------- |
+| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules         | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                       |
+| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity    | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity` |
+| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation               | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                       |
+| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e         | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                       |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook         | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
+| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker             | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
+| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
+| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                       |
+| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`             |
+| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route    |
+| S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors               | Capture errors in streamed pages                  | done                  | Merged 2026-10-16 (PR #173)                       |
+| S-12       | [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168) | dashboard-opens-this-week-when-saved | Open "This week" once next week is saved          | done                  | Merged 2026-10-16 (PR #174)                       |
+| S-13       | [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169) | collapse-fully-rated-days            | Collapse fully rated days on "This week"          | yes                   | Independent of S-12; any time                     |
 
 ## Open Roadmap Questions
 
@@ -334,3 +334,5 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **S-08: a database, PostgREST or Auth fault that the app handles with a friendly page, an error code or a fallback reaches Sentry as one issue per step and error code, with the original error kept as its cause; user errors stay in the logs, and `docs/deployment.md` describes the new policy.** — Archived 2026-10-14 → `context/archive/2026-10-13-report-handled-errors/`. Lesson: —.
 - **S-07: an unhandled error in the Worker (pages, API routes, MO delivery, keep-alive) or in a React island reaches Sentry with enough context to find its cause, so a failure that slips past the tests is noticed instead of going silent.** — Archived 2026-10-14 → `context/archive/2026-10-11-add-sentry/`. Lesson: —.
 - **S-09: an Auth outage, a failed link check or a missing secret is reported to Sentry and shown to the user as "try again" where that applies, instead of looking like everyone signing out, every invitation expiring or a wrong password; anonymous visits and wrong passwords stay quiet.** — Archived 2026-10-15 → `context/archive/2026-10-14-auth-fault-visibility/`. Lesson: —.
+- **S-11: an error thrown by a component after the page has started streaming reaches Sentry and the Worker logs, instead of leaving the user a truncated page with status 200 and no trace.** — Archived 2026-10-16 → `context/archive/2026-10-15-streamed-render-errors/`. Lesson: —.
+- **S-12: a user who has saved next week (swapped a meal or kept the picks) opens the dashboard on "This week", where they rate what they ate; while next week is unsaved, or when there is no plan for this week, it still opens on "Next week". The other tab stays one tap away.** — Archived 2026-10-16 → `context/archive/2026-10-16-dashboard-opens-this-week-when-saved/`. Lesson: —.

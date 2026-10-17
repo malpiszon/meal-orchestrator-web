@@ -93,12 +93,13 @@ The smoke test guards the flows end to end; it is not a substitute for unit and 
 
 ## E2E
 
-`npm run test:e2e` (`npx playwright test`) runs the Playwright suite in Chromium against a production build served on the Cloudflare runtime (`npm run build && npm run preview`, started by Playwright). Two specs:
+`npm run test:e2e` (`npx playwright test`) runs the Playwright suite in Chromium against a production build served on the Cloudflare runtime (`npm run build && npm run preview`, started by Playwright). Three specs:
 
 - `tests/e2e/critical-journey.spec.ts`: one journey for a new user each run (`e2e-journey-<uuid>@example.com`), in a browser without a stored session. MO delivers this week and next week, the invitation email from Mailpit opens the set-password page, the user sets a password, keeps next week's picks, swaps a meal, rates this Monday's meal, signs out, signs in again and finds the swap and the rating still there. It asserts only what needs a browser (the tab the dashboard opens: "Next week" while next week is unsaved, "This week" once it is saved; hydrated islands, the save status, the rating toggles, the cookie session); the rules behind them (cut-off, rating window, re-sends, expired links, isolation) are pgTAP and smoke territory and aren't re-checked here.
+- `tests/e2e/rated-days.spec.ts`: a fully rated day on "This week" collapses without getting in the way of rating. One new user each run (`e2e-rated-days-<uuid>@example.com`, so an earlier run's ratings can't leave Monday collapsed), created by delivering this week and setting a password through the Admin API, signs in in a browser without a stored session and rates both of Monday's meals. After a reload Monday is one closed line ("All rated", no faces) whose day heading is still exposed as a heading inside the summary, while Tuesday is open; Enter on the focused summary opens it and shows the faces; one rating then changes and the other clears, each pressed state updating; after another reload Monday is open again, as it is no longer fully rated. Which days count as fully rated is unit-tested (`src/lib/ratings.test.ts`).
 - `tests/e2e/seed.spec.ts`: the signed-in dashboard renders an upcoming week and survives a reload. It runs on the session the `setup` project (`tests/e2e/auth.setup.ts`) stores: setup delivers next week for `E2E_USERNAME` (creating the account on an empty stack), sets its password to `E2E_PASSWORD` through the Admin API and signs in.
 
-Both pass on any date and on a stack where neither user exists yet, and again right away; nothing needs resetting between runs. The helpers in `tests/e2e/support/`:
+All pass on any date and on a stack where none of their users exists yet, and again right away; nothing needs resetting between runs. The helpers in `tests/e2e/support/`:
 
 - `deliveries.ts`: `thisMonday`/`nextMonday` from a Warsaw today (`todayInWarsaw`, as the dashboard uses) and `deliverWeek`, which posts `scripts/fixtures/mo-delivery.sample.json` moved to the given week to `/api/mo/deliveries`.
 - `users.ts`: `ensureUserWithPassword` creates or updates a confirmed auth user with a password.

@@ -15,6 +15,7 @@ const MAX_BODY_BYTES = 256 * 1024;
 interface RpcResult {
   data: unknown;
   error: { code?: string; message: string } | null;
+  status?: number;
 }
 
 /** A service client whose `rpc` answers with `result`; never `P0002 unknown_user` (provisioning is S-10's). */
@@ -192,6 +193,25 @@ describe("handleMoDelivery storage", () => {
     expect((reported as Error).cause).toBe(error);
     expect((reported as Error).message).not.toContain(sample.user.email);
   });
+
+  it.each([
+    ["a 401 with 42501", { status: 401, error: { code: "42501", message: "permission denied" } }],
+    ["a 401 without a code", { status: 401, error: { code: "", message: "Unauthorized" } }],
+    ["a PostgREST JWT error", { status: 400, error: { code: "PGRST301", message: "JWSError" } }],
+  ])(
+    "answers 503 not_configured when the database rejects the service key (%s) and reports it",
+    async (_case, rejected) => {
+      const { response, body } = await deliver(deliveryRequest(validJson()), { data: null, ...rejected });
+
+      expect(response.status).toBe(503);
+      expect(body).toEqual({ error: "not_configured" });
+      expect(reportHandledError).toHaveBeenCalledTimes(1);
+      const [step, reported] = vi.mocked(reportHandledError).mock.calls[0] ?? [];
+      expect(step).toBe("mo_delivery.config");
+      expect((reported as Error).cause).toBe(rejected.error);
+      expect((reported as Error).message).not.toContain(sample.user.email);
+    },
+  );
 
   it("answers 500 storage_failed when the RPC returns no string plan id, reported as no_plan_id", async () => {
     const { response, body } = await deliver(deliveryRequest(validJson()), { data: 42, error: null });
