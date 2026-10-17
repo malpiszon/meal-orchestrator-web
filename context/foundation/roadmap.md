@@ -62,7 +62,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
 | S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
 | S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
-| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | in-progress |
+| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | done        |
 | S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | done        |
 | S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | done        |
 | S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | in-progress |
@@ -212,7 +212,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Does MO accept a new response field (`invitation_sent`) and a new error code without a change on its side, and should it alert on them? — Owner: user. Block: no.
 - **Risk:** The third critical finding (D1): today a user can get an account with no invitation and nobody knows. It changes the delivery contract, so `docs/mo-delivery-contract.md` changes with it; re-inviting or retrying stays parked. Touches the delivery route that S-02 tests, so sequence the two branches if they overlap.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-11: Streamed render errors captured
 
@@ -270,7 +270,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 | S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
 | S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                       |
 | S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`             |
-| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route    |
+| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | done                  | Merged 2026-10-16 (PR #176)                       |
 | S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors               | Capture errors in streamed pages                  | done                  | Merged 2026-10-16 (PR #173)                       |
 | S-12       | [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168) | dashboard-opens-this-week-when-saved | Open "This week" once next week is saved          | done                  | Merged 2026-10-16 (PR #174)                       |
 | S-13       | [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169) | collapse-fully-rated-days            | Collapse fully rated days on "This week"          | yes                   | Independent of S-12; any time                     |
@@ -321,3 +321,4 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **S-09: an Auth outage, a failed link check or a missing secret is reported to Sentry and shown to the user as "try again" where that applies, instead of looking like everyone signing out, every invitation expiring or a wrong password; anonymous visits and wrong passwords stay quiet.** — Archived 2026-10-15 → `context/archive/2026-10-14-auth-fault-visibility/`. Lesson: —.
 - **S-11: an error thrown by a component after the page has started streaming reaches Sentry and the Worker logs, instead of leaving the user a truncated page with status 200 and no trace.** — Archived 2026-10-16 → `context/archive/2026-10-15-streamed-render-errors/`. Lesson: —.
 - **S-12: a user who has saved next week (swapped a meal or kept the picks) opens the dashboard on "This week", where they rate what they ate; while next week is unsaved, or when there is no plan for this week, it still opens on "Next week". The other tab stays one tap away.** — Archived 2026-10-16 → `context/archive/2026-10-16-dashboard-opens-this-week-when-saved/`. Lesson: —.
+- **S-10: when the invitation email can't be sent or the account can't be created, the delivery reports it to Sentry and tells MO in its response, and a missing or wrong secret answers a distinct "not configured" error instead of a retryable storage failure.** — Archived 2026-10-17 → `context/archive/2026-10-15-mo-invitation-failure-visible/`. Lesson: —.
