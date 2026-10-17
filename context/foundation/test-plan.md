@@ -69,13 +69,13 @@ Each row is a discrete rollout phase that will open its own change folder
 via `/10x-new`. Status moves left-to-right through the values below; the
 orchestrator updates Status as artifacts appear on disk.
 
-| #   | Phase name                     | Goal (one line)                                                                                          | Risks covered | Test types                    | Status      | Change folder                                       |
-| --- | ------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- | ----------- | --------------------------------------------------- |
-| 1   | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries         | #1, #5        | pgTAP, unit, migration replay | complete    | testing-migration-date-rules                        |
-| 2   | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should                 | #2, #6        | pgTAP, unit, smoke extensions | complete    | testing-delivery-resend-integrity                   |
-| 3   | Data isolation sweep           | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3            | pgTAP, smoke                  | not started | —                                                   |
-| 4   | Critical journey e2e           | One real-browser journey on the Workers runtime, wired as a CI gate                                      | #4, #7        | e2e (Playwright)              | complete    | testing-critical-journey-e2e                        |
-| 5   | Agent-loop feedback            | Post-edit hook runs the matching pgTAP or unit tests when an agent edits migrations or `src/lib/`        | #1, #5        | post-edit hook                | complete    | — (built with `/10x-configure-hook`; #123, PR #129) |
+| #   | Phase name                     | Goal (one line)                                                                                          | Risks covered | Test types                    | Status   | Change folder                                       |
+| --- | ------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- | -------- | --------------------------------------------------- |
+| 1   | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries         | #1, #5        | pgTAP, unit, migration replay | complete | testing-migration-date-rules                        |
+| 2   | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should                 | #2, #6        | pgTAP, unit, smoke extensions | complete | testing-delivery-resend-integrity                   |
+| 3   | Data isolation sweep           | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3            | pgTAP, smoke                  | complete | testing-data-isolation                              |
+| 4   | Critical journey e2e           | One real-browser journey on the Workers runtime, wired as a CI gate                                      | #4, #7        | e2e (Playwright)              | complete | testing-critical-journey-e2e                        |
+| 5   | Agent-loop feedback            | Post-edit hook runs the matching pgTAP or unit tests when an agent edits migrations or `src/lib/`        | #1, #5        | post-edit hook                | complete | — (built with `/10x-configure-hook`; #123, PR #129) |
 
 Order rationale: #1 is the only High × High risk and covers the SQL the delivery logic runs on; delivery integrity follows (interview Q1); isolation is the abuse lens; e2e is the most expensive layer and only covers what cheaper layers can't reach; the hook comes last because it runs the tests the earlier phases add.
 
@@ -84,12 +84,12 @@ Order rationale: #1 is the only High × High risk and covers the SQL the deliver
 | Layer                      | Tool                                    | Version           | Notes                                                                                                                         |
 | -------------------------- | --------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | unit                       | Vitest                                  | ^5.0.3            | `src/**/*.test.ts`; 21 files in `src/lib/` and `src/lib/services/`                                                            |
-| database                   | pgTAP via Supabase CLI                  | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 10 files; runs against local Supabase                                                            |
+| database                   | pgTAP via Supabase CLI                  | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 12 files; runs against local Supabase                                                            |
 | HTTP smoke                 | `scripts/smoke.mjs` (Node, no deps)     | n/a               | Drives flows over HTTP against a preview on the Workers runtime; also post-deploy probe                                       |
 | e2e (browser)              | Playwright Test (Chromium)              | 1.64.0            | `tests/e2e/`; the critical journey and a seed, against a preview on the Workers runtime; CI `e2e` job; checked: 2026-10-11    |
 | (AI-native) post-edit hook | Claude Code hooks — checked: 2026-10-10 | n/a               | When NOT to use: UI, styling or docs edits, and any edit where the matching test needs the full stack and takes over a minute |
 
-Test-base profile: `meaningful` — Vitest configured, 21 unit files, 10 pgTAP files, an HTTP smoke and one Playwright journey; pages, API routes and components have no tests of their own beyond the smoke and the journey.
+Test-base profile: `meaningful` — Vitest configured, 21 unit files, 12 pgTAP files, an HTTP smoke and one Playwright journey; pages, API routes and components have no tests of their own beyond the smoke and the journey.
 
 **Stack grounding tools (current session):**
 
@@ -100,15 +100,15 @@ Test-base profile: `meaningful` — Vitest configured, 21 unit files, 10 pgTAP f
 
 ## 5. Quality Gates
 
-| Gate                                                 | Where                    | Required?                                  | Catches                                            |
-| ---------------------------------------------------- | ------------------------ | ------------------------------------------ | -------------------------------------------------- |
-| lint + typecheck (`npm run lint`, `npx astro check`) | local + CI (`ci` job)    | required                                   | syntactic / type drift                             |
-| unit (`npm test`)                                    | local + CI (`ci` job)    | required                                   | logic regressions in `src/lib/`                    |
-| database (`supabase test db`)                        | local + CI (`smoke` job) | required; scope widens after §3 Phases 1–3 | plan-rule, migration and isolation regressions     |
-| HTTP smoke (`npm run smoke`)                         | local + CI (`smoke` job) | required                                   | broken flows over HTTP, error and edge cases       |
-| e2e on the critical journey (`npx playwright test`)  | local + CI (`e2e` job)   | required                                   | broken interactive journey in a real browser       |
-| post-deploy probe                                    | CI (`deploy` job)        | required                                   | missing Worker secrets, bot protection blocking MO |
-| post-edit hook                                       | local (agent loop)       | recommended after §3 Phase 5               | regressions at edit time; not a CI substitute      |
+| Gate                                                 | Where                    | Required?                          | Catches                                            |
+| ---------------------------------------------------- | ------------------------ | ---------------------------------- | -------------------------------------------------- |
+| lint + typecheck (`npm run lint`, `npx astro check`) | local + CI (`ci` job)    | required                           | syntactic / type drift                             |
+| unit (`npm test`)                                    | local + CI (`ci` job)    | required                           | logic regressions in `src/lib/`                    |
+| database (`supabase test db`)                        | local + CI (`smoke` job) | required; widened by §3 Phases 1–3 | plan-rule, migration and isolation regressions     |
+| HTTP smoke (`npm run smoke`)                         | local + CI (`smoke` job) | required                           | broken flows over HTTP, error and edge cases       |
+| e2e on the critical journey (`npx playwright test`)  | local + CI (`e2e` job)   | required                           | broken interactive journey in a real browser       |
+| post-deploy probe                                    | CI (`deploy` job)        | required                           | missing Worker secrets, bot protection blocking MO |
+| post-edit hook                                       | local (agent loop)       | recommended after §3 Phase 5       | regressions at edit time; not a CI substitute      |
 
 ## 6. Cookbook Patterns
 
@@ -137,7 +137,13 @@ Expected values come from `docs/mo-delivery-contract.md` and `docs/api.md` Re-de
 
 ### 6.3 Adding an isolation test for a new table, function or route
 
-- TBD — see §3 Phase 3 for the second-user denial pattern.
+Expected values come from PRD US-03 (a user sees and changes only their own plans) and `docs/api.md` (someone else's plan, option or rating answers `not_found`, like one that does not exist), never from the policies or functions under test.
+
+- **New table, function or grant**: `supabase/tests/exposed_surface.test.sql` fails on anything new that `anon` or `authenticated` can reach, since Supabase's default privileges grant them everything new in `public`. In the same migration PR, revoke what they must not have and add the rest to the allowlist. A newly exposed schema (`[api] schemas`) joins the file's schema lists; a migration that revokes the pinned `MAINTAIN` default removes it from the allowlist.
+- **Its second-user case**: each allowlist row gets a case in `supabase/tests/second_user_isolation.test.sql`, where a second user and anon act on the first user's rows and change nothing. A security definer function must check `auth.uid()` itself. A row that needs no case gets a line in the file's header saying why.
+- **New write path for child rows**: set the row's `user_id` from its plan's owner, and build the sweep's fixtures through that path so its `user_id` invariant checks the rows it writes.
+- **New route taking an id**: a `second user: …` step in `scripts/smoke.mjs` sending the smoke user's real id. If the route reaches a new table or RPC, add the matching direct `/rest/v1` call as the second user too, since the app's own `user_id` filters hide whether RLS holds.
+- **Reference tests**: `supabase/tests/exposed_surface.test.sql`, `supabase/tests/second_user_isolation.test.sql`, the `second user: …` steps in `scripts/smoke.mjs`.
 
 ### 6.4 Adding to the critical-journey e2e
 
@@ -152,6 +158,7 @@ Expected values come from `docs/mo-delivery-contract.md` and `docs/api.md` Re-de
 
 - **Phase 1** (`testing-migration-date-rules`): the SQL "today" had to become a function (`private.warsaw_today()`) before any test could pin it; the older pgTAP files still use the real Warsaw today and were left as they are. The replay runs only in CI or with `MIGRATION_REPLAY_WIPES_LOCAL_DB=1`, as it resets the local stack shared with `npm run dev` and other worktrees, and it can start no further back than `20261008180000`, the oldest version with every RPC the seed calls.
 - **Phase 2** (`testing-delivery-resend-integrity`, #120): the route imported `astro:env/server`, so its body moved unchanged into `handleMoDelivery` (`src/lib/services/mo-deliveries.ts`) with the token and client injected; the route is now a one-line call. The tests needed a right oracle first: the contract said a never-saved re-send follows MO's new recommendations and the PRD (US-07, FR-017) that the latest delivery always replaces the stored week; both now describe the shipped behaviour (the rating-adjusted suggested pick, a changed re-send of a started week refused with 409, kept choices). The fixtures are hand-built from the contract, not real dev re-sends. Provisioning and invitation partial states (unknown user, `createUser` fallback) were left to S-10 (#145), which changes that branch; the unit tests never stub `unknown_user`. The round trip runs in smoke, not in the post-deploy probe, so it never writes to production.
+- **Phase 3** (`testing-data-isolation`, #121): no leak found; the risk was Supabase's default privileges, which grant `anon` and `authenticated` everything on a new table, function or sequence in `public`, so every migration revokes by hand and nothing failed on one that forgot. The allowlist now does. Reading grants with `has_table_privilege` rather than `role_table_grants` surfaced `MAINTAIN` on all three tables, another default; it is pinned as allowed, with no migration, and noted on #121 as a candidate revoke. The allowlist also pins `graphql_public.graphql()`, Supabase's stub while pg_graphql isn't installed; a manual check on prod (2026-10-17) found pg_graphql off and no table in a realtime publication. The app's reads filter by `user_id` on top of RLS, so only the direct `/rest/v1` calls show RLS holds on its own. The choose route's `planId` is still not checked against the option; it only re-reads recency, which RLS scopes, and the smoke checks that. Like the round trip, the second user exists only on the local and CI stacks; the post-deploy probe is unchanged.
 - **Phase 4** (`testing-critical-journey-e2e`, #122): the swap and the rating need different weeks (swap only before a week starts, rating only within 7 days of a meal), so the journey delivers this week and next week relative to the Warsaw today and runs on any date. Local and CI auth email isn't rate limited (`email_sent` needs custom SMTP), so the journey always reads the real invitation from Mailpit. The invitation links to `site_url` (port 4321); the helper re-hosts it on `baseURL`, and CI previews on 4321. In CI the `e2e` job takes about 2 min 15 s and runs beside `smoke` (about 3 min 10 s), so it adds no wall-clock time per PR (first measured 2026-10-11).
 - **Phase 5** (agent hooks, #123): type-checked ESLint takes ~45 s per file and `astro check` ~50 s on this checkout, so neither runs per edit; the end-of-turn hook runs them side by side. Per edit, only Vitest (`related`, for `src/lib/` and `src/test/`) and an edited pgTAP file run. A migration can't be tested before it is applied, so the end-of-turn hook applies new ones (`npx supabase migration up --local`, additive, once the agent stops editing for the turn) and then runs pgTAP; an edited, already-applied migration needs a `db reset`, which the hook only reports, as it wipes the local database.
 

@@ -369,10 +369,10 @@ Not applicable: no migrations. Migration authors from now on must update `expose
 
 #### Automated
 
-- [ ] 4.1 Format passes
-- [ ] 4.2 Lint passes
+- [x] 4.1 Format passes
+- [x] 4.2 Lint passes
 
 #### Manual
 
-- [ ] 4.3 §6.3 reads as a complete recipe
-- [ ] 4.4 Issue #121's test-plan box is ticked
+- [x] 4.3 §6.3 reads as a complete recipe
+- [x] 4.4 Issue #121's test-plan box is ticked
