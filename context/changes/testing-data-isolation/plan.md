@@ -358,7 +358,7 @@ Not applicable: no migrations. Migration authors from now on must update `expose
 #### Automated
 
 - [x] 3.1 The smoke passes against a local preview — 97f7d92
-- [ ] 3.2 The CI smoke job passes on the PR
+- [x] 3.2 The CI smoke job passes on the PR — d48feff
 - [x] 3.3 Lint passes — 97f7d92
 
 #### Manual
@@ -369,10 +369,10 @@ Not applicable: no migrations. Migration authors from now on must update `expose
 
 #### Automated
 
-- [x] 4.1 Format passes
-- [x] 4.2 Lint passes
+- [x] 4.1 Format passes — cd88b42
+- [x] 4.2 Lint passes — cd88b42
 
 #### Manual
 
-- [x] 4.3 §6.3 reads as a complete recipe
-- [x] 4.4 Issue #121's test-plan box is ticked
+- [x] 4.3 §6.3 reads as a complete recipe — cd88b42
+- [x] 4.4 Issue #121's test-plan box is ticked — cd88b42
