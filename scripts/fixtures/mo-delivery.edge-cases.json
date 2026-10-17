@@ -289,7 +289,8 @@
               "justifications": [
                 {
                   "icon": "⚖️",
-                  "text": "Edge reason 1."
+                  "text": "Edge reason 1.",
+                  "weight": 2
                 },
                 {
                   "icon": "⚖️",

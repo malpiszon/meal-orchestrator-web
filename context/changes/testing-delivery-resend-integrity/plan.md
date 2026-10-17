@@ -320,15 +320,15 @@ None: no schema change. The handler move ships with the normal deploy; no deploy
 
 #### Automated
 
-- [x] 3.1 Unit tests pass
-- [ ] 3.2 Smoke passes including the round-trip steps
-- [x] 3.3 Round trip fails when a stored column is dropped (spot-check, reverted)
-- [x] 3.4 Lint passes
-- [ ] 3.5 CI smoke job green on the PR
+- [x] 3.1 Unit tests pass — c1c2e99
+- [x] 3.2 Smoke passes including the round-trip steps — c1c2e99
+- [x] 3.3 Round trip fails when a stored column is dropped (spot-check, reverted) — c1c2e99
+- [x] 3.4 Lint passes — c1c2e99
+- [x] 3.5 CI smoke job green on the PR — c1c2e99
 
 #### Manual
 
-- [x] 3.6 Round-trip output lists compared fields and reads clearly on failure
+- [x] 3.6 Round-trip output lists compared fields and reads clearly on failure — c1c2e99
 
 ### Phase 4: Test-plan and docs upkeep
 

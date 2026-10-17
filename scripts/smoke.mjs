@@ -201,6 +201,11 @@ const OPTION_FIELDS = [
   "is_recommended",
 ];
 const NUTRITION_KEYS = ["protein_g", "fat_g", "saturated_fat_g", "carbs_g", "sugar_g", "fiber_g", "salt_g"];
+const JUSTIFICATION_KEYS = ["icon", "text"];
+
+/** `value` cut to its contract `keys`: unknown nested keys are ignored (kept only in raw_payload). */
+const knownKeys = (value, keys) =>
+  Object.fromEntries(keys.filter((key) => key in value).map((key) => [key, value[key]]));
 
 /** The key the round trip compares an option row under, so a difference names its slot. */
 const optionKey = (row) => `${row.meal_date} ${row.meal_type} #${row.variant_index}`;
@@ -208,8 +213,9 @@ const optionKey = (row) => `${row.meal_date} ${row.meal_type} #${row.variant_ind
 /**
  * The option rows docs/mo-delivery-contract.md promises for `payload`, keyed by `optionKey`. Written from the
  * contract, not from src/lib/mo-delivery.ts: one row per variant, its `variant_index` the position in the
- * menu's order; `composition` "" stored as null ("no composition"); a missing `nutrition` stored as null, and
- * only its known keys kept (unknown nested keys live only in raw_payload); one recommended option per meal,
+ * menu's order; `composition` "" stored as null ("no composition"); a missing `nutrition` stored as null;
+ * `nutrition` and each justification keep only their known keys (unknown nested keys live only in
+ * raw_payload); one recommended option per meal,
  * the highest score with ties going to the first listed.
  */
 function expectedOptions(payload) {
@@ -224,14 +230,9 @@ function expectedOptions(payload) {
         provider_meal_id: variant.provider_meal_id,
         name: variant.name,
         composition: variant.composition === "" ? null : variant.composition,
-        nutrition:
-          variant.nutrition === undefined
-            ? null
-            : Object.fromEntries(
-                NUTRITION_KEYS.filter((key) => key in variant.nutrition).map((key) => [key, variant.nutrition[key]]),
-              ),
+        nutrition: variant.nutrition === undefined ? null : knownKeys(variant.nutrition, NUTRITION_KEYS),
         score: variant.score,
-        justifications: variant.justifications,
+        justifications: variant.justifications.map((justification) => knownKeys(justification, JUSTIFICATION_KEYS)),
         is_recommended: index === recommended,
       }));
     }),
