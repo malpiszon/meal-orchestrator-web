@@ -334,8 +334,8 @@ None: no schema change. The handler move ships with the normal deploy; no deploy
 
 #### Automated
 
-- [x] 4.1 Format check passes
+- [x] 4.1 Format check passes — 86fc2c4
 
 #### Manual
 
-- [x] 4.2 §6.2 is enough to add a test for a new contract field
+- [x] 4.2 §6.2 is enough to add a test for a new contract field — 86fc2c4
