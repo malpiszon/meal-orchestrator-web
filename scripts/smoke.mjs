@@ -580,6 +580,16 @@ async function passwordGrant(signInEmail, signInPassword) {
   return token ? { token } : { failure: { status: response.status, location: "", body } };
 }
 
+/** A PostgREST answer's rows: the parsed list when `ok` and the body is a JSON array, else undefined. */
+function listRows(ok, body) {
+  try {
+    const rows = ok ? JSON.parse(body) : undefined;
+    return Array.isArray(rows) ? rows : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * The plans, each with all its options, that the user holding `token` reads through PostgREST (RLS: their
  * own), in a fixed order. `plans` is the parsed list, or undefined when the read failed.
@@ -591,13 +601,7 @@ async function readOwnPlans(token) {
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
   });
   const body = await response.text();
-  let plans;
-  try {
-    plans = response.ok ? JSON.parse(body) : undefined;
-  } catch {
-    plans = undefined;
-  }
-  return { status: response.status, location: "", body, plans: Array.isArray(plans) ? plans : undefined };
+  return { status: response.status, location: "", body, plans: listRows(response.ok, body) };
 }
 
 /**
@@ -646,13 +650,7 @@ async function createSmokeUser(userEmail = email, userPassword = password) {
 async function serviceRoleRead(query) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, { headers: serviceRoleHeaders() });
   const body = await response.text();
-  let rows;
-  try {
-    rows = response.ok ? JSON.parse(body) : undefined;
-  } catch {
-    rows = undefined;
-  }
-  return { status: response.status, location: "", body, rows: Array.isArray(rows) ? rows : undefined };
+  return { status: response.status, location: "", body, rows: listRows(response.ok, body) };
 }
 
 /**
@@ -681,6 +679,17 @@ async function restAsSecondUser(path, { method = "GET", json } = {}) {
     body: json === undefined ? undefined : JSON.stringify(json),
   });
   return { status: response.status, location: "", body: await response.text() };
+}
+
+/**
+ * Runs `call` (a database API request as the second user) once their session and each of the smoke user's
+ * ids named in `needs` are set, so a step never sends `eq.undefined` under a name claiming real ids.
+ */
+function secondUserCall(needs, call) {
+  if (!secondToken) return stepFailure("no second-user session");
+  const ids = { smokeUserId, smokeNextPlanId, laterPlanId, laterOptionId, ratedOptionId };
+  const missing = needs.filter((name) => !ids[name]);
+  return missing.length > 0 ? stepFailure(`missing ${missing.join(", ")}`) : call();
 }
 
 /** Requests `path` from the server under test as the second signed-in user. */
@@ -1551,21 +1560,47 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           const later = plans.find((plan) => plan.week_start === laterDelivery.week_start);
           laterPlanId = later?.id;
           laterOptionId = later?.plan_meal_options.find((option) => !option.is_chosen)?.id;
+          if (!smokeState) return read.result;
+          // Targets the smoke user could still change, so a missing ownership check would show as a change.
+          if (!smokeNextPlanId) return stepFailure("no smoke user's upcoming week");
+          if (!later) return stepFailure("no smoke user's later week");
+          if (later.saved_at !== null) return stepFailure("the smoke user's later week is already saved");
+          if (!laterOptionId) return stepFailure("no unchosen option in the smoke user's later week");
+          if (!smokeState.ratings.some((rating) => rating.option_id === ratedOptionId))
+            return stepFailure("no rating on the smoke user's rated meal");
           return read.result;
         },
-        {
-          status: 200,
-          // Targets the smoke user could still change, so a missing ownership check would show as a change.
-          body: [
-            "the upcoming week, the later week unsaved with an unchosen option, and the rated meal's rating",
-            () =>
-              smokeNextPlanId !== undefined &&
-              smokeState.plans.find((plan) => plan.id === laterPlanId)?.saved_at === null &&
-              laterOptionId !== undefined &&
-              smokeState.ratings.some((rating) => rating.option_id === ratedOptionId),
-          ],
-        },
+        { status: 200 },
       ],
+      ...(SUPABASE_KEY
+        ? [
+            [
+              // The second user's empty recency and ratings below mean something only if the owner has some.
+              "second user: the smoke user's own recency and ratings on their upcoming week are not empty",
+              async () => {
+                if (!smokeNextPlanId) return stepFailure("no smoke user's upcoming plan");
+                const session = await passwordGrant(email, smokePassword);
+                if (session.failure) return session.failure;
+                for (const fn of ["get_plan_recency", "get_plan_ratings"]) {
+                  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+                    method: "POST",
+                    headers: {
+                      apikey: SUPABASE_KEY,
+                      Authorization: `Bearer ${session.token}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ p_plan_id: smokeNextPlanId }),
+                  });
+                  const body = await response.text();
+                  if ((listRows(response.ok, body)?.length ?? 0) === 0)
+                    return comparison(response.status, `rpc/${fn}: no rows for the owner (${body.slice(0, 200)})`);
+                }
+                return comparison(200, null);
+              },
+              { status: 200, body: noDifference },
+            ],
+          ]
+        : []),
       [
         "second user: admin creates the second user",
         async () => {
@@ -1598,7 +1633,8 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             `contains "${secondName}" and none of the smoke user's own meal names`,
             (body) =>
               body.includes(escapeHtml(secondName ?? "")) &&
-              [currentName, newName, repeatName, plantedName, neverAgainName, laterName, pastName].every(
+              // The names the smoke user's own dashboard shows (this week and the next).
+              [currentName, newName, repeatName, plantedName, neverAgainName].every(
                 (name) => name !== undefined && !body.includes(escapeHtml(name)),
               ),
           ],
@@ -1690,31 +1726,32 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               { status: 200 },
             ],
             // The second user has a plan and its options but no rating (their only week hasn't started).
-            ...["weekly_plans", "plan_meal_options", "meal_ratings"].map((table) => [
+            ...[
+              ["weekly_plans", true],
+              ["plan_meal_options", true],
+              ["meal_ratings", false],
+            ].map(([table, requireOwnRows]) => [
               `second user: database API GET ${table} returns only their own rows`,
               async () => {
                 if (!secondToken || !secondUserId) return stepFailure("no second-user session");
                 const result = await restAsSecondUser(`${table}?select=*`);
-                let rows;
-                try {
-                  rows = JSON.parse(result.body);
-                } catch {
-                  rows = undefined;
-                }
-                if (result.status !== 200 || !Array.isArray(rows)) return result;
+                const rows = listRows(result.status === 200, result.body);
+                if (!rows) return result;
                 const foreign = rows.find((row) => row.user_id !== secondUserId);
                 if (foreign) return comparison(result.status, `${table}: a row of user ${foreign.user_id}`);
-                if (table !== "meal_ratings" && rows.length === 0)
+                if (requireOwnRows && rows.length === 0)
                   return comparison(result.status, `${table}: none of the second user's own rows`);
                 return comparison(result.status, null);
               },
               { status: 200, body: noDifference },
             ]),
-            // Writes are revoked from authenticated on every table; UPDATE and DELETE aim at the smoke user's rows.
+            // Writes are revoked from authenticated on every table (the message names the grant, not an RLS
+            // check); UPDATE and DELETE aim at the smoke user's rows. Each row lists the smoke user's ids it uses.
             ...[
               [
                 "weekly_plans",
                 "POST",
+                ["smokeUserId"],
                 () => "weekly_plans",
                 () => ({
                   user_id: smokeUserId,
@@ -1727,13 +1764,15 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               [
                 "weekly_plans",
                 "PATCH",
+                ["laterPlanId"],
                 () => `weekly_plans?id=eq.${laterPlanId}`,
                 () => ({ saved_at: isoDate(Date.now()) }),
               ],
-              ["weekly_plans", "DELETE", () => `weekly_plans?id=eq.${laterPlanId}`],
+              ["weekly_plans", "DELETE", ["laterPlanId"], () => `weekly_plans?id=eq.${laterPlanId}`],
               [
                 "plan_meal_options",
                 "POST",
+                ["laterPlanId", "smokeUserId"],
                 () => "plan_meal_options",
                 () => ({
                   plan_id: laterPlanId,
@@ -1750,39 +1789,41 @@ const steps = KEEPALIVE_EXPECT_FAILURE
               [
                 "plan_meal_options",
                 "PATCH",
+                ["laterOptionId"],
                 () => `plan_meal_options?id=eq.${laterOptionId}`,
                 () => ({ is_chosen: true }),
               ],
-              ["plan_meal_options", "DELETE", () => `plan_meal_options?id=eq.${laterOptionId}`],
+              ["plan_meal_options", "DELETE", ["laterOptionId"], () => `plan_meal_options?id=eq.${laterOptionId}`],
               [
                 "meal_ratings",
                 "POST",
+                ["ratedOptionId", "smokeUserId"],
                 () => "meal_ratings",
                 () => ({ option_id: ratedOptionId, user_id: smokeUserId, rating: 1 }),
               ],
-              ["meal_ratings", "PATCH", () => `meal_ratings?option_id=eq.${ratedOptionId}`, () => ({ rating: 1 })],
-              ["meal_ratings", "DELETE", () => `meal_ratings?option_id=eq.${ratedOptionId}`],
-            ].map(([table, method, path, body]) => [
+              [
+                "meal_ratings",
+                "PATCH",
+                ["ratedOptionId"],
+                () => `meal_ratings?option_id=eq.${ratedOptionId}`,
+                () => ({ rating: 1 }),
+              ],
+              ["meal_ratings", "DELETE", ["ratedOptionId"], () => `meal_ratings?option_id=eq.${ratedOptionId}`],
+            ].map(([table, method, needs, path, body]) => [
               `second user: database API ${method} on ${table} with the smoke user's ids is refused`,
-              () =>
-                secondToken && laterOptionId
-                  ? restAsSecondUser(path(), { method, json: body?.() })
-                  : stepFailure("no second-user session or smoke user's ids"),
-              { status: 403, body: pgError("42501") },
+              () => secondUserCall(needs, () => restAsSecondUser(path(), { method, json: body?.() })),
+              { status: 403, body: pgError("42501", `permission denied for table ${table}`) },
             ]),
             // The definer RPCs check auth.uid(): the smoke user's ids answer not_found, as unknown ids do
-            // (PostgREST maps P0002 to 500).
+            // (PostgREST v14.5 maps P0002 to 500; the body is what pins it).
             ...[
-              ["choose_plan_option", () => ({ p_option_id: laterOptionId })],
-              ["confirm_plan", () => ({ p_plan_id: laterPlanId })],
-              ["rate_meal", () => ({ p_option_id: ratedOptionId, p_rating: 4 })],
-              ["rate_meal", () => ({ p_option_id: ratedOptionId, p_rating: null }), " (clearing)"],
-            ].map(([fn, args, suffix = ""]) => [
+              ["choose_plan_option", ["laterOptionId"], () => ({ p_option_id: laterOptionId })],
+              ["confirm_plan", ["laterPlanId"], () => ({ p_plan_id: laterPlanId })],
+              ["rate_meal", ["ratedOptionId"], () => ({ p_option_id: ratedOptionId, p_rating: 4 })],
+              ["rate_meal", ["ratedOptionId"], () => ({ p_option_id: ratedOptionId, p_rating: null }), " (clearing)"],
+            ].map(([fn, needs, args, suffix = ""]) => [
               `second user: database API rpc/${fn}${suffix} with the smoke user's ids is not found`,
-              () =>
-                secondToken && laterOptionId
-                  ? restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })
-                  : stepFailure("no second-user session or smoke user's ids"),
+              () => secondUserCall(needs, () => restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })),
               { status: 500, body: pgError("P0002", "not_found") },
             ]),
             // The invoker RPCs run under RLS: the smoke user's upcoming plan has a recency note and a rating for
@@ -1790,38 +1831,23 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             ...["get_plan_recency", "get_plan_ratings"].map((fn) => [
               `second user: database API rpc/${fn} for the smoke user's plan is empty`,
               () =>
-                secondToken && smokeNextPlanId
-                  ? restAsSecondUser(`rpc/${fn}`, { method: "POST", json: { p_plan_id: smokeNextPlanId } })
-                  : stepFailure("no second-user session or smoke user's plan"),
-              {
-                status: 200,
-                body: [
-                  "an empty list",
-                  (body) => {
-                    try {
-                      const rows = JSON.parse(body);
-                      return Array.isArray(rows) && rows.length === 0;
-                    } catch {
-                      return false;
-                    }
-                  },
-                ],
-              },
+                secondUserCall(["smokeNextPlanId"], () =>
+                  restAsSecondUser(`rpc/${fn}`, { method: "POST", json: { p_plan_id: smokeNextPlanId } }),
+                ),
+              { status: 200, body: ["an empty list", (body) => listRows(true, body)?.length === 0] },
             ]),
             // The service-role-only RPCs: authenticated has no EXECUTE.
             ...[
-              ["ingest_weekly_plan", ingestRpcArgs],
-              ["pick_default_choices", () => ({ p_plan_id: laterPlanId })],
+              ["ingest_weekly_plan", [], ingestRpcArgs],
+              ["pick_default_choices", ["laterPlanId"], () => ({ p_plan_id: laterPlanId })],
               [
                 "auth_link_is_valid",
+                [],
                 () => ({ p_token_hash: "not-a-real-token-hash", p_type: "invite", p_lifetime_seconds: 86400 }),
               ],
-            ].map(([fn, args]) => [
+            ].map(([fn, needs, args]) => [
               `second user: database API rpc/${fn} is refused`,
-              () =>
-                secondToken
-                  ? restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })
-                  : stepFailure("no second-user session"),
+              () => secondUserCall(needs, () => restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })),
               { status: 403, body: pgError("42501") },
             ]),
           ]
