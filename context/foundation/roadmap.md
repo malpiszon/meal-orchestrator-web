@@ -55,7 +55,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | ID   | Change ID                            | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
 | ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
 | S-01 | testing-migration-date-rules         | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
-| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | in-progress |
+| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | done        |
 | S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | in-progress |
 | S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
 | S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
@@ -113,7 +113,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Is the delivery write atomic, so a failure part-way through answers non-2xx and leaves nothing half-written? — Owner: research. Block: no.
   - Can real dev re-sends serve as fixtures for the changed-week cases? — Owner: user. Block: no.
 - **Risk:** MO alerts only on non-2xx and mo-web has no monitoring, so a 2xx with a bad save goes unnoticed; next in line because the delivery is where every week's data enters.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-03: Data isolation sweep
 
@@ -323,3 +323,4 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **S-12: a user who has saved next week (swapped a meal or kept the picks) opens the dashboard on "This week", where they rate what they ate; while next week is unsaved, or when there is no plan for this week, it still opens on "Next week". The other tab stays one tap away.** — Archived 2026-10-16 → `context/archive/2026-10-16-dashboard-opens-this-week-when-saved/`. Lesson: —.
 - **S-10: when the invitation email can't be sent or the account can't be created, the delivery reports it to Sentry and tells MO in its response, and a missing or wrong secret answers a distinct "not configured" error instead of a retryable storage failure.** — Archived 2026-10-17 → `context/archive/2026-10-15-mo-invitation-failure-visible/`. Lesson: —.
 - **S-13: on "This week", a day whose chosen meals all have a rating is collapsed to a single line that still shows the day and can be opened again, so by Friday the user reaches the meals still to rate without scrolling past the whole week; days with an unrated meal, and days still to come, stay open. `/history/<id>` is unchanged.** — Archived 2026-10-17 → `context/archive/2026-10-16-collapse-fully-rated-days/`. Lesson: —.
+- **S-02: a 2xx from MO's delivery provably means the week is stored exactly as the contract describes, and a re-sent week changes only what it should; a contract-valid payload stored wrong, or a partial write behind a 2xx, fails a test.** — Archived 2026-10-17 → `context/archive/2026-10-16-testing-delivery-resend-integrity/`. Lesson: —.
