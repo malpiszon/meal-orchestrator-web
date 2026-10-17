@@ -183,7 +183,7 @@ A plan moves through three states, clarified during the FR Socrates round and re
   > Socrates: Counter-argument considered: "no consumer for the rating since mo-web → MO integration is out of scope." Resolution: kept — surfaced a real payoff even without MO integration: FR-008's history annotation can be enriched with the user's own past rating (e.g. "last time you ate this meal was 2 weeks ago, scored 6/10"), not just recency. This is a valuable enhancement to FR-008 once FR-013 exists, though not required for FR-008's MVP form.
 - FR-014: User can view a macro/nutritional summary (e.g. salt) for the in-progress week, a past history entry, or the upcoming plan — recalculated live as the upcoming plan is edited. Priority: nice-to-have
   > Socrates: Counter-argument considered: "blocked by data availability — depends on whether MO's payload includes macro data at all." Resolution: kept as nice-to-have; tied to the existing Open Question on payload completeness (see Open Questions).
-  > Update (2026-10-17): no longer blocked. MO's delivery carries protein, fat, saturated fat, carbs, sugar, fibre and salt for every meal variant, and mo-web stores them; only the screens are missing.
+  > Update (2026-10-17): no longer blocked. The checked MO run carried protein, fat, saturated fat, carbs, sugar, fibre and salt for every meal variant. mo-web stores each supplied nutrition value; the delivery contract permits missing values. Only the screens are missing.
 - FR-015: User can compare nutritional summaries across weeks (including the upcoming plan). Priority: nice-to-have
   > Socrates: Same data-availability dependency as FR-014. Resolution: kept as nice-to-have, tied to the same Open Question.
   > Update (2026-10-17): see FR-014; the data is available.
@@ -247,5 +247,5 @@ Unauthenticated visitors are redirected to login; the dashboard and history are 
 None open (all three answered by 2026-10-17):
 
 1. **Payload completeness (provider-side meal ID).** Answered: MO sends `provider_meal_id` for every variant, and the contract in `docs/mo-delivery-contract.md` is implemented on both sides.
-2. **Macro/nutritional data in MO's payload.** Answered: yes, all seven values are sent for every variant (see FR-014).
+2. **Macro/nutritional data in MO's payload.** Answered: the checked MO run sent all seven values for every variant (see FR-014). The delivery contract permits missing values, and mo-web stores each supplied value.
 3. **Format of MO's historical debug-artifact logs.** Answered: parseable, but they hold no history from before mo-web, so FR-016 is not pursued.
