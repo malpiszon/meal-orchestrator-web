@@ -60,14 +60,16 @@ $$;
 -- Every stored plan and option row, except those of p_except (null: all of them).
 create function pg_temp.state(p_except uuid)
 returns table (
-  ord bigint, plan_id uuid, user_id uuid, week_start date, mo_run_id text, raw_payload jsonb,
-  received_at timestamptz, saved_at timestamptz, option_id uuid, provider_meal_id text, score smallint,
-  is_recommended boolean, is_chosen boolean
+  ord bigint, plan_id uuid, user_id uuid, provider text, week_start date, week_end date, mo_run_id text,
+  raw_payload jsonb, received_at timestamptz, saved_at timestamptz, option_id uuid, meal_date date,
+  meal_type text, variant_index smallint, provider_meal_id text, name text, composition text,
+  nutrition jsonb, score smallint, justifications jsonb, is_recommended boolean, is_chosen boolean
 )
 language sql stable as $$
   select row_number() over (order by p.user_id, p.week_start, o.meal_date, o.meal_type, o.variant_index),
-         p.id, p.user_id, p.week_start, p.mo_run_id, p.raw_payload, p.received_at, p.saved_at,
-         o.id, o.provider_meal_id, o.score, o.is_recommended, o.is_chosen
+         p.id, p.user_id, p.provider, p.week_start, p.week_end, p.mo_run_id, p.raw_payload, p.received_at,
+         p.saved_at, o.id, o.meal_date, o.meal_type, o.variant_index, o.provider_meal_id, o.name,
+         o.composition, o.nutrition, o.score, o.justifications, o.is_recommended, o.is_chosen
     from public.weekly_plans p
     left join public.plan_meal_options o on o.plan_id = p.id
    where p_except is null or p.id <> p_except
