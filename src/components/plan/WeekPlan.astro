@@ -2,6 +2,7 @@
 import MealSlot from "@/components/plan/MealSlot.astro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDayLabel, formatWeekRange, groupPlanOptions } from "@/lib/plans";
+import { isDayFullyRated } from "@/lib/ratings";
 import type { WeeklyPlan } from "@/types";
 
 interface Props {
@@ -12,9 +13,11 @@ interface Props {
   recency?: Map<string, string>;
   /** Today in Europe/Warsaw (`todayInWarsaw`): which chosen meals can be rated. */
   today: string;
+  /** Collapse days whose chosen meals are all rated; "This week" only. */
+  collapseRatedDays?: boolean;
 }
 
-const { plan, label, recency, today } = Astro.props;
+const { plan, label, recency, today, collapseRatedDays = false } = Astro.props;
 const days = groupPlanOptions(plan.plan_meal_options);
 // Per plan, so two weeks on one page don't share a heading id.
 const headingId = `week-heading-${plan.id}`;
@@ -28,18 +31,70 @@ const headingId = `week-heading-${plan.id}`;
     </h2>
   </div>
   {days.length === 0 && <p class="text-sm text-muted-foreground">This week's plan has no meals to show.</p>}
-  {days.map((day) => (
-    <Card className="gap-4">
-      <CardHeader>
-        <CardTitle>
-          <h3>{formatDayLabel(day.date)}</h3>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        {day.slots.map((slot) => (
-          <MealSlot meal={slot} recency={recency} today={today} />
-        ))}
-      </CardContent>
-    </Card>
-  ))}
+  {/*
+    With `collapseRatedDays`, a fully rated day is a closed native disclosure: one line until opened, no client
+    JavaScript. The card's padding and gap move to the summary and the content, so a closed card has no empty
+    space below the line.
+  */}
+  {days.map((day) =>
+    collapseRatedDays && isDayFullyRated(day) ? (
+      <Card className="gap-0 py-0">
+        <details class="group">
+          <summary class="flex cursor-pointer list-none items-center gap-2 rounded-xl px-6 py-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+            {/* lucide "chevron-right" icon, inlined; turns down while the day is open. */}
+            <svg
+              aria-hidden="true"
+              class="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="m9 18 6-6-6-6"></path>
+            </svg>
+            <h3 class="leading-none font-semibold">{formatDayLabel(day.date)}</h3>
+            <span class="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
+              {/* lucide "circle-check" icon, inlined: a lucide-react component would cost a React SSR pass. */}
+              <svg
+                aria-hidden="true"
+                class="size-4 shrink-0"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
+              All rated
+            </span>
+          </summary>
+          <CardContent className="flex flex-col gap-4 pb-6">
+            {day.slots.map((slot) => (
+              <MealSlot meal={slot} recency={recency} today={today} />
+            ))}
+          </CardContent>
+        </details>
+      </Card>
+    ) : (
+      <Card className="gap-4">
+        <CardHeader>
+          <CardTitle>
+            <h3>{formatDayLabel(day.date)}</h3>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {day.slots.map((slot) => (
+            <MealSlot meal={slot} recency={recency} today={today} />
+          ))}
+        </CardContent>
+      </Card>
+    ),
+  )}
 </section>
