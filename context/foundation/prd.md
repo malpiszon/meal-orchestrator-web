@@ -1,7 +1,7 @@
 ---
 project: "mo-web"
 version: 1
-status: draft
+status: reviewed
 created: 2026-09-23
 context_type: greenfield
 product_type: web-app
@@ -183,10 +183,13 @@ A plan moves through three states, clarified during the FR Socrates round and re
   > Socrates: Counter-argument considered: "no consumer for the rating since mo-web → MO integration is out of scope." Resolution: kept — surfaced a real payoff even without MO integration: FR-008's history annotation can be enriched with the user's own past rating (e.g. "last time you ate this meal was 2 weeks ago, scored 6/10"), not just recency. This is a valuable enhancement to FR-008 once FR-013 exists, though not required for FR-008's MVP form.
 - FR-014: User can view a macro/nutritional summary (e.g. salt) for the in-progress week, a past history entry, or the upcoming plan — recalculated live as the upcoming plan is edited. Priority: nice-to-have
   > Socrates: Counter-argument considered: "blocked by data availability — depends on whether MO's payload includes macro data at all." Resolution: kept as nice-to-have; tied to the existing Open Question on payload completeness (see Open Questions).
+  > Update (2026-10-17): no longer blocked. MO's delivery carries protein, fat, saturated fat, carbs, sugar, fibre and salt for every meal variant, and mo-web stores them; only the screens are missing.
 - FR-015: User can compare nutritional summaries across weeks (including the upcoming plan). Priority: nice-to-have
   > Socrates: Same data-availability dependency as FR-014. Resolution: kept as nice-to-have, tied to the same Open Question.
+  > Update (2026-10-17): see FR-014; the data is available.
 - FR-016: mo-web can import prior choices from Meal Orchestrator's historical logs to populate history predating mo-web. Priority: nice-to-have
   > Socrates: Counter-argument considered: "MO's debug artifacts aren't a stable data source — parsing them to populate history could be brittle." Resolution: kept as nice-to-have, but flagged as higher-risk/exploratory — feasibility depends on investigating the actual log format, and this may need reprioritizing once that's known.
+  > Update (2026-10-17): not pursued. MO keeps no history from before mo-web (its debug artifacts start on 2026-09-29 and mostly repeat one week, which mo-web already received), and sending older entries would need new development in MO. Revisit only if that is built.
 
 ### Duplicate submissions (edge case surfaced at cross-check)
 
@@ -202,6 +205,7 @@ A plan moves through three states, clarified during the FR Socrates round and re
 
 - FR-019: Operator is notified when a scheduled operational job (e.g. the database keep-alive) or MO's delivery fails. Priority: nice-to-have
   > Originated in F-02 (`supabase-idle-keepalive`) planning (2026-09-25): the keep-alive cron and MO's delivery both fail silently today; alerting is parked as future work rather than built as part of F-02.
+  > Update (2026-10-17): met. A failed keep-alive or MO delivery reaches Sentry as an issue, which notifies the operator on Discord and by email, and a missed run of MO itself marks its cron monitor failed (see `docs/deployment.md`, Error monitoring).
 
 ## Non-Functional Requirements
 
@@ -240,6 +244,8 @@ Unauthenticated visitors are redirected to login; the dashboard and history are 
 
 ## Open Questions
 
-1. **Does MO's current per-module data payload contain everything mo-web needs (e.g. a provider-side meal ID), or does MO need a small payload extension?** — Owner: user. Blocks a precise FR-001 submission format and affects FR-009 (menu-swap data) and FR-008 / FR-011 (matching the same meal across weeks). Probably yes for the core case, but unconfirmed for edge details.
-2. **Does MO's payload include macro/nutritional data (e.g. salt) at all?** — Owner: user. Blocks FR-014 and FR-015 (nice-to-have) — if the data isn't available from MO, these FRs cannot be built as scoped.
-3. **What format are MO's historical debug-artifact logs in, and are they parseable as a stable source?** — Owner: user. Blocks FR-016 (nice-to-have, exploratory) — feasibility and effort are unknown until investigated.
+None open (all three answered by 2026-10-17):
+
+1. **Payload completeness (provider-side meal ID).** Answered: MO sends `provider_meal_id` for every variant, and the contract in `docs/mo-delivery-contract.md` is implemented on both sides.
+2. **Macro/nutritional data in MO's payload.** Answered: yes, all seven values are sent for every variant (see FR-014).
+3. **Format of MO's historical debug-artifact logs.** Answered: parseable, but they hold no history from before mo-web, so FR-016 is not pursued.
