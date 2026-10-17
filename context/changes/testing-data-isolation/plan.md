@@ -357,13 +357,13 @@ Not applicable: no migrations. Migration authors from now on must update `expose
 
 #### Automated
 
-- [ ] 3.1 The smoke passes against a local preview
+- [x] 3.1 The smoke passes against a local preview
 - [ ] 3.2 The CI smoke job passes on the PR
-- [ ] 3.3 Lint passes
+- [x] 3.3 Lint passes
 
 #### Manual
 
-- [ ] 3.4 The smoke output lists the second-user steps and fails on a wrong expectation
+- [x] 3.4 The smoke output lists the second-user steps and fails on a wrong expectation
 
 ### Phase 4: Test-plan and docs upkeep
 

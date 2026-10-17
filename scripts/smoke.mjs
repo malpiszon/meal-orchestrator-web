@@ -14,12 +14,14 @@ const password = "Smoke-Test-Passw0rd!";
 // The smoke user's password changes during the password-reset steps; they sign in with this one.
 let smokePassword = password;
 const jar = new Map();
+// The second signed-in user's cookies (the isolation steps), so the smoke user stays signed in beside them.
+const secondJar = new Map();
 
-function cookieHeader() {
-  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+function cookieHeader(cookies = jar) {
+  return [...cookies.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
 }
 
-function storeCookies(response) {
+function storeCookies(response, cookies = jar) {
   for (const raw of response.headers.getSetCookie()) {
     const [pair, ...attrs] = raw.split(";");
     const [name, ...rest] = pair.split("=");
@@ -33,17 +35,18 @@ function storeCookies(response) {
     const expires = attr("expires");
     const expired =
       maxAge !== undefined ? Number(maxAge) <= 0 : expires !== undefined && Date.parse(expires) <= Date.now();
-    if (expired) jar.delete(name.trim());
-    else jar.set(name.trim(), rest.join("="));
+    if (expired) cookies.delete(name.trim());
+    else cookies.set(name.trim(), rest.join("="));
   }
 }
 
-async function request(path, { method = "GET", form, json, raw, headers = {} } = {}) {
+/** Requests `path` from the server under test with the cookies in `cookies` (the smoke user's by default). */
+async function request(path, { method = "GET", form, json, raw, headers = {}, cookies = jar } = {}) {
   const response = await fetch(BASE_URL + path, {
     method,
     redirect: "manual",
     headers: {
-      Cookie: cookieHeader(),
+      Cookie: cookieHeader(cookies),
       Origin: BASE_URL,
       ...(form ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
       ...(json ? { "Content-Type": "application/json" } : {}),
@@ -51,7 +54,7 @@ async function request(path, { method = "GET", form, json, raw, headers = {} } =
     },
     body: form ? new URLSearchParams(form).toString() : json ? JSON.stringify(json) : raw,
   });
-  storeCookies(response);
+  storeCookies(response, cookies);
   return { status: response.status, location: response.headers.get("location") ?? "", body: await response.text() };
 }
 
@@ -279,6 +282,7 @@ const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
 const KEEPALIVE_TRIGGER = "/cdn-cgi/handler/scheduled?cron=0+3+*+*+*";
 const DELIVERIES = "/api/mo/deliveries";
 const CHOOSE = "/api/plans/choose";
+const CONFIRM = "/api/plans/confirm";
 const RATINGS = "/api/ratings";
 // The rating the rating steps give, and its label (RATING_FACES in src/lib/ratings.ts).
 const RATING = 5;
@@ -336,6 +340,14 @@ const roundTripEmail = `smoke-roundtrip-${Date.now()}-${Math.random().toString(3
 const ROUND_TRIP_PASSWORD = "Smoke-RoundTrip-Passw0rd!";
 let roundTripDelivery, roundTripLaterDelivery, roundTripPlanId, roundTripLaterPlanId;
 let roundTripToken, smokeToken, smokeSnapshot;
+// The isolation steps (risk #3): a second signed-in user with an upcoming week of their own, their id and
+// their REST access token. Created only here, on the stack the smoke runs against (local or CI).
+const secondEmail = `smoke-second-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
+const SECOND_PASSWORD = "Smoke-Second-Passw0rd!";
+let secondDelivery, secondName, secondUserId, secondToken;
+// The smoke user's id, their plans (with options) and ratings read past RLS before the isolation steps, and
+// their later week (unsaved) with one of its unchosen options: targets the smoke user could still change.
+let smokeUserId, smokeState, smokeNextPlanId, laterPlanId, laterOptionId;
 if (!KEEPALIVE_EXPECT_FAILURE) {
   if (!MO_INGEST_TOKEN) {
     console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
@@ -350,6 +362,7 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   if (!SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_KEY)\n");
   if (!MAILPIT_URL) console.log("SKIP  real reset email (set MAILPIT_URL)\n");
   if (!SUPABASE_KEY) console.log("SKIP  delivery round trip (set SUPABASE_KEY)\n");
+  if (!SUPABASE_KEY) console.log("SKIP  second user's database API pass (set SUPABASE_KEY)\n");
   const nextWeek = upcomingMonday();
   delivery = await loadDelivery(email, nextWeek);
   newUserDelivery = await loadDelivery(
@@ -486,25 +499,34 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
     .replace(/^smoke-roundtrip/, "Smoke-RoundTrip")
     .replace(/@example\.com$/, "@Example.COM");
   roundTripLaterDelivery = await loadDelivery(mixedCaseEmail, laterWeek);
+
+  // The second user's upcoming week: the sample with the first meal's recommendation renamed, so their
+  // dashboard shows a name of their own. The smoke user's renamed meals occur only in the smoke user's weeks.
+  secondDelivery = await loadDelivery(secondEmail, nextWeek);
+  secondName = `Smoke second-user meal ${Date.now()}`;
+  secondDelivery.days[0].meals[0].variants[index].name = secondName;
 }
 
 const deliver = (payload) =>
   request(DELIVERIES, { method: "POST", json: payload, headers: { Authorization: `Bearer ${MO_INGEST_TOKEN}` } });
+
+/** Arguments for ingest_weekly_plan that would store an empty upcoming week for the smoke user. */
+const ingestRpcArgs = () => ({
+  p_email: email,
+  p_provider: "smoke",
+  p_week_start: delivery.week_start,
+  p_week_end: delivery.week_end,
+  p_run_id: null,
+  p_raw: {},
+  p_options: [],
+});
 
 /** Calls ingest_weekly_plan through PostgREST with the anon key, as a browser holding that key could. */
 async function anonIngestRpc() {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/ingest_weekly_plan`, {
     method: "POST",
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      p_email: email,
-      p_provider: "smoke",
-      p_week_start: delivery.week_start,
-      p_week_end: delivery.week_end,
-      p_run_id: null,
-      p_raw: {},
-      p_options: [],
-    }),
+    body: JSON.stringify(ingestRpcArgs()),
   });
   return { status: response.status, location: "", body: await response.text() };
 }
@@ -603,8 +625,11 @@ async function claimPlanOwner(planId, newPassword, signInEmail) {
   return passwordGrant(signInEmail, newPassword);
 }
 
-/** Creates the smoke user through the Admin API with a password; public sign-up is disabled. */
-async function createSmokeUser() {
+/**
+ * Creates a user (the smoke user by default) through the Admin API with a password; public sign-up is
+ * disabled. The answer's `id` is the user's id.
+ */
+async function createSmokeUser(userEmail = email, userPassword = password) {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
     method: "POST",
     headers: {
@@ -612,10 +637,60 @@ async function createSmokeUser() {
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ email, password, email_confirm: true }),
+    body: JSON.stringify({ email: userEmail, password: userPassword, email_confirm: true }),
   });
   return { status: response.status, location: "", body: await response.text() };
 }
+
+/** Reads `query` (a /rest/v1 path) with the service-role key, past RLS. `rows` is the parsed list, or undefined. */
+async function serviceRoleRead(query) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${query}`, { headers: serviceRoleHeaders() });
+  const body = await response.text();
+  let rows;
+  try {
+    rows = response.ok ? JSON.parse(body) : undefined;
+  } catch {
+    rows = undefined;
+  }
+  return { status: response.status, location: "", body, rows: Array.isArray(rows) ? rows : undefined };
+}
+
+/**
+ * The smoke user's plans (each with all its options) and ratings, read past RLS in a fixed order. `state` is
+ * `{ plans, ratings }`, or undefined when a read failed; `result` is the last read, for the step to return.
+ */
+async function readSmokeUserState() {
+  const plans = await serviceRoleRead(
+    `weekly_plans?user_id=eq.${smokeUserId}&select=*,plan_meal_options(*)&order=week_start.asc&plan_meal_options.order=meal_date.asc,meal_type.asc,variant_index.asc`,
+  );
+  if (!plans.rows) return { result: plans };
+  const ratings = await serviceRoleRead(`meal_ratings?user_id=eq.${smokeUserId}&select=*&order=option_id.asc`);
+  if (!ratings.rows) return { result: ratings };
+  return { result: ratings, state: { plans: plans.rows, ratings: ratings.rows } };
+}
+
+/** Calls PostgREST's `path` (under /rest/v1) as the second user: the anon key plus their own access token. */
+async function restAsSecondUser(path, { method = "GET", json } = {}) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${secondToken}`,
+      ...(json === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: json === undefined ? undefined : JSON.stringify(json),
+  });
+  return { status: response.status, location: "", body: await response.text() };
+}
+
+/** Requests `path` from the server under test as the second signed-in user. */
+const requestAsSecond = (path, options = {}) => request(path, { ...options, cookies: secondJar });
+
+/** Whether `body` is a JSON error with Postgres `code` (and `message`, when given), as PostgREST answers one. */
+const pgError = (code, message) => [
+  message ? `code ${code}, message ${message}` : `code ${code}`,
+  (body) => jsonField(body, "code") === code && (message === undefined || jsonField(body, "message") === message),
+];
 
 /** Opens an old-style email link (`/api/auth/confirm`) the way a click in the email does. */
 const openEmailLink = (type, tokenHash) =>
@@ -794,7 +869,15 @@ const steps = KEEPALIVE_EXPECT_FAILURE
         () => request("/history/not-a-uuid"),
         { status: 302, location: "/auth/signin" },
       ],
-      ["admin creates the smoke user", createSmokeUser, { status: 200 }],
+      [
+        "admin creates the smoke user",
+        async () => {
+          const result = await createSmokeUser();
+          smokeUserId = jsonField(result.body, "id");
+          return result;
+        },
+        { status: 200 },
+      ],
       [
         "signin rejects wrong password",
         () => request("/api/auth/signin", { method: "POST", form: { email, password: "wrong" } }),
@@ -1453,6 +1536,306 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             ],
           ]
         : []),
+      // Isolation (risk #3): a second signed-in user sends the smoke user's real ids to every route that takes
+      // one, then (with SUPABASE_KEY) calls PostgREST directly with their own token. Every attempt is refused
+      // or returns nothing, and the smoke user's state is unchanged. The pgTAP twin is
+      // supabase/tests/second_user_isolation.test.sql.
+      [
+        "second user: snapshot the smoke user's plans, options and ratings",
+        async () => {
+          if (!smokeUserId) return stepFailure("no smoke user id");
+          const read = await readSmokeUserState();
+          smokeState = read.state;
+          const plans = smokeState?.plans ?? [];
+          smokeNextPlanId = plans.find((plan) => plan.week_start === delivery.week_start)?.id;
+          const later = plans.find((plan) => plan.week_start === laterDelivery.week_start);
+          laterPlanId = later?.id;
+          laterOptionId = later?.plan_meal_options.find((option) => !option.is_chosen)?.id;
+          return read.result;
+        },
+        {
+          status: 200,
+          // Targets the smoke user could still change, so a missing ownership check would show as a change.
+          body: [
+            "the upcoming week, the later week unsaved with an unchosen option, and the rated meal's rating",
+            () =>
+              smokeNextPlanId !== undefined &&
+              smokeState.plans.find((plan) => plan.id === laterPlanId)?.saved_at === null &&
+              laterOptionId !== undefined &&
+              smokeState.ratings.some((rating) => rating.option_id === ratedOptionId),
+          ],
+        },
+      ],
+      [
+        "second user: admin creates the second user",
+        async () => {
+          const result = await createSmokeUser(secondEmail, SECOND_PASSWORD);
+          secondUserId = jsonField(result.body, "id");
+          return result;
+        },
+        { status: 200 },
+      ],
+      [
+        "second user: delivery for the second user is stored",
+        () => deliver(secondDelivery),
+        { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+      ],
+      [
+        "second user: signin accepts the second user's password",
+        () =>
+          requestAsSecond("/api/auth/signin", {
+            method: "POST",
+            form: { email: secondEmail, password: SECOND_PASSWORD },
+          }),
+        { status: 302, location: "/dashboard" },
+      ],
+      [
+        "second user: dashboard shows their own week and none of the smoke user's meals",
+        () => requestAsSecond("/dashboard"),
+        {
+          status: 200,
+          body: [
+            `contains "${secondName}" and none of the smoke user's own meal names`,
+            (body) =>
+              body.includes(escapeHtml(secondName ?? "")) &&
+              [currentName, newName, repeatName, plantedName, neverAgainName, laterName, pastName].every(
+                (name) => name !== undefined && !body.includes(escapeHtml(name)),
+              ),
+          ],
+        },
+      ],
+      [
+        "second user: choosing the smoke user's option is not found",
+        () =>
+          laterOptionId
+            ? requestAsSecond(CHOOSE, { method: "POST", json: { planId: laterPlanId, optionId: laterOptionId } })
+            : stepFailure("no smoke user's option"),
+        { status: 404, body: ["error: not_found", (body) => jsonField(body, "error") === "not_found"] },
+      ],
+      [
+        // planId only re-reads recency (src/lib/plan-save.ts), unchecked against the option, so the save of
+        // the second user's own option succeeds. The smoke user sees a note on that plan ("Next week stays on
+        // the nearer week, with its same-week note"); RLS must hide it from the second user.
+        "second user: choosing their own option with the smoke user's planId returns none of their recency",
+        async () => {
+          if (!smokeNextPlanId) return stepFailure("no smoke user's upcoming plan");
+          const { nextWeek } = panels((await requestAsSecond("/dashboard")).body);
+          const optionId = radioIdFor(nextWeek, swapName ?? "");
+          return optionId
+            ? requestAsSecond(CHOOSE, { method: "POST", json: { planId: smokeNextPlanId, optionId } })
+            : stepFailure(`no "${swapName}" in the second user's "Next week"`);
+        },
+        {
+          status: 200,
+          body: [
+            "saved_at is set, and recency has none of the smoke user's option ids or dates",
+            (body) => {
+              const recency = jsonField(body, "recency");
+              const options = smokeState?.plans.flatMap((plan) => plan.plan_meal_options) ?? [];
+              const ids = new Set(options.map((option) => option.id));
+              const dates = new Set(options.map((option) => option.meal_date));
+              return (
+                options.length > 0 &&
+                typeof jsonField(body, "saved_at") === "string" &&
+                typeof recency === "object" &&
+                recency !== null &&
+                Object.entries(recency).every(([id, date]) => !ids.has(id) && !dates.has(date))
+              );
+            },
+          ],
+        },
+      ],
+      [
+        "second user: confirming the smoke user's plan is not found",
+        () =>
+          laterPlanId
+            ? requestAsSecond(CONFIRM, { method: "POST", json: { planId: laterPlanId } })
+            : stepFailure("no smoke user's later plan"),
+        { status: 404, body: ["error: not_found", (body) => jsonField(body, "error") === "not_found"] },
+      ],
+      [
+        "second user: rating the smoke user's meal is not found",
+        () =>
+          ratedOptionId
+            ? requestAsSecond(RATINGS, { method: "POST", json: { optionId: ratedOptionId, rating: 4 } })
+            : stepFailure("no rated option id"),
+        { status: 404, body: ["error: not_found", (body) => jsonField(body, "error") === "not_found"] },
+      ],
+      [
+        "second user: clearing the smoke user's rating is not found",
+        () =>
+          ratedOptionId
+            ? requestAsSecond(RATINGS, { method: "POST", json: { optionId: ratedOptionId, rating: null } })
+            : stepFailure("no rated option id"),
+        { status: 404, body: ["error: not_found", (body) => jsonField(body, "error") === "not_found"] },
+      ],
+      [
+        "second user: history hides the smoke user's past week",
+        () => (pastPlanId ? requestAsSecond(`/history/${pastPlanId}`) : stepFailure("no past plan_id")),
+        { status: 404, body: ["contains 'Plan not found'", (body) => body.includes("Plan not found")] },
+      ],
+      ...(SUPABASE_KEY
+        ? [
+            // The database API path itself: the anon key, PostgREST and the exposed schemas with the second
+            // user's own session, where the app's extra user_id filters don't help. An authenticated JWT
+            // gets 403 for 42501 (anon gets 401).
+            [
+              "second user: database API sign-in",
+              async () => {
+                const session = await passwordGrant(secondEmail, SECOND_PASSWORD);
+                if (session.failure) return session.failure;
+                secondToken = session.token;
+                return { status: 200, location: "", body: "" };
+              },
+              { status: 200 },
+            ],
+            // The second user has a plan and its options but no rating (their only week hasn't started).
+            ...["weekly_plans", "plan_meal_options", "meal_ratings"].map((table) => [
+              `second user: database API GET ${table} returns only their own rows`,
+              async () => {
+                if (!secondToken || !secondUserId) return stepFailure("no second-user session");
+                const result = await restAsSecondUser(`${table}?select=*`);
+                let rows;
+                try {
+                  rows = JSON.parse(result.body);
+                } catch {
+                  rows = undefined;
+                }
+                if (result.status !== 200 || !Array.isArray(rows)) return result;
+                const foreign = rows.find((row) => row.user_id !== secondUserId);
+                if (foreign) return comparison(result.status, `${table}: a row of user ${foreign.user_id}`);
+                if (table !== "meal_ratings" && rows.length === 0)
+                  return comparison(result.status, `${table}: none of the second user's own rows`);
+                return comparison(result.status, null);
+              },
+              { status: 200, body: noDifference },
+            ]),
+            // Writes are revoked from authenticated on every table; UPDATE and DELETE aim at the smoke user's rows.
+            ...[
+              [
+                "weekly_plans",
+                "POST",
+                () => "weekly_plans",
+                () => ({
+                  user_id: smokeUserId,
+                  provider: "smoke",
+                  week_start: laterDelivery.week_start,
+                  week_end: laterDelivery.week_end,
+                  raw_payload: {},
+                }),
+              ],
+              [
+                "weekly_plans",
+                "PATCH",
+                () => `weekly_plans?id=eq.${laterPlanId}`,
+                () => ({ saved_at: isoDate(Date.now()) }),
+              ],
+              ["weekly_plans", "DELETE", () => `weekly_plans?id=eq.${laterPlanId}`],
+              [
+                "plan_meal_options",
+                "POST",
+                () => "plan_meal_options",
+                () => ({
+                  plan_id: laterPlanId,
+                  user_id: smokeUserId,
+                  meal_date: laterDelivery.week_start,
+                  meal_type: "lunch",
+                  variant_index: 99,
+                  provider_meal_id: "smoke-second-user",
+                  name: "Smoke second-user insert",
+                  score: 1,
+                  is_recommended: false,
+                }),
+              ],
+              [
+                "plan_meal_options",
+                "PATCH",
+                () => `plan_meal_options?id=eq.${laterOptionId}`,
+                () => ({ is_chosen: true }),
+              ],
+              ["plan_meal_options", "DELETE", () => `plan_meal_options?id=eq.${laterOptionId}`],
+              [
+                "meal_ratings",
+                "POST",
+                () => "meal_ratings",
+                () => ({ option_id: ratedOptionId, user_id: smokeUserId, rating: 1 }),
+              ],
+              ["meal_ratings", "PATCH", () => `meal_ratings?option_id=eq.${ratedOptionId}`, () => ({ rating: 1 })],
+              ["meal_ratings", "DELETE", () => `meal_ratings?option_id=eq.${ratedOptionId}`],
+            ].map(([table, method, path, body]) => [
+              `second user: database API ${method} on ${table} with the smoke user's ids is refused`,
+              () =>
+                secondToken && laterOptionId
+                  ? restAsSecondUser(path(), { method, json: body?.() })
+                  : stepFailure("no second-user session or smoke user's ids"),
+              { status: 403, body: pgError("42501") },
+            ]),
+            // The definer RPCs check auth.uid(): the smoke user's ids answer not_found, as unknown ids do
+            // (PostgREST maps P0002 to 500).
+            ...[
+              ["choose_plan_option", () => ({ p_option_id: laterOptionId })],
+              ["confirm_plan", () => ({ p_plan_id: laterPlanId })],
+              ["rate_meal", () => ({ p_option_id: ratedOptionId, p_rating: 4 })],
+              ["rate_meal", () => ({ p_option_id: ratedOptionId, p_rating: null }), " (clearing)"],
+            ].map(([fn, args, suffix = ""]) => [
+              `second user: database API rpc/${fn}${suffix} with the smoke user's ids is not found`,
+              () =>
+                secondToken && laterOptionId
+                  ? restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })
+                  : stepFailure("no second-user session or smoke user's ids"),
+              { status: 500, body: pgError("P0002", "not_found") },
+            ]),
+            // The invoker RPCs run under RLS: the smoke user's upcoming plan has a recency note and a rating for
+            // its owner, and nothing for the second user.
+            ...["get_plan_recency", "get_plan_ratings"].map((fn) => [
+              `second user: database API rpc/${fn} for the smoke user's plan is empty`,
+              () =>
+                secondToken && smokeNextPlanId
+                  ? restAsSecondUser(`rpc/${fn}`, { method: "POST", json: { p_plan_id: smokeNextPlanId } })
+                  : stepFailure("no second-user session or smoke user's plan"),
+              {
+                status: 200,
+                body: [
+                  "an empty list",
+                  (body) => {
+                    try {
+                      const rows = JSON.parse(body);
+                      return Array.isArray(rows) && rows.length === 0;
+                    } catch {
+                      return false;
+                    }
+                  },
+                ],
+              },
+            ]),
+            // The service-role-only RPCs: authenticated has no EXECUTE.
+            ...[
+              ["ingest_weekly_plan", ingestRpcArgs],
+              ["pick_default_choices", () => ({ p_plan_id: laterPlanId })],
+              [
+                "auth_link_is_valid",
+                () => ({ p_token_hash: "not-a-real-token-hash", p_type: "invite", p_lifetime_seconds: 86400 }),
+              ],
+            ].map(([fn, args]) => [
+              `second user: database API rpc/${fn} is refused`,
+              () =>
+                secondToken
+                  ? restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })
+                  : stepFailure("no second-user session"),
+              { status: 403, body: pgError("42501") },
+            ]),
+          ]
+        : []),
+      [
+        "second user: the smoke user's plans, options and ratings are unchanged",
+        async () => {
+          if (!smokeState) return stepFailure("no snapshot of the smoke user's state");
+          const read = await readSmokeUserState();
+          if (!read.state) return read.result;
+          return comparison(read.result.status, firstDifference(smokeState, read.state, "smoke user"));
+        },
+        { status: 200, body: noDifference },
+      ],
       ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
       [
         "signout clears session",
