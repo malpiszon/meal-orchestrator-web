@@ -9,7 +9,7 @@ main_goal: quality
 top_blocker: time
 milestone_id: regression-safety-net
 milestone_seq: 2
-milestone_status: open
+milestone_status: done
 tracker: github-issues
 gh_milestone: "M-2: Regression safety net"
 ---
@@ -22,7 +22,7 @@ gh_milestone: "M-2: Regression safety net"
 
 ## Milestone
 
-**M-2: Regression safety net** — Status: open
+**M-2: Regression safety net** — Status: done
 
 - **Intent:** a change that breaks a plan rule, MO's delivery, another user's data or the main journey fails a test before it reaches production, and a system fault that slips through (database, Auth or email outage, a broken render) reaches Sentry instead of looking like a user error or success. The test plan's risks #1–#7 are covered by the cheapest test that gives a real signal, and the audit's critical findings and proven coverage gaps are closed. Two small dashboard changes (MS-12, MS-13, added 2026-10-15) make the mid-week rating routine quicker; more scope goes into a later milestone.
 - **Source materials:** `context/foundation/test-plan.md` §3 Phased Rollout (risks in §2), plus the user's descriptions for MS-06 (2026-10-10) and MS-07 (2026-10-11), plus `context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md` §5–§6 for MS-08 to MS-11 (added 2026-10-12), plus the user's description for MS-12 and MS-13 (2026-10-15).
@@ -308,6 +308,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 ## Milestone History
 
 - **M-1: Weekly plan loop with memory** (`weekly-plan-loop-with-memory`) — closed 2026-10-09. MO's weekly plan lands in mo-web for invited users, who see recency notes, swap and save the upcoming week, rate recent meals (which also order the options) and browse past weeks; all 13 slices and their foundations done.
+- **M-2: Regression safety net** (`regression-safety-net`) — closed 2026-10-17. Migrations, MO delivery, data isolation and the main journey are covered by tests that run locally and in CI, system faults reach Sentry, and the two mid-week dashboard changes shipped; S-01 to S-05 and S-07 to S-13 done, mutation testing (S-06) parked.
 
 ## Done
 
