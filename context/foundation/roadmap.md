@@ -33,7 +33,7 @@ gh_milestone: "M-2: Regression safety net"
   - MS-03: Test-plan Phase 3, data isolation sweep (risk #3).
   - MS-04: Test-plan Phase 4, critical-journey e2e (risks #4, #7).
   - MS-05: Test-plan Phase 5, agent-loop feedback (risks #1, #5).
-  - MS-06: Mutation testing, probably with Stryker — nice-to-have (user, 2026-10-10: "cover only risks listed there + nice to have for mutation tests").
+  - MS-06: Mutation testing, probably with Stryker — nice-to-have (user, 2026-10-10: "cover only risks listed there + nice to have for mutation tests"). Parked 2026-10-17 (S-06), see `## Parked`.
   - MS-07: Sentry error monitoring — nice-to-have (user, 2026-10-11: "I'd like to add Sentry to this project").
   - MS-08: Observability audit (2026-10-12), handled-error reporting: a shared helper reports system faults the app handles, and the "not reported" policy is rewritten (X3, X5, D2, W3, W6, R2, A6). Policy (user, 2026-10-12): report system faults only, grouped by step and error code; user errors stay in the logs.
   - MS-09: Observability audit, auth faults visible (X1, X4, A1–A4); holds two of the three critical findings.
@@ -59,7 +59,6 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | in-progress |
 | S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
 | S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
-| S-06 | testing-mutation-stryker             | a developer can see which code changes the unit tests fail to catch (nice-to-have)                       | S-01          | MS-06    | ready       |
 | S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
 | S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
 | S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
@@ -82,7 +81,7 @@ What's already in place in the codebase as of `2026-10-10` (auto-researched + us
 
 ## Foundations
 
-None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Playwright, S-06 Stryker, S-07 Sentry), so no shared enabler has to land first.
+None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Playwright, S-07 Sentry), so no shared enabler has to land first.
 
 ## Slices
 
@@ -108,7 +107,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120)
 - **PRD refs:** MS-02
 - **Prerequisites:** S-01
-- **Parallel with:** S-03, S-04, S-05, S-06, S-07, S-08, S-09, S-10, S-11
+- **Parallel with:** S-03, S-04, S-05, S-07, S-08, S-09, S-10, S-11
 - **Blockers:** —
 - **Unknowns:**
   - Is the delivery write atomic, so a failure part-way through answers non-2xx and leaves nothing half-written? — Owner: research. Block: no.
@@ -123,7 +122,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121)
 - **PRD refs:** MS-03
 - **Prerequisites:** S-01
-- **Parallel with:** S-02, S-04, S-05, S-06, S-07, S-08, S-09, S-10, S-11
+- **Parallel with:** S-02, S-04, S-05, S-07, S-08, S-09, S-10, S-11
 - **Blockers:** —
 - **Unknowns:**
   - Which tables, functions and grants are reachable with the public keys, and which functions run with the owner's rights (skipping row-level security)? — Owner: research. Block: no.
@@ -137,7 +136,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122)
 - **PRD refs:** MS-04
 - **Prerequisites:** —
-- **Parallel with:** S-01, S-02, S-03, S-05, S-06, S-07
+- **Parallel with:** S-01, S-02, S-03, S-05, S-07
 - **Blockers:** —
 - **Unknowns:**
   - Does Playwright run against the Workers preview in CI next to local Supabase and Mailpit, and how is the stack reset between runs? — Owner: research. Block: no. Resolved on #122: a separate `e2e` job with its own local Supabase and Mailpit; no reset, since each run uses a new journey user and a self-provisioning setup user.
@@ -151,26 +150,12 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123)
 - **PRD refs:** MS-05
 - **Prerequisites:** S-01
-- **Parallel with:** S-02, S-03, S-04, S-06, S-07
+- **Parallel with:** S-02, S-03, S-04, S-07
 - **Blockers:** —
 - **Unknowns:**
   - How does an edited file map to its tests, and can the hook stay under a minute? — Owner: research. Block: no. Resolved on #123: `vitest related` and the edited pgTAP file per edit (~3 s); migrations at end of turn, since a migration can't be tested before it is applied.
 - **Risk:** Runs the tests the earlier items add, so it comes late; local only, never a CI substitute.
 - **Status:** done
-
-### S-06: Mutation testing for unit tests (nice-to-have)
-
-- **Outcome:** a developer can run mutation testing over `src/lib/` and see which code changes the unit tests fail to catch, so weak tests are found by a tool instead of by hand.
-- **Change ID:** testing-mutation-stryker
-- **Issue:** [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124)
-- **PRD refs:** MS-06
-- **Prerequisites:** S-01
-- **Parallel with:** S-02, S-03, S-04, S-05, S-07, S-08, S-09, S-10, S-11
-- **Blockers:** —
-- **Unknowns:**
-  - Does Stryker work with this repo's Vitest and TypeScript versions, and is a run fast enough for CI or only for local use? — Owner: research. Block: no.
-- **Risk:** Nice-to-have and first to park if M-2 drags on (top blocker: time); last so it scores the suite the earlier items build. TypeScript only — SQL keeps the manual mutation checks S-01 uses.
-- **Status:** ready
 
 ### S-07: Error monitoring with Sentry (nice-to-have)
 
@@ -179,7 +164,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136)
 - **PRD refs:** MS-07
 - **Prerequisites:** —
-- **Parallel with:** S-02, S-03, S-06
+- **Parallel with:** S-02, S-03
 - **Blockers:** —
 - **Unknowns:**
   - Which Sentry setup works for the app on the Workers runtime, including the scheduled keep-alive, and does it fit the Worker size limit? — Owner: research. Block: no. Resolved on #136: `@sentry/cloudflare` wraps the Worker entry, `@sentry/astro` runs browser-only, and the Worker stays far under the size limit.
@@ -194,7 +179,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143)
 - **PRD refs:** MS-08
 - **Prerequisites:** S-07
-- **Parallel with:** S-02, S-03, S-06, S-11
+- **Parallel with:** S-02, S-03, S-11
 - **Blockers:** —
 - **Unknowns:**
   - Which error fields can be sent without user data (PostgREST `details` can echo row values), and does grouping keep an outage inside the free plan's 5,000 events a month? — Owner: research. Block: no. Resolved on #143: only the code, an email-masked hint and the message; non-`Error` inputs are wrapped so `details` is never sent; one issue per step and code, and Sentry's Dedupe drops repeats within an isolate.
@@ -208,7 +193,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144)
 - **PRD refs:** MS-09
 - **Prerequisites:** S-08
-- **Parallel with:** S-02, S-03, S-06, S-10, S-11
+- **Parallel with:** S-02, S-03, S-10, S-11
 - **Blockers:** —
 - **Unknowns:**
   - Which Auth error codes mean the link really expired or was used, and which are system faults? — Owner: research. Block: no.
@@ -222,7 +207,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145)
 - **PRD refs:** MS-10
 - **Prerequisites:** S-08
-- **Parallel with:** S-02, S-03, S-06, S-09, S-11
+- **Parallel with:** S-02, S-03, S-09, S-11
 - **Blockers:** —
 - **Unknowns:**
   - Does MO accept a new response field (`invitation_sent`) and a new error code without a change on its side, and should it alert on them? — Owner: user. Block: no.
@@ -236,7 +221,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146)
 - **PRD refs:** MS-11
 - **Prerequisites:** S-07
-- **Parallel with:** S-02, S-03, S-06, S-08, S-09, S-10
+- **Parallel with:** S-02, S-03, S-08, S-09, S-10
 - **Blockers:** —
 - **Unknowns:**
   - Can the middleware catch errors in the streamed body without breaking streaming, or should streaming be turned off in the adapter? — Owner: research. Block: no.
@@ -250,7 +235,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168)
 - **PRD refs:** MS-12
 - **Prerequisites:** —
-- **Parallel with:** S-02, S-03, S-06, S-10, S-11, S-13
+- **Parallel with:** S-02, S-03, S-10, S-11, S-13
 - **Blockers:** —
 - **Unknowns:**
   - Right after a save on the open page, does the dashboard switch to "This week", or only the next time it is opened? — Owner: user. Block: no. Resolved on #168: only the next time it is opened. Every swap saves, so the open page stays on "Next week" and the user can keep swapping.
@@ -265,7 +250,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Issue:** [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169)
 - **PRD refs:** MS-13
 - **Prerequisites:** —
-- **Parallel with:** S-02, S-03, S-06, S-10, S-11, S-12
+- **Parallel with:** S-02, S-03, S-10, S-11, S-12
 - **Blockers:** —
 - **Unknowns:**
   - Does a day collapse as soon as its last meal is rated, or only the next time the page is opened? — Owner: user. Block: no.
@@ -282,7 +267,6 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 | S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation               | Test-plan Phase 3: data isolation sweep           | yes                   | Test-plan order: after S-02                       |
 | S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e         | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                       |
 | S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook         | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
-| S-06       | [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124) | testing-mutation-stryker             | Mutation testing for unit tests (Stryker)         | yes                   | Nice-to-have; last, first to park                 |
 | S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
 | S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                       |
 | S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`             |
@@ -298,6 +282,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 
 ## Parked
 
+- **Mutation testing for unit tests (Stryker, S-06, MS-06)** — Why parked: StrykerJS 10.0.0's Vitest runner reports every covered mutant as Survived on Vitest 5 (upstream [stryker-js#6210](https://github.com/stryker-mutator/stryker-js/issues/6210); fix PRs #6214 and #6247 unmerged as of 2026-10-17), and patching the runner ourselves isn't worth maintaining (decided 2026-10-17). Resume when a vitest-runner release fixes #6210 (check `npm view @stryker-mutator/vitest-runner version`): reopen [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124), update `context/changes/testing-mutation-stryker/research.md` (still open: run time, so CI or local only) and run `/10x-plan testing-mutation-stryker`. Run Stryker with `TZ=Pacific/Honolulu` set (stryker-js#5982).
 - **Operator alerts on failed jobs or deliveries (FR-019)** — Why parked: nice-to-have; the test plan treats noticing failures in production as observability, not testing (§2). S-07 adds error capture only; alert rules stay here (decided 2026-10-11). A candidate for a later milestone.
 - **Remaining observability-audit findings** — Why parked: outside M-2's critical scope (decided 2026-10-12). From `context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md` §6 steps 5–7: browser save and rating reporting with an island error boundary (W5, R6, X8), logging the expected 404/409/400/401 outcomes and invariants (W2, W4, W9, W10, R1, R3, R4, R5, D7, A5, A8), and the low-severity polish (X6, X7, X9, D5, D8, D9, D10, A7, A9, A10, R7, R8, W7, W8). A candidate for a later milestone; re-run `/10x-observability-audit` first.
 - **Visual or snapshot tests of shadcn components** — Why parked: test-plan §7; generated components, and the look changes in the parked UI review.
