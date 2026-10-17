@@ -55,7 +55,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | ID   | Change ID                            | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
 | ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
 | S-01 | testing-migration-date-rules         | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
-| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | ready       |
+| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | in-progress |
 | S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | in-progress |
 | S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
 | S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
@@ -114,7 +114,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Is the delivery write atomic, so a failure part-way through answers non-2xx and leaves nothing half-written? — Owner: research. Block: no.
   - Can real dev re-sends serve as fixtures for the changed-week cases? — Owner: user. Block: no.
 - **Risk:** MO alerts only on non-2xx and mo-web has no monitoring, so a 2xx with a bad save goes unnoticed; next in line because the delivery is where every week's data enters.
-- **Status:** ready
+- **Status:** in-progress
 
 ### S-03: Data isolation sweep
 
