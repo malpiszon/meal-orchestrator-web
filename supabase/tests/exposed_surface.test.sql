@@ -7,10 +7,10 @@
 -- migration: revoke what the API roles must not have; if they should have it, add the row here and add a
 -- case for it to second_user_isolation.test.sql (a new table, policy or definer function always needs
 -- one). Objects an extension owns (pgTAP) are skipped. A schema added to config.toml's [api] schemas (or
--- exposed in the hosted dashboard) must be added to every nspname list below. Run with
--- `npx supabase test db`.
+-- exposed in the hosted dashboard) must be added to every nspname list below. Realtime and Storage, the
+-- other ways in, are pinned empty at the end. Run with `npx supabase test db`.
 begin;
-select plan(9);
+select plan(12);
 
 -- Relations, with their RLS flag: the three plan tables (20261001120000_weekly_plans,
 -- 20261008120000_meal_ratings). graphql_public has none.
@@ -144,6 +144,23 @@ select is_empty(
       where has_schema_privilege(r.rolname, n.oid, 'create')
         and n.nspname !~ '^pg_(toast_)?temp_' $$,
   'neither anon nor authenticated can create objects in any schema'
+);
+
+-- Realtime and Storage: both are enabled (supabase/config.toml) and reach the public keys outside
+-- PostgREST. Their tables keep RLS on with no policy, so the keys get nothing; the grants on them are
+-- Supabase's own and not pinned. A table added to a publication streams its changes to subscribers, a
+-- bucket or policy opens files; each must be reviewed here first.
+select is_empty(
+  $$ select pubname, schemaname, tablename from pg_publication_tables $$,
+  'no table is in a realtime publication'
+);
+select is_empty(
+  $$ select id from storage.buckets $$,
+  'there are no storage buckets'
+);
+select is_empty(
+  $$ select schemaname, tablename, policyname from pg_policies where schemaname in ('storage', 'realtime') $$,
+  'the storage and realtime schemas have no policies'
 );
 
 select * from finish();
