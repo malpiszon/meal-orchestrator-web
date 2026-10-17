@@ -1,0 +1,614 @@
+{
+  "schema_version": 1,
+  "run_id": "edge-run-0001",
+  "provider": "ntfy",
+  "week_start": "2026-06-29",
+  "week_end": "2026-07-05",
+  "user": {
+    "email": "user@example.com",
+    "locale": "pl"
+  },
+  "days": [
+    {
+      "date": "2026-06-29",
+      "label": "edge unknown day key",
+      "meals": [
+        {
+          "type": "breakfast",
+          "slot_note": "edge unknown meal key",
+          "variants": [
+            {
+              "provider_meal_id": "e100",
+              "name": "Edge e100",
+              "composition": "Edge e100 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 4,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ],
+              "calories": 410
+            },
+            {
+              "provider_meal_id": "e101",
+              "name": "Edge e101",
+              "composition": "Edge e101 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 6,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e102",
+              "name": "Edge e102",
+              "composition": "Edge e102 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 9,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e103",
+              "name": "Edge e103",
+              "composition": "Edge e103 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 3,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e104",
+              "name": "Edge e104",
+              "composition": "Edge e104 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 7,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e105",
+              "name": "Edge e105",
+              "composition": "Edge e105 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 9,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e106",
+              "name": "Edge e106",
+              "composition": "Edge e106 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 2,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e107",
+              "name": "Edge e107",
+              "composition": "Edge e107 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 5,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e108",
+              "name": "Edge e108",
+              "composition": "Edge e108 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 8,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e109",
+              "name": "Edge e109",
+              "composition": "Edge e109 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 1,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "lunch",
+          "variants": [
+            {
+              "provider_meal_id": "e120",
+              "name": "Edge e120",
+              "composition": "",
+              "score": 6,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e121",
+              "name": "Edge e121",
+              "composition": "Edge e121 composition",
+              "nutrition": {
+                "protein_g": 31.5,
+                "salt_g": 0.8
+              },
+              "score": 8,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-06-30",
+      "meals": [
+        {
+          "type": "second_breakfast",
+          "variants": [
+            {
+              "provider_meal_id": "e200",
+              "name": "Edge e200",
+              "composition": "Edge e200 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2,
+                "energy_kcal": 300
+              },
+              "score": 5,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                },
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 2."
+                },
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 3."
+                },
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 4."
+                },
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 5."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e201",
+              "name": "Edge e201",
+              "composition": "Edge e201 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 5,
+              "justifications": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-07-01",
+      "meals": [
+        {
+          "type": "tea",
+          "variants": [
+            {
+              "provider_meal_id": "e300",
+              "name": "Edge e300",
+              "composition": "Edge e300 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 3,
+              "justifications": []
+            },
+            {
+              "provider_meal_id": "e301",
+              "name": "Edge e301",
+              "composition": "Edge e301 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 10,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-07-02",
+      "meals": [
+        {
+          "type": "dinner",
+          "variants": [
+            {
+              "provider_meal_id": "e400",
+              "name": "Edge e400",
+              "composition": "Edge e400 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 7,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e401",
+              "name": "Edge e401",
+              "composition": "Edge e401 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 2,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e402",
+              "name": "Edge e402",
+              "composition": "Edge e402 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 7,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-07-03",
+      "meals": [
+        {
+          "type": "snack",
+          "variants": [
+            {
+              "provider_meal_id": "e500",
+              "name": "Edge e500",
+              "composition": "Edge e500 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 1,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-07-04",
+      "meals": [
+        {
+          "type": "breakfast",
+          "variants": [
+            {
+              "provider_meal_id": "e600",
+              "name": "Edge e600",
+              "composition": "Edge e600 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 9,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e601",
+              "name": "Edge e601",
+              "composition": "Edge e601 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 4,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-07-05",
+      "meals": [
+        {
+          "type": "lunch",
+          "variants": [
+            {
+              "provider_meal_id": "e700",
+              "name": "Edge e700",
+              "composition": "Edge e700 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 6,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            },
+            {
+              "provider_meal_id": "e701",
+              "name": "Edge e701",
+              "composition": "Edge e701 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 8,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "dinner",
+          "variants": [
+            {
+              "provider_meal_id": "e710",
+              "name": "Edge e710",
+              "composition": "Edge e710 composition",
+              "nutrition": {
+                "protein_g": 20.5,
+                "fat_g": 10,
+                "saturated_fat_g": 3.2,
+                "carbs_g": 40.1,
+                "sugar_g": 5,
+                "fiber_g": 4.4,
+                "salt_g": 1.2
+              },
+              "score": 5,
+              "justifications": [
+                {
+                  "icon": "⚖️",
+                  "text": "Edge reason 1."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

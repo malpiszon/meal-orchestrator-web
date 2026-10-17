@@ -164,14 +164,17 @@ function daysBetween(from, to) {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / MS_PER_DAY);
 }
 
-/** The sample delivery for `deliveryEmail`, moved to the week starting on the Monday `weekStart` (`YYYY-MM-DD`). */
-async function loadDelivery(deliveryEmail, weekStart) {
-  const sample = JSON.parse(await readFile(new URL("./fixtures/mo-delivery.sample.json", import.meta.url), "utf8"));
+/**
+ * A fixture delivery (the sample unless `fixture` names another file in scripts/fixtures) for `deliveryEmail`,
+ * moved to the week starting on the Monday `weekStart` (`YYYY-MM-DD`). Other keys, unknown ones included, stay.
+ */
+async function loadDelivery(deliveryEmail, weekStart, fixture = "mo-delivery.sample.json") {
+  const sample = JSON.parse(await readFile(new URL(`./fixtures/${fixture}`, import.meta.url), "utf8"));
   const shift = (date) =>
     isoDate(Date.parse(`${weekStart}T00:00:00Z`) + daysBetween(sample.week_start, date) * MS_PER_DAY);
   return {
     ...sample,
-    user: { email: deliveryEmail },
+    user: { ...sample.user, email: deliveryEmail },
     week_start: weekStart,
     week_end: shift(sample.week_end),
     days: sample.days.map((day) => ({ ...day, date: shift(day.date) })),
@@ -182,6 +185,93 @@ async function loadDelivery(deliveryEmail, weekStart) {
 function recommendedIndex(meal) {
   return meal.variants.reduce((best, variant, index) => (variant.score > meal.variants[best].score ? index : best), 0);
 }
+
+// The option columns the delivery round trip compares, and nutrition's keys, from the field table in
+// docs/mo-delivery-contract.md.
+const OPTION_FIELDS = [
+  "meal_date",
+  "meal_type",
+  "variant_index",
+  "provider_meal_id",
+  "name",
+  "composition",
+  "nutrition",
+  "score",
+  "justifications",
+  "is_recommended",
+];
+const NUTRITION_KEYS = ["protein_g", "fat_g", "saturated_fat_g", "carbs_g", "sugar_g", "fiber_g", "salt_g"];
+
+/** The key the round trip compares an option row under, so a difference names its slot. */
+const optionKey = (row) => `${row.meal_date} ${row.meal_type} #${row.variant_index}`;
+
+/**
+ * The option rows docs/mo-delivery-contract.md promises for `payload`, keyed by `optionKey`. Written from the
+ * contract, not from src/lib/mo-delivery.ts: one row per variant, its `variant_index` the position in the
+ * menu's order; `composition` "" stored as null ("no composition"); a missing `nutrition` stored as null, and
+ * only its known keys kept (unknown nested keys live only in raw_payload); one recommended option per meal,
+ * the highest score with ties going to the first listed.
+ */
+function expectedOptions(payload) {
+  const rows = payload.days.flatMap((day) =>
+    day.meals.flatMap((meal) => {
+      const topScore = Math.max(...meal.variants.map((variant) => variant.score));
+      const recommended = meal.variants.findIndex((variant) => variant.score === topScore);
+      return meal.variants.map((variant, index) => ({
+        meal_date: day.date,
+        meal_type: meal.type,
+        variant_index: index,
+        provider_meal_id: variant.provider_meal_id,
+        name: variant.name,
+        composition: variant.composition === "" ? null : variant.composition,
+        nutrition:
+          variant.nutrition === undefined
+            ? null
+            : Object.fromEntries(
+                NUTRITION_KEYS.filter((key) => key in variant.nutrition).map((key) => [key, variant.nutrition[key]]),
+              ),
+        score: variant.score,
+        justifications: variant.justifications,
+        is_recommended: index === recommended,
+      }));
+    }),
+  );
+  return Object.fromEntries(rows.map((row) => [optionKey(row), row]));
+}
+
+/** The stored option rows of `plan` (as read through PostgREST), cut to OPTION_FIELDS and keyed by `optionKey`. */
+function storedOptions(plan) {
+  return Object.fromEntries(
+    plan.plan_meal_options.map((row) => [
+      optionKey(row),
+      Object.fromEntries(OPTION_FIELDS.map((field) => [field, row[field]])),
+    ]),
+  );
+}
+
+/**
+ * The first difference between `expected` and `actual`, as "path: expected …, got …", or `null` when they are
+ * deep-equal. Object key order doesn't matter (jsonb reorders keys); array order does.
+ */
+function firstDifference(expected, actual, path = "") {
+  if (Object.is(expected, actual)) return null;
+  const isObject = (value) => typeof value === "object" && value !== null;
+  if (isObject(expected) && isObject(actual) && Array.isArray(expected) === Array.isArray(actual)) {
+    const keys = Array.isArray(expected)
+      ? Array.from({ length: Math.max(expected.length, actual.length) }, (_, i) => i)
+      : [...new Set([...Object.keys(expected), ...Object.keys(actual)])].sort();
+    for (const key of keys) {
+      const difference = firstDifference(expected[key], actual[key], path === "" ? String(key) : `${path}.${key}`);
+      if (difference) return difference;
+    }
+    return null;
+  }
+  return `${path || "(root)"}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`;
+}
+
+/** A comparison step's result: JSON with the first difference, so a failing run prints it. */
+const comparison = (status, difference) => ({ status, location: "", body: JSON.stringify({ difference }) });
+const noDifference = ["no difference", (body) => jsonField(body, "difference") === null];
 
 const KEEPALIVE_EXPECT_FAILURE = process.env.KEEPALIVE_EXPECT_FAILURE === "1";
 // Same schedule as wrangler.jsonc, so local logs read like production ("keepalive ok (0 3 * * *)").
@@ -238,6 +328,13 @@ let pastDelivery, otherPastDelivery, pastName;
 let pastPlanId, otherPastPlanId, currentPlanId, upcomingDeliveryPlanId;
 // Read from the dashboard HTML by the swap steps.
 let upcomingPlanId, swapOptionId;
+// The delivery round trip: the edge-case fixture for an account it creates, and another week for the same
+// address in mixed case; the plan ids they answer; that account's and the smoke user's REST access tokens;
+// the smoke user's plans and options before the round trip.
+const roundTripEmail = `smoke-roundtrip-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
+const ROUND_TRIP_PASSWORD = "Smoke-RoundTrip-Passw0rd!";
+let roundTripDelivery, roundTripLaterDelivery, roundTripPlanId, roundTripLaterPlanId;
+let roundTripToken, smokeToken, smokeSnapshot;
 if (!KEEPALIVE_EXPECT_FAILURE) {
   if (!MO_INGEST_TOKEN) {
     console.error("MO_INGEST_TOKEN is not set; use the same token the server under test has.");
@@ -251,6 +348,7 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   }
   if (!SUPABASE_KEY) console.log("SKIP  anon grant check (set SUPABASE_KEY)\n");
   if (!MAILPIT_URL) console.log("SKIP  real reset email (set MAILPIT_URL)\n");
+  if (!SUPABASE_KEY) console.log("SKIP  delivery round trip (set SUPABASE_KEY)\n");
   const nextWeek = upcomingMonday();
   delivery = await loadDelivery(email, nextWeek);
   newUserDelivery = await loadDelivery(
@@ -380,6 +478,13 @@ if (!KEEPALIVE_EXPECT_FAILURE) {
   laterDelivery = await loadDelivery(email, laterWeek);
   laterName = `Smoke later-week meal ${Date.now()}`;
   laterDelivery.days[0].meals[0].variants[index].name = laterName;
+
+  // The round trip: a new account, so any week can be used; the second week follows the first.
+  roundTripDelivery = await loadDelivery(roundTripEmail, nextWeek, "mo-delivery.edge-cases.json");
+  const mixedCaseEmail = roundTripEmail
+    .replace(/^smoke-roundtrip/, "Smoke-RoundTrip")
+    .replace(/@example\.com$/, "@Example.COM");
+  roundTripLaterDelivery = await loadDelivery(mixedCaseEmail, laterWeek);
 }
 
 const deliver = (payload) =>
@@ -432,6 +537,69 @@ async function generateLinkToken(type, linkEmail) {
   // GoTrue versions differ on where the token sits in the response.
   const hash = jsonField(body, "hashed_token") ?? jsonField(body, "properties")?.hashed_token;
   return hash ? { hash } : { failure: { status: response.status, location: "", body } };
+}
+
+const serviceRoleHeaders = () => ({
+  apikey: SUPABASE_SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  "Content-Type": "application/json",
+});
+
+/** Signs in through GoTrue's password grant and returns the REST access token, or a `failure` step result. */
+async function passwordGrant(signInEmail, signInPassword) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: signInEmail, password: signInPassword }),
+  });
+  const body = await response.text();
+  const token = jsonField(body, "access_token");
+  return token ? { token } : { failure: { status: response.status, location: "", body } };
+}
+
+/**
+ * The plans, each with all its options, that the user holding `token` reads through PostgREST (RLS: their
+ * own), in a fixed order. `plans` is the parsed list, or undefined when the read failed.
+ */
+async function readOwnPlans(token) {
+  const query =
+    "select=*,plan_meal_options(*)&order=week_start.asc&plan_meal_options.order=meal_date.asc,meal_type.asc,variant_index.asc";
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/weekly_plans?${query}`, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+  });
+  const body = await response.text();
+  let plans;
+  try {
+    plans = response.ok ? JSON.parse(body) : undefined;
+  } catch {
+    plans = undefined;
+  }
+  return { status: response.status, location: "", body, plans: Array.isArray(plans) ? plans : undefined };
+}
+
+/**
+ * Gives the account owning plan `planId` a password through the Admin API (its id read with the service-role
+ * key), then signs it in. Returns the token, or a `failure` step result.
+ */
+async function claimPlanOwner(planId, newPassword, signInEmail) {
+  const owner = await fetch(`${SUPABASE_URL}/rest/v1/weekly_plans?id=eq.${planId}&select=user_id`, {
+    headers: serviceRoleHeaders(),
+  });
+  const ownerBody = await owner.text();
+  let userId;
+  try {
+    userId = JSON.parse(ownerBody)[0]?.user_id;
+  } catch {
+    userId = undefined;
+  }
+  if (!userId) return { failure: { status: owner.status, location: "", body: ownerBody } };
+  const update = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {
+    method: "PUT",
+    headers: serviceRoleHeaders(),
+    body: JSON.stringify({ password: newPassword, email_confirm: true }),
+  });
+  if (!update.ok) return { failure: { status: update.status, location: "", body: await update.text() } };
+  return passwordGrant(signInEmail, newPassword);
 }
 
 /** Creates the smoke user through the Admin API with a password; public sign-up is disabled. */
@@ -1164,6 +1332,113 @@ const steps = KEEPALIVE_EXPECT_FAILURE
           ],
         },
       ],
+      ...(SUPABASE_KEY
+        ? [
+            // Delivery round trip (risk #2): the edge-case fixture over HTTP, read back as its owner through
+            // PostgREST and compared field by field with what docs/mo-delivery-contract.md promises.
+            [
+              "round trip: snapshot the smoke user's plans and options",
+              async () => {
+                const session = await passwordGrant(email, smokePassword);
+                if (session.failure) return session.failure;
+                smokeToken = session.token;
+                const read = await readOwnPlans(smokeToken);
+                smokeSnapshot = read.plans;
+                return read;
+              },
+              { status: 200, body: ["a non-empty list of plans", () => (smokeSnapshot?.length ?? 0) > 0] },
+            ],
+            [
+              "round trip: edge-case delivery for a new email creates the account",
+              async () => {
+                const result = await deliver(roundTripDelivery);
+                roundTripPlanId = jsonField(result.body, "plan_id");
+                return result;
+              },
+              { status: 200, body: ["account_created: true", (body) => jsonField(body, "account_created") === true] },
+            ],
+            [
+              "round trip: the new account gets a password and signs in",
+              async () => {
+                if (!roundTripPlanId) return stepFailure("no round-trip plan_id");
+                const session = await claimPlanOwner(roundTripPlanId, ROUND_TRIP_PASSWORD, roundTripEmail);
+                if (session.failure) return session.failure;
+                roundTripToken = session.token;
+                return { status: 200, location: "", body: "" };
+              },
+              { status: 200 },
+            ],
+            [
+              "round trip: owner reads the plan's provider, week_start, week_end, mo_run_id and raw_payload as sent",
+              async () => {
+                if (!roundTripToken) return stepFailure("no round-trip session");
+                const read = await readOwnPlans(roundTripToken);
+                if (!read.plans) return read;
+                const plan = read.plans.find((p) => p.id === roundTripPlanId);
+                if (!plan) return comparison(read.status, `plan ${roundTripPlanId} is not among the owner's plans`);
+                const sent = JSON.parse(JSON.stringify(roundTripDelivery));
+                const expected = {
+                  provider: sent.provider,
+                  week_start: sent.week_start,
+                  week_end: sent.week_end,
+                  mo_run_id: sent.run_id ?? null,
+                  raw_payload: sent,
+                };
+                const actual = Object.fromEntries(Object.keys(expected).map((field) => [field, plan[field]]));
+                return comparison(read.status, firstDifference(expected, actual));
+              },
+              { status: 200, body: noDifference },
+            ],
+            [
+              `round trip: owner reads every option's ${OPTION_FIELDS.join(", ")} as the contract maps them`,
+              async () => {
+                if (!roundTripToken) return stepFailure("no round-trip session");
+                const read = await readOwnPlans(roundTripToken);
+                if (!read.plans) return read;
+                const plan = read.plans.find((p) => p.id === roundTripPlanId);
+                if (!plan) return comparison(read.status, `plan ${roundTripPlanId} is not among the owner's plans`);
+                return comparison(
+                  read.status,
+                  firstDifference(expectedOptions(roundTripDelivery), storedOptions(plan), "options"),
+                );
+              },
+              { status: 200, body: noDifference },
+            ],
+            [
+              "round trip: another week for the same address in mixed case reaches the same account",
+              async () => {
+                const result = await deliver(roundTripLaterDelivery);
+                roundTripLaterPlanId = jsonField(result.body, "plan_id");
+                return result;
+              },
+              { status: 200, body: ["account_created: false", (body) => jsonField(body, "account_created") === false] },
+            ],
+            [
+              "round trip: the owner reads both weeks",
+              async () => {
+                if (!roundTripToken) return stepFailure("no round-trip session");
+                const read = await readOwnPlans(roundTripToken);
+                if (!read.plans) return read;
+                const ids = read.plans.map((p) => p.id);
+                return comparison(
+                  read.status,
+                  firstDifference([roundTripPlanId, roundTripLaterPlanId], ids, "plan ids"),
+                );
+              },
+              { status: 200, body: noDifference },
+            ],
+            [
+              "round trip: the smoke user's plans and options are unchanged",
+              async () => {
+                if (!smokeToken || !smokeSnapshot) return stepFailure("no snapshot of the smoke user's plans");
+                const read = await readOwnPlans(smokeToken);
+                if (!read.plans) return read;
+                return comparison(read.status, firstDifference(smokeSnapshot, read.plans, "plans"));
+              },
+              { status: 200, body: noDifference },
+            ],
+          ]
+        : []),
       ["dashboard renders for signed-in user", () => request("/dashboard"), { status: 200 }],
       [
         "signout clears session",

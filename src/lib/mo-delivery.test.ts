@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sample from "../../scripts/fixtures/mo-delivery.sample.json";
+import edgeCases from "../../scripts/fixtures/mo-delivery.edge-cases.json";
 import { moDeliverySchema, toOptionRows, type MoDelivery } from "@/lib/mo-delivery";
 
 /** A fresh, mutable copy of the sample payload. */
@@ -26,6 +27,13 @@ const FIRST_VARIANT = "days.0.meals.0.variants.0";
 describe("moDeliverySchema", () => {
   it("accepts the sample payload", () => {
     const result = moDeliverySchema.safeParse(sample);
+    expect(result.error?.issues).toBeUndefined();
+    expect(result.success).toBe(true);
+  });
+
+  // The smoke round trip delivers this fixture; a contract change that invalidates it must fail here first.
+  it("accepts the edge-case payload", () => {
+    const result = moDeliverySchema.safeParse(edgeCases);
     expect(result.error?.issues).toBeUndefined();
     expect(result.success).toBe(true);
   });
