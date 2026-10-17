@@ -333,13 +333,13 @@ Not applicable: no migrations. Migration authors from now on must update `expose
 
 #### Automated
 
-- [x] 1.1 Database tests pass with the new file
-- [x] 1.2 The allowlist fails when the surface changes
-- [x] 1.3 Lint and format pass
+- [x] 1.1 Database tests pass with the new file — d651e0f
+- [x] 1.2 The allowlist fails when the surface changes — d651e0f
+- [x] 1.3 Lint and format pass — d651e0f
 
 #### Manual
 
-- [x] 1.4 The prod surface matches local
+- [x] 1.4 The prod surface matches local — d651e0f
 
 ### Phase 2: Second-user sweep (pgTAP)
 

@@ -6,7 +6,9 @@
 -- public, so a migration that forgets its revokes still matches itself. When this fails after your
 -- migration: revoke what the API roles must not have; if they should have it, add the row here and add a
 -- case for it to second_user_isolation.test.sql (a new table, policy or definer function always needs
--- one). Objects an extension owns (pgTAP) are skipped. Run with `npx supabase test db`.
+-- one). Objects an extension owns (pgTAP) are skipped. A schema added to config.toml's [api] schemas (or
+-- exposed in the hosted dashboard) must be added to every nspname list below. Run with
+-- `npx supabase test db`.
 begin;
 select plan(9);
 
@@ -56,20 +58,30 @@ select set_eq(
   'the exposed tables have only the three own-rows SELECT policies'
 );
 
--- Table grants: SELECT, REFERENCES and TRIGGER are left after the write revokes in
+-- Table grants: SELECT, REFERENCES, TRIGGER and MAINTAIN are left after the write revokes in
 -- 20261001120000_weekly_plans and 20261008120000_meal_ratings. Neither role can create objects (below), so
--- REFERENCES and TRIGGER can't be used.
+-- REFERENCES and TRIGGER can't be used, and MAINTAIN (VACUUM, ANALYZE, REINDEX, LOCK) is plain SQL that
+-- PostgREST never issues. has_table_privilege also sees grants to PUBLIC and to a role the API roles are
+-- members of, and MAINTAIN, none of which role_table_grants lists.
 select set_eq(
-  $$ select format('%s.%s', table_schema, table_name) collate "default", grantee::text collate "default",
-            privilege_type::text collate "default"
-       from information_schema.role_table_grants
-      where table_schema in ('public', 'graphql_public')
-        and grantee in ('anon', 'authenticated') $$,
+  $$ select format('%s.%s', n.nspname, c.relname) collate "default", r.rolname::text collate "default", pr.p
+       from pg_class c
+       join pg_namespace n on n.oid = c.relnamespace
+       cross join (values ('anon'::name), ('authenticated'::name)) r (rolname)
+       cross join unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER',
+                               'MAINTAIN']) pr (p)
+      where n.nspname in ('public', 'graphql_public')
+        and c.relkind in ('r', 'p', 'v', 'm', 'f')
+        and has_table_privilege(r.rolname, c.oid, pr.p)
+        and not exists (
+          select 1 from pg_depend d
+           where d.classid = 'pg_class'::regclass and d.objid = c.oid and d.deptype = 'e'
+        ) $$,
   $$ select t, r, p
        from unnest(array['public.weekly_plans', 'public.plan_meal_options', 'public.meal_ratings']) t,
             unnest(array['anon', 'authenticated']) r,
-            unnest(array['SELECT', 'REFERENCES', 'TRIGGER']) p $$,
-  'anon and authenticated hold only SELECT, REFERENCES and TRIGGER on the exposed tables'
+            unnest(array['SELECT', 'REFERENCES', 'TRIGGER', 'MAINTAIN']) p $$,
+  'anon and authenticated hold only SELECT, REFERENCES, TRIGGER and MAINTAIN on the exposed tables'
 );
 
 -- Column grants: none. role_column_grants also lists columns covered by a table grant, so read attacl.

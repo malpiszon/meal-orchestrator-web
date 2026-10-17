@@ -1,7 +1,7 @@
 ---
 change_id: testing-data-isolation
 title: Data isolation sweep (test-plan Phase 3)
-status: implementing
+status: impl_reviewed
 created: 2026-10-17
 updated: 2026-10-17
 archived_at: null
