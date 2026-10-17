@@ -9,7 +9,7 @@
 - **Verdict**: NEEDS ATTENTION
 - **Findings**: 0 critical, 2 warnings, 4 observations
 
-Context: PR #190 is already merged and #121 is closed. Phases 1–3 each had their own review, and all of those findings are fixed. Gates run for this review:
+Context: PR #190 is already merged and #121 is closed. Phases 1–3 each had their own review, and all of those findings are fixed. Gates run for this review, before the fixes below:
 
 - `npx supabase test db`: PASS. 12 files, 314 tests, full log saved to the scratchpad.
 - `npm run lint`: PASS, with 0 errors and 2 `no-console` warnings that already existed.
@@ -123,3 +123,5 @@ Context: PR #190 is already merged and #121 is closed. Phases 1–3 each had the
 | Outcome | Findings                               |
 | ------- | -------------------------------------- |
 | Fixed   | F1 (Fix A), F2, F3, F4, F5 (Fix A), F6 |
+
+After the fixes: `npx supabase test db` PASS (12 files, 317 tests; F1 added 3); `npm run smoke` against a preview on :4324 PASS; ESLint and Prettier pass on the changed files.
