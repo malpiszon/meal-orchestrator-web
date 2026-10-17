@@ -65,7 +65,7 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 | S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | done        |
 | S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | done        |
 | S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | done        |
-| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | in-progress |
+| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | done        |
 
 ## Baseline
 
@@ -256,7 +256,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Does a day collapse as soon as its last meal is rated, or only the next time the page is opened? — Owner: user. Block: no.
   - What does a collapsed day show: just the day, or the day with its meals' ratings? — Owner: user. Block: no.
 - **Risk:** Touches the week view that rating happens in, so a rating must still save, change and clear inside a day opened again; the change must stay accessible (the collapsed line is a real control that keyboards and screen readers can open).
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
@@ -322,3 +322,4 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **S-11: an error thrown by a component after the page has started streaming reaches Sentry and the Worker logs, instead of leaving the user a truncated page with status 200 and no trace.** — Archived 2026-10-16 → `context/archive/2026-10-15-streamed-render-errors/`. Lesson: —.
 - **S-12: a user who has saved next week (swapped a meal or kept the picks) opens the dashboard on "This week", where they rate what they ate; while next week is unsaved, or when there is no plan for this week, it still opens on "Next week". The other tab stays one tap away.** — Archived 2026-10-16 → `context/archive/2026-10-16-dashboard-opens-this-week-when-saved/`. Lesson: —.
 - **S-10: when the invitation email can't be sent or the account can't be created, the delivery reports it to Sentry and tells MO in its response, and a missing or wrong secret answers a distinct "not configured" error instead of a retryable storage failure.** — Archived 2026-10-17 → `context/archive/2026-10-15-mo-invitation-failure-visible/`. Lesson: —.
+- **S-13: on "This week", a day whose chosen meals all have a rating is collapsed to a single line that still shows the day and can be opened again, so by Friday the user reaches the meals still to rate without scrolling past the whole week; days with an unrated meal, and days still to come, stay open. `/history/<id>` is unchanged.** — Archived 2026-10-17 → `context/archive/2026-10-16-collapse-fully-rated-days/`. Lesson: —.
