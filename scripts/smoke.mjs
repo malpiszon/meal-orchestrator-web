@@ -341,7 +341,8 @@ const ROUND_TRIP_PASSWORD = "Smoke-RoundTrip-Passw0rd!";
 let roundTripDelivery, roundTripLaterDelivery, roundTripPlanId, roundTripLaterPlanId;
 let roundTripToken, smokeToken, smokeSnapshot;
 // The isolation steps (risk #3): a second signed-in user with an upcoming week of their own, their id and
-// their REST access token. Created only here, on the stack the smoke runs against (local or CI).
+// their REST access token. Created on whatever stack SUPABASE_URL names and never deleted; by convention
+// the smoke runs only against local and CI stacks (nothing here enforces that).
 const secondEmail = `smoke-second-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@example.com`;
 const SECOND_PASSWORD = "Smoke-Second-Passw0rd!";
 let secondDelivery, secondName, secondUserId, secondToken;
@@ -1848,7 +1849,7 @@ const steps = KEEPALIVE_EXPECT_FAILURE
             ].map(([fn, needs, args]) => [
               `second user: database API rpc/${fn} is refused`,
               () => secondUserCall(needs, () => restAsSecondUser(`rpc/${fn}`, { method: "POST", json: args() })),
-              { status: 403, body: pgError("42501") },
+              { status: 403, body: pgError("42501", `permission denied for function ${fn}`) },
             ]),
           ]
         : []),

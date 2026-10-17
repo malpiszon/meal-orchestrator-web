@@ -10,7 +10,10 @@
 -- Allowlist rows without a B case: keepalive() returns now() and adjusted_score() is pure arithmetic, so
 -- neither reads or writes any row (anon is still refused adjusted_score below); graphql_public.graphql()
 -- is Supabase's stub when pg_graphql isn't installed and only returns an error (if pg_graphql is enabled,
--- it resolves through the same grants and RLS this file checks). Today is pinned to 2026-03-30 (T), so
+-- it resolves through the same grants and RLS this file checks). The MAINTAIN, REFERENCES and TRIGGER
+-- grants on the three tables need no case either: VACUUM, ANALYZE, REINDEX, LOCK, foreign keys and
+-- triggers can't be issued through PostgREST. Realtime and Storage are pinned empty there, so they have no
+-- case until a migration opens one. Today is pinned to 2026-03-30 (T), so
 -- pg_temp.d(n) is T + n days. Run with `npx supabase test db`.
 begin;
 select plan(46);
@@ -163,17 +166,17 @@ select ok(
 select throws_ok(
   $$ insert into public.weekly_plans (user_id, provider, week_start, week_end, raw_payload)
      values ('5e5e5e5e-0000-0000-0000-00000000000b', 'ntfy', pg_temp.d(21), pg_temp.d(25), '{}') $$,
-  '42501', null,
+  '42501', 'permission denied for table weekly_plans',
   'B cannot insert into weekly_plans'
 );
 select throws_ok(
   $$ update public.weekly_plans set saved_at = null where id = pg_temp.ref('a_plan_7') $$,
-  '42501', null,
+  '42501', 'permission denied for table weekly_plans',
   'B cannot update A''s weekly_plans row'
 );
 select throws_ok(
   $$ delete from public.weekly_plans where id = pg_temp.ref('a_plan_7') $$,
-  '42501', null,
+  '42501', 'permission denied for table weekly_plans',
   'B cannot delete A''s weekly_plans row'
 );
 select throws_ok(
@@ -181,33 +184,33 @@ select throws_ok(
        (plan_id, user_id, meal_date, meal_type, variant_index, provider_meal_id, name, score, is_recommended)
      values (pg_temp.ref('a_plan_7'), '5e5e5e5e-0000-0000-0000-00000000000b', pg_temp.d(9), 'lunch', 0, 'X', 'X',
              8, true) $$,
-  '42501', null,
+  '42501', 'permission denied for table plan_meal_options',
   'B cannot insert into plan_meal_options'
 );
 select throws_ok(
   $$ update public.plan_meal_options set is_chosen = true where id = pg_temp.ref('a_SOUP_7') $$,
-  '42501', null,
+  '42501', 'permission denied for table plan_meal_options',
   'B cannot update A''s plan_meal_options row'
 );
 select throws_ok(
   $$ delete from public.plan_meal_options where id = pg_temp.ref('a_SOUP_7') $$,
-  '42501', null,
+  '42501', 'permission denied for table plan_meal_options',
   'B cannot delete A''s plan_meal_options row'
 );
 select throws_ok(
   $$ insert into public.meal_ratings (option_id, user_id, rating)
      values (pg_temp.ref('a_SOUP_-7'), '5e5e5e5e-0000-0000-0000-00000000000b', 1) $$,
-  '42501', null,
+  '42501', 'permission denied for table meal_ratings',
   'B cannot insert into meal_ratings'
 );
 select throws_ok(
   $$ update public.meal_ratings set rating = 1 where option_id = pg_temp.ref('a_SOUP_-7') $$,
-  '42501', null,
+  '42501', 'permission denied for table meal_ratings',
   'B cannot update A''s meal_ratings row'
 );
 select throws_ok(
   $$ delete from public.meal_ratings where option_id = pg_temp.ref('a_SOUP_-7') $$,
-  '42501', null,
+  '42501', 'permission denied for table meal_ratings',
   'B cannot delete A''s meal_ratings row'
 );
 
