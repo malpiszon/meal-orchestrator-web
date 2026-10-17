@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-10-11
+> Last updated: 2026-10-17
 
 ## 1. Strategy
 
@@ -72,7 +72,7 @@ orchestrator updates Status as artifacts appear on disk.
 | #   | Phase name                     | Goal (one line)                                                                                          | Risks covered | Test types                    | Status      | Change folder                                       |
 | --- | ------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------- | ----------- | --------------------------------------------------- |
 | 1   | Migration and date-rule safety | Prove the PRD plan rules hold after migrations run on existing data and at their date boundaries         | #1, #5        | pgTAP, unit, migration replay | complete    | testing-migration-date-rules                        |
-| 2   | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should                 | #2, #6        | pgTAP, unit, smoke extensions | not started | —                                                   |
+| 2   | Delivery and re-send integrity | Prove a 2xx means MO's week is stored exactly, and a re-send changes only what it should                 | #2, #6        | pgTAP, unit, smoke extensions | complete    | testing-delivery-resend-integrity                   |
 | 3   | Data isolation sweep           | Prove a second user can't read or change anything that isn't theirs, through the app or the database API | #3            | pgTAP, smoke                  | not started | —                                                   |
 | 4   | Critical journey e2e           | One real-browser journey on the Workers runtime, wired as a CI gate                                      | #4, #7        | e2e (Playwright)              | complete    | testing-critical-journey-e2e                        |
 | 5   | Agent-loop feedback            | Post-edit hook runs the matching pgTAP or unit tests when an agent edits migrations or `src/lib/`        | #1, #5        | post-edit hook                | complete    | — (built with `/10x-configure-hook`; #123, PR #129) |
@@ -83,13 +83,13 @@ Order rationale: #1 is the only High × High risk and covers the SQL the deliver
 
 | Layer                      | Tool                                    | Version           | Notes                                                                                                                         |
 | -------------------------- | --------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| unit                       | Vitest                                  | ^5.0.3            | `src/**/*.test.ts`; 11 files in `src/lib/` and `src/lib/services/`                                                            |
-| database                   | pgTAP via Supabase CLI                  | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 9 files; runs against local Supabase                                                             |
+| unit                       | Vitest                                  | ^5.0.3            | `src/**/*.test.ts`; 21 files in `src/lib/` and `src/lib/services/`                                                            |
+| database                   | pgTAP via Supabase CLI                  | supabase ^2.120.0 | `supabase/tests/*.test.sql`; 10 files; runs against local Supabase                                                            |
 | HTTP smoke                 | `scripts/smoke.mjs` (Node, no deps)     | n/a               | Drives flows over HTTP against a preview on the Workers runtime; also post-deploy probe                                       |
 | e2e (browser)              | Playwright Test (Chromium)              | 1.64.0            | `tests/e2e/`; the critical journey and a seed, against a preview on the Workers runtime; CI `e2e` job; checked: 2026-10-11    |
 | (AI-native) post-edit hook | Claude Code hooks — checked: 2026-10-10 | n/a               | When NOT to use: UI, styling or docs edits, and any edit where the matching test needs the full stack and takes over a minute |
 
-Test-base profile: `meaningful` — Vitest configured, 11 unit files, 9 pgTAP files, an HTTP smoke and one Playwright journey; pages, API routes and components have no tests of their own beyond the smoke and the journey.
+Test-base profile: `meaningful` — Vitest configured, 21 unit files, 10 pgTAP files, an HTTP smoke and one Playwright journey; pages, API routes and components have no tests of their own beyond the smoke and the journey.
 
 **Stack grounding tools (current session):**
 
@@ -127,7 +127,13 @@ the relevant rollout phase ships; before that, the sub-section reads
 
 ### 6.2 Adding a test for the MO delivery endpoint
 
-- TBD — see §3 Phase 2 for the "2xx means stored exactly per contract" and re-send patterns.
+Expected values come from `docs/mo-delivery-contract.md` and `docs/api.md` Re-delivery, never from `src/lib/mo-delivery.ts` or the SQL. Change the contract first, then the tests.
+
+- **New or changed contract field**: add it, with its edge values, to `scripts/fixtures/mo-delivery.edge-cases.json`; map it in `expectedOptions` (or the plan `expected` object) in `scripts/smoke.mjs`, written from the contract text; keep "accepts the edge-case payload" in `src/lib/mo-delivery.test.ts` green. A new column the RPC writes also goes into `rpc_contract.test.sql` (§6.1). The round trip runs only with `SUPABASE_KEY` set.
+- **New or changed response status**: an `it` in `src/lib/services/mo-deliveries.test.ts` with the scripted RPC answer, asserting status and body from the contract's Responses table, whether it was reported, and that a pre-storage check never calls the RPC.
+- **New or changed re-send rule**: a case in `supabase/tests/week_resubmission.test.sql` on its own week, snapshotting `pg_temp.state(<plan>)` before the re-send and comparing after, so other weeks and users stay untouched.
+- **New write step in `ingest_weekly_plan`**: each case in `supabase/tests/delivery_atomicity.test.sql` must still fail after every write; if one now fails earlier or a new table is written, add a case or extend its snapshots.
+- **Reference tests**: `src/lib/services/mo-deliveries.test.ts`, `supabase/tests/delivery_atomicity.test.sql`, `supabase/tests/week_resubmission.test.sql`, the `round trip: …` steps in `scripts/smoke.mjs`.
 
 ### 6.3 Adding an isolation test for a new table, function or route
 
@@ -145,6 +151,7 @@ the relevant rollout phase ships; before that, the sub-section reads
 ### 6.5 Per-rollout-phase notes
 
 - **Phase 1** (`testing-migration-date-rules`): the SQL "today" had to become a function (`private.warsaw_today()`) before any test could pin it; the older pgTAP files still use the real Warsaw today and were left as they are. The replay runs only in CI or with `MIGRATION_REPLAY_WIPES_LOCAL_DB=1`, as it resets the local stack shared with `npm run dev` and other worktrees, and it can start no further back than `20261008180000`, the oldest version with every RPC the seed calls.
+- **Phase 2** (`testing-delivery-resend-integrity`, #120): the route imported `astro:env/server`, so its body moved unchanged into `handleMoDelivery` (`src/lib/services/mo-deliveries.ts`) with the token and client injected; the route is now a one-line call. The tests needed a right oracle first: the contract said a never-saved re-send follows MO's new recommendations and the PRD (US-07, FR-017) that the latest delivery always replaces the stored week; both now describe the shipped behaviour (the rating-adjusted suggested pick, a changed re-send of a started week refused with 409, kept choices). The fixtures are hand-built from the contract, not real dev re-sends. Provisioning and invitation partial states (unknown user, `createUser` fallback) were left to S-10 (#145), which changes that branch; the unit tests never stub `unknown_user`. The round trip runs in smoke, not in the post-deploy probe, so it never writes to production.
 - **Phase 4** (`testing-critical-journey-e2e`, #122): the swap and the rating need different weeks (swap only before a week starts, rating only within 7 days of a meal), so the journey delivers this week and next week relative to the Warsaw today and runs on any date. Local and CI auth email isn't rate limited (`email_sent` needs custom SMTP), so the journey always reads the real invitation from Mailpit. The invitation links to `site_url` (port 4321); the helper re-hosts it on `baseURL`, and CI previews on 4321. In CI the `e2e` job takes about 2 min 15 s and runs beside `smoke` (about 3 min 10 s), so it adds no wall-clock time per PR (first measured 2026-10-11).
 - **Phase 5** (agent hooks, #123): type-checked ESLint takes ~45 s per file and `astro check` ~50 s on this checkout, so neither runs per edit; the end-of-turn hook runs them side by side. Per edit, only Vitest (`related`, for `src/lib/` and `src/test/`) and an edited pgTAP file run. A migration can't be tested before it is applied, so the end-of-turn hook applies new ones (`npx supabase migration up --local`, additive, once the agent stops editing for the turn) and then runs pgTAP; an edited, already-applied migration needs a `db reset`, which the hook only reports, as it wipes the local database.
 
