@@ -1,10 +1,10 @@
 ---
-change_id: testing-delivery-resend-integrity
-title: Testing delivery resend integrity
-status: impl_reviewed
-created: 2026-10-16
+change_id: testing-data-isolation
+title: Data isolation sweep (test-plan Phase 3)
+status: archived
+created: 2026-10-17
 updated: 2026-10-17
-archived_at: null
+archived_at: 2026-10-17T17:38:13Z
 ---
 
 ## Notes

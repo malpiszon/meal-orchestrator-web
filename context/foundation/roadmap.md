@@ -9,7 +9,7 @@ main_goal: quality
 top_blocker: time
 milestone_id: regression-safety-net
 milestone_seq: 2
-milestone_status: open
+milestone_status: done
 tracker: github-issues
 gh_milestone: "M-2: Regression safety net"
 ---
@@ -22,7 +22,7 @@ gh_milestone: "M-2: Regression safety net"
 
 ## Milestone
 
-**M-2: Regression safety net** — Status: open
+**M-2: Regression safety net** — Status: done
 
 - **Intent:** a change that breaks a plan rule, MO's delivery, another user's data or the main journey fails a test before it reaches production, and a system fault that slips through (database, Auth or email outage, a broken render) reaches Sentry instead of looking like a user error or success. The test plan's risks #1–#7 are covered by the cheapest test that gives a real signal, and the audit's critical findings and proven coverage gaps are closed. Two small dashboard changes (MS-12, MS-13, added 2026-10-15) make the mid-week rating routine quicker; more scope goes into a later milestone.
 - **Source materials:** `context/foundation/test-plan.md` §3 Phased Rollout (risks in §2), plus the user's descriptions for MS-06 (2026-10-10) and MS-07 (2026-10-11), plus `context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md` §5–§6 for MS-08 to MS-11 (added 2026-10-12), plus the user's description for MS-12 and MS-13 (2026-10-15).
@@ -52,20 +52,20 @@ Meal Orchestrator (MO) emails a weekly meal recommendation; mo-web receives that
 
 ## At a glance
 
-| ID   | Change ID                            | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status      |
-| ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ----------- |
-| S-01 | testing-migration-date-rules         | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done        |
-| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | in-progress |
-| S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | done        |
-| S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done        |
-| S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done        |
-| S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done        |
-| S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done        |
-| S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done        |
-| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | in-progress |
-| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | done        |
-| S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | done        |
-| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | in-progress |
+| ID   | Change ID                            | Outcome (user can …)                                                                                     | Prerequisites | PRD refs | Status |
+| ---- | ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------- | -------- | ------ |
+| S-01 | testing-migration-date-rules         | a migration that breaks a plan rule, grant or date boundary fails a test before production               | —             | MS-01    | done   |
+| S-02 | testing-delivery-resend-integrity    | a 2xx from MO's delivery provably means the week is stored exactly; a re-send changes only its week      | S-01          | MS-02    | done   |
+| S-03 | testing-data-isolation               | a second user provably can't read or change another user's data, via the app or the database API         | S-01          | MS-03    | done   |
+| S-04 | testing-critical-journey-e2e         | one real-browser journey from delivery to rating runs as a CI gate                                       | —             | MS-04    | done   |
+| S-05 | testing-agent-post-edit-hook         | an agent editing a migration or `src/lib/` gets the matching tests run before it hands back              | S-01          | MS-05    | done   |
+| S-07 | add-sentry                           | an unhandled error in the Worker or a React island reaches Sentry instead of going silent (nice-to-have) | —             | MS-07    | done   |
+| S-08 | report-handled-errors                | a database, PostgREST or Auth fault the app handles reaches Sentry as one grouped issue, not a log line  | S-07          | MS-08    | done   |
+| S-09 | auth-fault-visibility                | an Auth outage or missing secret is reported, not shown as sign-outs or expired links                    | S-08          | MS-09    | done   |
+| S-10 | mo-invitation-failure-visible        | a failed invitation is reported and visible to MO, not answered with a plain success                     | S-08          | MS-10    | done   |
+| S-11 | streamed-render-errors               | an error while a page streams is reported instead of leaving a silent truncated page                     | S-07          | MS-11    | done   |
+| S-12 | dashboard-opens-this-week-when-saved | open the dashboard on "This week" once next week is saved, to rate what they ate                         | —             | MS-12    | done   |
+| S-13 | collapse-fully-rated-days            | scroll past fully rated days on "This week", which are collapsed                                         | —             | MS-13    | done   |
 
 ## Baseline
 
@@ -113,7 +113,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Is the delivery write atomic, so a failure part-way through answers non-2xx and leaves nothing half-written? — Owner: research. Block: no.
   - Can real dev re-sends serve as fixtures for the changed-week cases? — Owner: user. Block: no.
 - **Risk:** MO alerts only on non-2xx and mo-web has no monitoring, so a 2xx with a bad save goes unnoticed; next in line because the delivery is where every week's data enters.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-03: Data isolation sweep
 
@@ -212,7 +212,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **Unknowns:**
   - Does MO accept a new response field (`invitation_sent`) and a new error code without a change on its side, and should it alert on them? — Owner: user. Block: no.
 - **Risk:** The third critical finding (D1): today a user can get an account with no invitation and nobody knows. It changes the delivery contract, so `docs/mo-delivery-contract.md` changes with it; re-inviting or retrying stays parked. Touches the delivery route that S-02 tests, so sequence the two branches if they overlap.
-- **Status:** in-progress
+- **Status:** done
 
 ### S-11: Streamed render errors captured
 
@@ -256,34 +256,32 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
   - Does a day collapse as soon as its last meal is rated, or only the next time the page is opened? — Owner: user. Block: no.
   - What does a collapsed day show: just the day, or the day with its meals' ratings? — Owner: user. Block: no.
 - **Risk:** Touches the week view that rating happens in, so a rating must still save, change and clear inside a day opened again; the change must stay accessible (the collapsed line is a real control that keyboards and screen readers can open).
-- **Status:** in-progress
+- **Status:** done
 
 ## Backlog Handoff
 
-| Roadmap ID | Issue                                                                 | Change ID                            | Suggested issue title                             | Ready for `/10x-plan` | Notes                                             |
-| ---------- | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- | --------------------- | ------------------------------------------------- |
-| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules         | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)                       |
-| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity    | Test-plan Phase 2: delivery and re-send integrity | yes                   | Run `/10x-plan testing-delivery-resend-integrity` |
-| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation               | Test-plan Phase 3: data isolation sweep           | done                  | Merged 2026-10-17 (PR #190)                       |
-| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e         | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)                       |
-| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook         | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)                       |
-| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)                       |
-| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)                       |
-| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | yes                   | Run `/10x-plan auth-fault-visibility`             |
-| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | yes                   | Changes the MO contract; overlaps S-02's route    |
-| S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors               | Capture errors in streamed pages                  | done                  | Merged 2026-10-16 (PR #173)                       |
-| S-12       | [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168) | dashboard-opens-this-week-when-saved | Open "This week" once next week is saved          | done                  | Merged 2026-10-16 (PR #174)                       |
-| S-13       | [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169) | collapse-fully-rated-days            | Collapse fully rated days on "This week"          | yes                   | Independent of S-12; any time                     |
+| Roadmap ID | Issue                                                                 | Change ID                            | Suggested issue title                             | Ready for `/10x-plan` | Notes                         |
+| ---------- | --------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- | --------------------- | ----------------------------- |
+| S-01       | [#116](https://github.com/malpiszon/meal-orchestrator-web/issues/116) | testing-migration-date-rules         | Test-plan Phase 1: migration and date-rule safety | done                  | Merged 2026-10-10 (PR #127)   |
+| S-02       | [#120](https://github.com/malpiszon/meal-orchestrator-web/issues/120) | testing-delivery-resend-integrity    | Test-plan Phase 2: delivery and re-send integrity | done                  | —                             |
+| S-03       | [#121](https://github.com/malpiszon/meal-orchestrator-web/issues/121) | testing-data-isolation               | Test-plan Phase 3: data isolation sweep           | done                  | Merged 2026-10-17 (PR #190)   |
+| S-04       | [#122](https://github.com/malpiszon/meal-orchestrator-web/issues/122) | testing-critical-journey-e2e         | Test-plan Phase 4: critical-journey e2e           | done                  | Merged 2026-10-11 (PR #134)   |
+| S-05       | [#123](https://github.com/malpiszon/meal-orchestrator-web/issues/123) | testing-agent-post-edit-hook         | Test-plan Phase 5: agent post-edit test hook      | done                  | Merged 2026-10-10 (PR #129)   |
+| S-07       | [#136](https://github.com/malpiszon/meal-orchestrator-web/issues/136) | add-sentry                           | Error monitoring with Sentry                      | done                  | Merged 2026-10-12 (PR #140)   |
+| S-08       | [#143](https://github.com/malpiszon/meal-orchestrator-web/issues/143) | report-handled-errors                | Report handled system faults to Sentry            | done                  | Merged 2026-10-14 (PR #153)   |
+| S-09       | [#144](https://github.com/malpiszon/meal-orchestrator-web/issues/144) | auth-fault-visibility                | Make Auth faults visible                          | done                  | —                             |
+| S-10       | [#145](https://github.com/malpiszon/meal-orchestrator-web/issues/145) | mo-invitation-failure-visible        | Surface MO invitation failures                    | done                  | Merged 2026-10-16 (PR #176)   |
+| S-11       | [#146](https://github.com/malpiszon/meal-orchestrator-web/issues/146) | streamed-render-errors               | Capture errors in streamed pages                  | done                  | Merged 2026-10-16 (PR #173)   |
+| S-12       | [#168](https://github.com/malpiszon/meal-orchestrator-web/issues/168) | dashboard-opens-this-week-when-saved | Open "This week" once next week is saved          | done                  | Merged 2026-10-16 (PR #174)   |
+| S-13       | [#169](https://github.com/malpiszon/meal-orchestrator-web/issues/169) | collapse-fully-rated-days            | Collapse fully rated days on "This week"          | done                  | Independent of S-12; any time |
 
 ## Open Roadmap Questions
 
-1. **Does MO's payload include macro/nutritional data (e.g. salt) at all?** — Owner: user. Block: parked FR-014, FR-015 (PRD Open Question 2).
-2. **What format are MO's historical debug-artifact logs in, and are they parseable as a stable source?** — Owner: user. Block: parked FR-016 (PRD Open Question 3).
+None open. Answered 2026-10-17: the checked MO run carried all seven nutrition values (MO run `823001a4f7fe47fcb3a4cb0f7050f911`), and MO's debug artifacts hold no history from before mo-web (see the FR-014 / FR-015 and FR-016 entries in `## Parked`).
 
 ## Parked
 
 - **Mutation testing for unit tests (Stryker, S-06, MS-06)** — Why parked: StrykerJS 10.0.0's Vitest runner reports every covered mutant as Survived on Vitest 5 (upstream [stryker-js#6210](https://github.com/stryker-mutator/stryker-js/issues/6210); fix PRs #6214 and #6247 unmerged as of 2026-10-17), and patching the runner ourselves isn't worth maintaining (decided 2026-10-17). Resume when a vitest-runner release fixes #6210 (check `npm view @stryker-mutator/vitest-runner version`): reopen [#124](https://github.com/malpiszon/meal-orchestrator-web/issues/124), update `context/changes/testing-mutation-stryker/research.md` (still open: run time, so CI or local only) and run `/10x-plan testing-mutation-stryker`. Run Stryker with `TZ=Pacific/Honolulu` set (stryker-js#5982).
-- **Operator alerts on failed jobs or deliveries (FR-019)** — Why parked: nice-to-have; the test plan treats noticing failures in production as observability, not testing (§2). S-07 adds error capture only; alert rules stay here (decided 2026-10-11). A candidate for a later milestone.
 - **Remaining observability-audit findings** — Why parked: outside M-2's critical scope (decided 2026-10-12). From `context/audits/observability/2026-10-12_mo-delivery-week-edit-auth-ratings-history.md` §6 steps 5–7: browser save and rating reporting with an island error boundary (W5, R6, X8), logging the expected 404/409/400/401 outcomes and invariants (W2, W4, W9, W10, R1, R3, R4, R5, D7, A5, A8), and the low-severity polish (X6, X7, X9, D5, D8, D9, D10, A7, A9, A10, R7, R8, W7, W8). A candidate for a later milestone; re-run `/10x-observability-audit` first.
 - **Visual or snapshot tests of shadcn components** — Why parked: test-plan §7; generated components, and the look changes in the parked UI review.
 - **Load and performance tests** — Why parked: test-plan §7; 2–4 users and one delivery a week.
@@ -297,17 +295,17 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **No mirroring of providers' meal-change deadlines** — Why parked: PRD §Non-Goals.
 - **No custom domain** — Why parked: PRD §Non-Goals; would require moving the `malpiszon.net` DNS zone.
 - **FR-006 multi-factor login** — Why parked: nice-to-have; speed goal.
-- **FR-014 / FR-015 nutritional summaries and comparison** — Why parked: nice-to-have; blocked by Open Roadmap Question 2.
-- **FR-016 import of MO's historical logs** — Why parked: nice-to-have, exploratory; blocked by Open Roadmap Question 3.
-- **Smarter tie-break between equally scored options** — Why parked: nice-to-have, outside the MVP (decided while planning S-01, 2026-09-30). S-01 recommends the highest-scored option and breaks ties by menu order (first listed wins); a later slice may resolve ties better (e.g. prefer the option not recently eaten, or let MO send an explicit pick).
-- **Invite email failure handling** — Why parked: nice-to-have, outside the MVP (decided while planning S-04, 2026-10-04). If the invitation email can't be sent (rate limit, SMTP down), the delivery still returns 200, the failure is only logged, and the account stays unconfirmed with no invitation; the user can use "Forgot password?". S-10 makes the failure visible (Sentry and MO's response); retrying or re-inviting stays parked here. Revisit (retry, re-invite on a later delivery, or a visible state) if the user base grows beyond 2–4 people.
+- **FR-014 / FR-015 nutritional summaries and comparison** — Why parked: nice-to-have, now unblocked (2026-10-17): the checked MO run carried protein, fat, saturated fat, carbs, sugar, fibre and salt for every variant, the contract permits missing values, and mo-web stores each supplied value; only the screens are missing.
+- **FR-016 import of MO's historical logs** — Why parked: nice-to-have; not pursued (decided 2026-10-17). MO keeps no history from before mo-web: its debug artifacts start on 2026-09-29, mostly repeat one week, and mo-web already received those weeks. Sending older entries would need new development in MO. Revisit only if that is built.
+- **Automatic retry or re-invite of a failed invitation** — Why parked: nice-to-have, outside the MVP (decided while planning S-04, 2026-10-04; wording updated 2026-10-17). If the invitation email can't be sent (rate limit, SMTP down), the delivery still stores the week and returns 200 with `invitation_sent: false`, and the account stays unconfirmed. Since S-10 the failure is reported to Sentry as a `mo_delivery.invite` warning (which notifies Discord), and the user can set a password through "Forgot or never set a password?"; later deliveries send no second invitation. What stays parked is doing it automatically: retry, re-invite on a later delivery, or a visible state for the user. Revisit if the user base grows beyond 2–4 people.
 - **Styled invitation and password-reset emails** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06). The templates in `supabase/templates/` are unstyled (a heading, one sentence and a link). When picked up, reuse the styling of MO's own emails rather than designing new styling. Traces to FR-003, FR-005. Email programs can't use the app's Tailwind classes or design tokens, so the styles must be inline. Production templates are pasted by hand into the Supabase dashboard (see `docs/deployment.md#email-settings-and-templates`).
-- **General mo-web UI review (logo, visual identity)** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06). An app-wide pass that adds a logo and a consistent look across pages. Its scope differs from S-09, which only replaces the page at `/` with a sign-in page. When picked up, run it through `/10x-ui` one view at a time. It could also give the styled emails above a shared look.
+- **mo-web visual consistency pass** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06; narrowed 2026-10-17). The logo, favicons and design tokens already exist (the logo shows on the sign-in page), so what is left is an app-wide pass for a consistent look across pages. Its scope differs from S-09, which only replaces the page at `/` with a sign-in page. When picked up, run it through `/10x-ui` one view at a time. It could also give the styled emails above a shared look.
 - **Stale "Keep as recommended" after a re-delivery** — Why parked: nice-to-have, outside the MVP (decided 2026-10-06, from the S-06 review). On a "Next week" page opened before MO re-sends that week, "Keep as recommended" still saves: the plan id survives a re-send, so `confirm_plan` accepts it. What gets saved is MO's latest recommendation, while the open page still shows the old dishes next to "Saved …" until a reload. S-06 then keeps those dishes on later re-sends. It needs a never-saved plan, an open page and a re-send together. A swap on such a page already shows "This plan was updated. Reload to see the latest version." Proposed fix: the page sends the plan's `received_at` (or `mo_run_id`) with confirm, and `confirm_plan` answers `not_found` on a mismatch, so the same reload message shows. That needs a migration (signature change) plus changes to the route, dashboard props, hook, pgTAP and smoke. Traces to FR-010, FR-018.
 
 ## Milestone History
 
 - **M-1: Weekly plan loop with memory** (`weekly-plan-loop-with-memory`) — closed 2026-10-09. MO's weekly plan lands in mo-web for invited users, who see recency notes, swap and save the upcoming week, rate recent meals (which also order the options) and browse past weeks; all 13 slices and their foundations done.
+- **M-2: Regression safety net** (`regression-safety-net`) — closed 2026-10-17. Migrations, MO delivery, data isolation and the main journey are covered by tests that run locally and in CI, system faults reach Sentry, and the two mid-week dashboard changes shipped; S-01 to S-05 and S-07 to S-13 done, mutation testing (S-06) parked.
 
 ## Done
 
@@ -321,3 +319,7 @@ None. Each item sets up the tooling it needs (S-01 the replay harness, S-04 Play
 - **S-09: an Auth outage, a failed link check or a missing secret is reported to Sentry and shown to the user as "try again" where that applies, instead of looking like everyone signing out, every invitation expiring or a wrong password; anonymous visits and wrong passwords stay quiet.** — Archived 2026-10-15 → `context/archive/2026-10-14-auth-fault-visibility/`. Lesson: —.
 - **S-11: an error thrown by a component after the page has started streaming reaches Sentry and the Worker logs, instead of leaving the user a truncated page with status 200 and no trace.** — Archived 2026-10-16 → `context/archive/2026-10-15-streamed-render-errors/`. Lesson: —.
 - **S-12: a user who has saved next week (swapped a meal or kept the picks) opens the dashboard on "This week", where they rate what they ate; while next week is unsaved, or when there is no plan for this week, it still opens on "Next week". The other tab stays one tap away.** — Archived 2026-10-16 → `context/archive/2026-10-16-dashboard-opens-this-week-when-saved/`. Lesson: —.
+- **S-10: when the invitation email can't be sent or the account can't be created, the delivery reports it to Sentry and tells MO in its response, and a missing or wrong secret answers a distinct "not configured" error instead of a retryable storage failure.** — Archived 2026-10-17 → `context/archive/2026-10-15-mo-invitation-failure-visible/`. Lesson: —.
+- **S-13: on "This week", a day whose chosen meals all have a rating is collapsed to a single line that still shows the day and can be opened again, so by Friday the user reaches the meals still to rate without scrolling past the whole week; days with an unrated meal, and days still to come, stay open. `/history/<id>` is unchanged.** — Archived 2026-10-17 → `context/archive/2026-10-16-collapse-fully-rated-days/`. Lesson: —.
+- **S-02: a 2xx from MO's delivery provably means the week is stored exactly as the contract describes, and a re-sent week changes only what it should; a contract-valid payload stored wrong, or a partial write behind a 2xx, fails a test.** — Archived 2026-10-17 → `context/archive/2026-10-16-testing-delivery-resend-integrity/`. Lesson: —.
+- **S-03: a second user can't read or change another user's plans, choices or ratings, through the app's routes or by calling the database API directly with their own session; a new table, function or grant that leaks fails a test.** — Archived 2026-10-17 → `context/archive/2026-10-17-testing-data-isolation/`. Lesson: —.
