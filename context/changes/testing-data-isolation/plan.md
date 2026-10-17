@@ -345,13 +345,13 @@ Not applicable: no migrations. Migration authors from now on must update `expose
 
 #### Automated
 
-- [x] 2.1 Database tests pass
-- [x] 2.2 The sweep catches a leak
-- [x] 2.3 Lint and format pass
+- [x] 2.1 Database tests pass — fb728bd
+- [x] 2.2 The sweep catches a leak — fb728bd
+- [x] 2.3 Lint and format pass — fb728bd
 
 #### Manual
 
-- [x] 2.4 Each allowlist row has a case in the sweep
+- [x] 2.4 Each allowlist row has a case in the sweep — fb728bd
 
 ### Phase 3: Second-user HTTP pass (smoke)
 

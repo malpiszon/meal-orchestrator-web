@@ -13,7 +13,7 @@
 -- it resolves through the same grants and RLS this file checks). Today is pinned to 2026-03-30 (T), so
 -- pg_temp.d(n) is T + n days. Run with `npx supabase test db`.
 begin;
-select plan(43);
+select plan(46);
 
 -- Pin today, as postgres (the helper's owner), before any role switch. Rolled back with the file.
 create or replace function private.warsaw_today()
@@ -112,6 +112,19 @@ create temp table snap_options as
   select * from public.plan_meal_options where user_id = '5e5e5e5e-0000-0000-0000-00000000000a';
 create temp table snap_ratings as
   select * from public.meal_ratings where user_id = '5e5e5e5e-0000-0000-0000-00000000000a';
+
+-- B's choose and confirm targets below are still changeable for A, so a missing ownership check would
+-- show in the snapshot comparison rather than be a no-op.
+select is(
+  (select is_chosen from public.plan_meal_options where id = pg_temp.ref('a_STEW_14')),
+  false,
+  'fixture: A''s STEW on its week starting T+14 is not chosen'
+);
+select is(
+  (select saved_at from public.weekly_plans where id = pg_temp.ref('a_plan_14')),
+  null,
+  'fixture: A''s week starting T+14 is not saved'
+);
 
 -- As B.
 set local role authenticated;
@@ -258,6 +271,8 @@ select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select is_empty($$ select * from public.weekly_plans $$, 'anon reads no weekly_plans row');
 select is_empty($$ select * from public.plan_meal_options $$, 'anon reads no plan_meal_options row');
 select is_empty($$ select * from public.meal_ratings $$, 'anon reads no meal_ratings row');
+-- anon reads the fixture ids, so the 42501s below come from the functions, not from refs.
+select isnt(pg_temp.ref('a_plan_14'), null, 'fixture: anon can read the refs fixture');
 select throws_ok(
   $$ select * from public.get_plan_recency(pg_temp.ref('a_plan_14')) $$,
   '42501', null,
@@ -323,7 +338,9 @@ select set_eq(
   'A''s meal_ratings rows are unchanged'
 );
 
--- The policies scope children by their own user_id, so it must equal the plan's on every row.
+-- The policies scope children by their own user_id, so it must equal the plan's on every row. These scan
+-- every committed row on purpose (dev and smoke data locally, the replay seed in CI), not just A's and
+-- B's: a failure means some committed row is inconsistent, not that this file is flaky.
 select is_empty(
   $$ select o.id from public.plan_meal_options o
        join public.weekly_plans p on p.id = o.plan_id
