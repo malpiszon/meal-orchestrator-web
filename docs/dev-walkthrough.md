@@ -43,3 +43,12 @@ The rules behind each step are in [Pages and API](api.md).
 7. Deliver a past week to see the history: run step 1 again with `--arg start` set to the Monday 7 days before this week's Monday, and send `/tmp/mo-delivery.json` with the same `curl` (a first delivery of a started week is stored). Open `/history` (the "History" link on the dashboard): it lists that week as "Not saved". Open it: it shows the week's meals and "Not saved: suggested picks". The dashboard's tabs don't change, and the week gives no recency notes, as it was never saved.
 
 8. Rate a meal: in "This week" (from step 4), tap a face under a meal of today or an earlier day, for example 😋. Reload `/dashboard`: the face is still pressed, and in "Next week" every option with the same meal shows "Last rated 😋 Chef's kiss" (although "This week" was never saved) and, as 😋 is 5/5, is listed first in its slot, with the star. The plan was saved in step 5, so its selection doesn't change; on a plan that isn't saved, the option would also be selected. Tap the pressed face again to clear the rating; after a reload the note is gone. Meals of later days and options that aren't chosen have no faces.
+
+## AI toolkit (optional)
+
+The private package `@malpiszon/ai-toolkit` is an optional dependency. On `npm install` it copies its agent skills into `.claude/skills/` (gitignored) and keeps a managed block at the end of `CLAUDE.md`. `.npmrc` sends the `@malpiszon` scope to GitHub Packages and holds no token.
+
+1. Log in once with a classic GitHub PAT that has `read:packages`, as the password: `npm login --scope=@malpiszon --registry=https://npm.pkg.github.com`. The token goes to your `~/.npmrc`.
+2. Run `npm install`, then `npm run ai:check`. It prints the installed toolkit version, or fails with the login hint. Without a token, npm skips the package silently, so `ai:check` is the only way to see that it is missing.
+
+CI has no token: `npm ci` skips the package, and the pipeline does not need it. The 10x CLI is not used in this repo, because the toolkit overwrites the skill names it ships.

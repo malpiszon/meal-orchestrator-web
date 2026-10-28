@@ -14,7 +14,8 @@
     "test:replay": "bash scripts/migration-replay.sh",
     "smoke": "node scripts/smoke.mjs",
     "test:e2e": "playwright test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ai:check": "node -e \"const f='.claude/.ai-toolkit-manifest.json';if(!require('fs').existsSync(f)){console.error('AI toolkit not installed: run npm login --scope=@malpiszon --registry=https://npm.pkg.github.com, then npm install');process.exit(1)}console.log(require('./'+f).version)\""
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
@@ -80,5 +81,8 @@
     "eslint-plugin-jsx-a11y": {
       "eslint": "$eslint"
     }
+  },
+  "optionalDependencies": {
+    "@malpiszon/ai-toolkit": "0.1.0"
   }
 }
