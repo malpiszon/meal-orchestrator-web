@@ -48,7 +48,7 @@ The rules behind each step are in [Pages and API](api.md).
 
 The private package `@malpiszon/ai-toolkit` is an optional dependency. On `npm install` it copies its agent skills into `.claude/skills/` (gitignored) and keeps a managed block at the end of `CLAUDE.md`. `.npmrc` sends the `@malpiszon` scope to GitHub Packages and holds no token.
 
-1. Log in once with a classic GitHub PAT that has `read:packages`, as the password: `npm login --scope=@malpiszon --registry=https://npm.pkg.github.com`. The token goes to your `~/.npmrc`.
-2. Run `npm install`, then `npm run ai:check`. It prints the installed toolkit version, or fails with the login hint. Without a token, npm skips the package silently, so `ai:check` is the only way to see that it is missing.
+1. Store a classic GitHub PAT that has `read:packages` once, in your `~/.npmrc` (not echoed, not kept in shell history): `read -rsp 'PAT: ' T && npm config set //npm.pkg.github.com/:_authToken "$T" && unset T; echo`. `npm login --scope=@malpiszon --registry=https://npm.pkg.github.com --auth-type=legacy` with the PAT as the password also works where it does not hang; without `--auth-type=legacy` npm tries a browser login that GitHub Packages does not support.
+2. Run `npm install`, then `npm run ai:check`. It prints the installed toolkit version, or fails with a hint pointing here. Without a token, npm skips the package silently, so `ai:check` is the only way to see that it is missing.
 
 CI has no token: `npm ci` skips the package, and the pipeline does not need it. The 10x CLI is not used in this repo, because the toolkit overwrites the skill names it ships.
