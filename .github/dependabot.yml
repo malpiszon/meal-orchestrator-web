@@ -17,6 +17,8 @@ updates:
       # TS 7 is blocked until @astrojs/check and typescript-eslint support it
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # Private GitHub Packages scope; Dependabot has no token, bumped by hand
+      - dependency-name: "@malpiszon/ai-toolkit"
 
   - package-ecosystem: "github-actions"
     directory: "/"

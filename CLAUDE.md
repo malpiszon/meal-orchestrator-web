@@ -46,3 +46,23 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 ## CI
 
 - `docs/testing.md#ci`, `@.github/workflows/ci.yml`
+
+<!-- BEGIN @malpiszon/ai-toolkit -->
+
+# AI toolkit rules (@malpiszon/ai-toolkit)
+
+This block is managed by `@malpiszon/ai-toolkit`; do not edit it by hand.
+Propose changes to the toolkit repo instead.
+
+## Working rules
+
+- Follow the conventions encoded in the toolkit's skills; when a rule there
+  conflicts with this repository's own `CLAUDE.md`, the repository wins.
+- Never commit secrets, tokens or `.npmrc` entries with `_authToken`.
+- Work one change per `context/changes/<id>/` and make one commit per plan
+  phase. Before proposing a commit, run the test command named in this
+  repository's `CLAUDE.md` or `package.json`.
+- When a toolkit rule looks wrong for this repository, say so and propose a
+  change to the toolkit instead of silently ignoring it.
+
+<!-- END @malpiszon/ai-toolkit -->
