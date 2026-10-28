@@ -83,6 +83,9 @@
     }
   },
   "optionalDependencies": {
-    "@malpiszon/ai-toolkit": "0.1.3"
+    "@malpiszon/ai-toolkit": "0.1.4"
+  },
+  "allowScripts": {
+    "@malpiszon/ai-toolkit": true
   }
 }

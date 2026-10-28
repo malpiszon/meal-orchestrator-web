@@ -1,6 +1,6 @@
 // Shows whether the optional @malpiszon/ai-toolkit is installed and its postinstall ran.
-// npm skips the package silently without a token, and npm 11 can skip its install script,
-// so this names which of the two happened. Run with `npm run ai:check`; not used in CI.
+// npm skips the package silently without a token, and its install script may not have run
+// (e.g. --ignore-scripts), so this names which of the two happened. Run with `npm run ai:check`; not used in CI.
 
 import { existsSync, readFileSync } from "node:fs";
 
@@ -21,7 +21,7 @@ const installed = existsSync(MANIFEST) ? readJson(MANIFEST).version : undefined;
 if (installed !== version) {
   console.error(
     `AI toolkit ${version} is in node_modules but its install script did not run (installed skills: ${installed ?? "none"}). ` +
-      "Run npm install-scripts approve @malpiszon/ai-toolkit, then npm rebuild @malpiszon/ai-toolkit",
+      "Run npm rebuild @malpiszon/ai-toolkit (docs/dev-walkthrough.md, AI toolkit)",
   );
   process.exit(1);
 }
