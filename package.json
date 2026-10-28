@@ -15,7 +15,7 @@
     "smoke": "node scripts/smoke.mjs",
     "test:e2e": "playwright test",
     "prepare": "husky",
-    "ai:check": "node -e \"const f='.claude/.ai-toolkit-manifest.json';if(!require('fs').existsSync(f)){console.error('AI toolkit not installed: run npm login --scope=@malpiszon --registry=https://npm.pkg.github.com, then npm install');process.exit(1)}console.log(require('./'+f).version)\""
+    "ai:check": "node -e \"const p='node_modules/@malpiszon/ai-toolkit/package.json';if(!require('fs').existsSync(p)||!require('fs').existsSync('.claude/.ai-toolkit-manifest.json')){console.error('AI toolkit not installed: run npm login --scope=@malpiszon --registry=https://npm.pkg.github.com, then npm install');process.exit(1)}console.log(require('./'+p).version)\""
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
