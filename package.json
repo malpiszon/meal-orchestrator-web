@@ -15,7 +15,7 @@
     "smoke": "node scripts/smoke.mjs",
     "test:e2e": "playwright test",
     "prepare": "husky",
-    "ai:check": "node -e \"const p='node_modules/@malpiszon/ai-toolkit/package.json';if(!require('fs').existsSync(p)||!require('fs').existsSync('.claude/.ai-toolkit-manifest.json')){console.error('AI toolkit not installed: store a read:packages token (docs/dev-walkthrough.md, AI toolkit), then npm install');process.exit(1)}console.log(require('./'+p).version)\""
+    "ai:check": "node scripts/ai-check.mjs"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.10",
@@ -83,6 +83,9 @@
     }
   },
   "optionalDependencies": {
-    "@malpiszon/ai-toolkit": "0.1.2"
+    "@malpiszon/ai-toolkit": "0.1.4"
+  },
+  "allowScripts": {
+    "@malpiszon/ai-toolkit": true
   }
 }
