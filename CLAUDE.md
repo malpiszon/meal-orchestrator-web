@@ -54,16 +54,10 @@ Astro 7 SSR app with React 19 islands, Tailwind 4, Supabase auth, and shadcn/ui 
 This block is managed by `@malpiszon/ai-toolkit`; do not edit it by hand.
 Propose changes to the toolkit repo instead.
 
-## Skills from this package
-
-Change workflow: `/10x-new` → `/10x-research` → `/10x-plan` → `/10x-implement`
-or `/10x-goal-implement` → `/10x-impl-review` → `/10x-archive`. Review the
-latest change with `/self-review`, then check its fixes with `/verify-fixes`.
-
 ## Working rules
 
-- Follow the conventions encoded in these skills; when a rule there conflicts
-  with this repository's own `CLAUDE.md`, the repository wins.
+- Follow the conventions encoded in the toolkit's skills; when a rule there
+  conflicts with this repository's own `CLAUDE.md`, the repository wins.
 - Never commit secrets, tokens or `.npmrc` entries with `_authToken`.
 - Work one change per `context/changes/<id>/` and make one commit per plan
   phase. Before proposing a commit, run the test command named in this
