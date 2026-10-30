@@ -3,7 +3,7 @@ project: mo-web
 version: 1
 status: draft
 created: 2026-10-10
-updated: 2026-10-17
+updated: 2026-10-30
 prd_version: —
 main_goal: quality
 top_blocker: time
@@ -301,6 +301,7 @@ None open. Answered 2026-10-17: the checked MO run carried all seven nutrition v
 - **Styled invitation and password-reset emails** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06). The templates in `supabase/templates/` are unstyled (a heading, one sentence and a link). When picked up, reuse the styling of MO's own emails rather than designing new styling. Traces to FR-003, FR-005. Email programs can't use the app's Tailwind classes or design tokens, so the styles must be inline. Production templates are pasted by hand into the Supabase dashboard (see `docs/deployment.md#email-settings-and-templates`).
 - **mo-web visual consistency pass** — Why parked: nice-to-have, outside M-1 (decided 2026-10-06; narrowed 2026-10-17). The logo, favicons and design tokens already exist (the logo shows on the sign-in page), so what is left is an app-wide pass for a consistent look across pages. Its scope differs from S-09, which only replaces the page at `/` with a sign-in page. When picked up, run it through `/10x-ui` one view at a time. It could also give the styled emails above a shared look.
 - **Stale "Keep as recommended" after a re-delivery** — Why parked: nice-to-have, outside the MVP (decided 2026-10-06, from the S-06 review). On a "Next week" page opened before MO re-sends that week, "Keep as recommended" still saves: the plan id survives a re-send, so `confirm_plan` accepts it. What gets saved is MO's latest recommendation, while the open page still shows the old dishes next to "Saved …" until a reload. S-06 then keeps those dishes on later re-sends. It needs a never-saved plan, an open page and a re-send together. A swap on such a page already shows "This plan was updated. Reload to see the latest version." Proposed fix: the page sends the plan's `received_at` (or `mo_run_id`) with confirm, and `confirm_plan` answers `not_found` on a mismatch, so the same reload message shows. That needs a migration (signature change) plus changes to the route, dashboard props, hook, pgTAP and smoke. Traces to FR-010, FR-018.
+- **"Didn't eat" mark for a meal** — Why parked: nice-to-have, outside M-2 (proposed 2026-10-30). Today a meal the user didn't have (cancelled, given away, spoiled) can't be rated, so its day on "This week" never collapses to "All rated". Idea: a sixth choice next to the five faces that marks the chosen meal as not eaten. Agreed so far: it follows the rating rules (only the chosen meal, same 7-day window, can be changed or cleared, shown read-only outside the window); it settles the day for collapsing; it has no other effect on ratings, so the Next-week order, the suggested pick and "Last rated" ignore it and keep using the meal's latest real rating, never treating it as "unrated". Open for `/10x-plan`: whether recency notes still count a not-eaten meal. Counting it keeps the PRD Non-Goal "history tracks the user's planned choices, not consumption" as it is. Skipping it makes the recency date match "Last rated" more often, but it changes that Non-Goal. The two notes can already disagree today when the latest occurrence wasn't rated. Traces to FR-013, US-08.
 
 ## Milestone History
 
