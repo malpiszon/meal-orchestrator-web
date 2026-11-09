@@ -18,9 +18,15 @@ interface RpcResult {
   status?: number;
 }
 
-/** A service client whose `rpc` answers with `result`; never `P0002 unknown_user` (provisioning is S-10's). */
-function stubClient(result: RpcResult) {
-  const rpc = vi.fn((_fn: string, _args: Record<string, unknown>) => Promise.resolve(result));
+/**
+ * A service client whose `rpc` answers with `results`, one per call in order (the last one repeats);
+ * never `P0002 unknown_user` (provisioning is S-10's).
+ */
+function stubClient(results: RpcResult | RpcResult[]) {
+  const sequence = Array.isArray(results) ? results : [results];
+  const rpc = vi.fn((_fn: string, _args: Record<string, unknown>) =>
+    Promise.resolve(sequence[Math.min(rpc.mock.calls.length, sequence.length) - 1]),
+  );
   return { rpc, supabase: { rpc } as unknown as SupabaseClient };
 }
 
@@ -39,7 +45,7 @@ function deliveryRequest(body: string, headers: Record<string, string> = {}): Re
 
 async function deliver(
   request: Request,
-  result: RpcResult = { data: PLAN_ID, error: null },
+  result: RpcResult | RpcResult[] = { data: PLAN_ID, error: null },
   options: { token?: string | undefined } = { token: TOKEN },
 ) {
   const { rpc, supabase } = stubClient(result);
@@ -50,6 +56,7 @@ async function deliver(
 const validJson = () => JSON.stringify(sample);
 
 let consoleSpies: MockInstance<(...args: unknown[]) => void>[] = [];
+let warnSpy: MockInstance<(...args: unknown[]) => void>;
 
 /** The handler logs codes and messages only, never the request body or the email. */
 function expectNoEmailLogged() {
@@ -60,13 +67,12 @@ function expectNoEmailLogged() {
 
 beforeEach(() => {
   vi.mocked(reportHandledError).mockReset();
-  consoleSpies = [
-    vi.spyOn(console, "error").mockImplementation(() => undefined),
-    vi.spyOn(console, "warn").mockImplementation(() => undefined),
-  ];
+  warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  consoleSpies = [vi.spyOn(console, "error").mockImplementation(() => undefined), warnSpy];
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -198,13 +204,15 @@ describe("handleMoDelivery storage", () => {
     ["a 401 with 42501", { status: 401, error: { code: "42501", message: "permission denied" } }],
     ["a 401 without a code", { status: 401, error: { code: "", message: "Unauthorized" } }],
     ["a PostgREST JWT error", { status: 400, error: { code: "PGRST301", message: "JWSError" } }],
+    ["a PGRST303 other than issued at future", { status: 401, error: { code: "PGRST303", message: "JWT expired" } }],
   ])(
     "answers 503 not_configured when the database rejects the service key (%s) and reports it",
     async (_case, rejected) => {
-      const { response, body } = await deliver(deliveryRequest(validJson()), { data: null, ...rejected });
+      const { response, body, rpc } = await deliver(deliveryRequest(validJson()), { data: null, ...rejected });
 
       expect(response.status).toBe(503);
       expect(body).toEqual({ error: "not_configured" });
+      expect(rpc).toHaveBeenCalledTimes(1);
       expect(reportHandledError).toHaveBeenCalledTimes(1);
       const [step, reported] = vi.mocked(reportHandledError).mock.calls[0] ?? [];
       expect(step).toBe("mo_delivery.config");
@@ -212,6 +220,75 @@ describe("handleMoDelivery storage", () => {
       expect((reported as Error).message).not.toContain(sample.user.email);
     },
   );
+
+  describe("PGRST303 JWT issued at future", () => {
+    const future = { data: null, status: 401, error: { code: "PGRST303", message: "JWT issued at future" } };
+
+    /**
+     * Fires each retry's timer once it is scheduled. The token check and body read settle outside the
+     * microtask queue, so each retry's wait starts only after its warning is logged. `vi.waitFor` also
+     * nudges the fake clock while it polls; harmless, since no retry timer is pending before the warning.
+     */
+    async function runRetries(retries: number) {
+      for (let retry = 1; retry <= retries; retry++) {
+        await vi.waitFor(() => {
+          expect(warnSpy).toHaveBeenCalledTimes(retry);
+        });
+        await vi.advanceTimersByTimeAsync(1500);
+      }
+    }
+
+    it("retries the RPC and answers 200 when a retry succeeds", async () => {
+      vi.useFakeTimers();
+      const delivering = deliver(deliveryRequest(validJson()), [future, { data: PLAN_ID, error: null }]);
+      await runRetries(1);
+      const { response, body, rpc } = await delivering;
+
+      expect(response.status).toBe(200);
+      expect(body).toMatchObject({ plan_id: PLAN_ID });
+      expect(rpc).toHaveBeenCalledTimes(2);
+      expect(reportHandledError).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expectNoEmailLogged();
+    });
+
+    it("answers 500 storage_failed and reports a warning when every retry fails", async () => {
+      vi.useFakeTimers();
+      const delivering = deliver(deliveryRequest(validJson()), future);
+      await runRetries(2);
+      const { response, body, rpc } = await delivering;
+
+      expect(response.status).toBe(500);
+      expect(body).toEqual({ error: "storage_failed" });
+      expect(rpc).toHaveBeenCalledTimes(3);
+      expect(reportHandledError).toHaveBeenCalledTimes(1);
+      const [step, reported, options] = vi.mocked(reportHandledError).mock.calls[0] ?? [];
+      expect(step).toBe("mo_delivery.ingest");
+      expect(options).toEqual({ level: "warning" });
+      expect((reported as Error).cause).toBe(future.error);
+      expect((reported as Error).message).not.toContain(sample.user.email);
+    });
+
+    it("retries the post-provisioning RPC too and answers 500 when every retry fails", async () => {
+      vi.useFakeTimers();
+      const { rpc } = stubClient([{ data: null, error: { code: "P0002", message: "unknown_user" } }, future]);
+      const inviteUserByEmail = vi.fn(() => Promise.resolve({ data: { user: { id: "invited-user" } }, error: null }));
+      const updateUserById = vi.fn(() => Promise.resolve({ error: null }));
+      const supabase = { rpc, auth: { admin: { inviteUserByEmail, updateUserById } } } as unknown as SupabaseClient;
+      const delivering = handleMoDelivery(deliveryRequest(validJson()), { token: TOKEN, supabase });
+      await runRetries(2);
+      const response = await delivering;
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: "storage_failed" });
+      expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledTimes(4);
+      expect(reportHandledError).toHaveBeenCalledTimes(1);
+      const [step, , options] = vi.mocked(reportHandledError).mock.calls[0] ?? [];
+      expect(step).toBe("mo_delivery.ingest");
+      expect(options).toEqual({ level: "warning" });
+    });
+  });
 
   it("answers 500 storage_failed when the RPC returns no string plan id, reported as no_plan_id", async () => {
     const { response, body } = await deliver(deliveryRequest(validJson()), { data: 42, error: null });

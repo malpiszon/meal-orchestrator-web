@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { reportMissingSecrets } from "@/lib/missing-secrets";
 import { moDeliverySchema, toOptionRows, type MoDelivery } from "@/lib/mo-delivery";
 import { isAuthRejection, isGoTrueKeyRejection } from "@/lib/mo-delivery-faults";
+import { isJwtIssuedAtFuture, withPgrst303Retry } from "@/lib/postgrest-retry";
 import { reportHandledError } from "@/lib/report-handled-error";
 
 const PROVISIONED_BY = "mo-delivery";
@@ -42,7 +43,11 @@ function bearerToken(request: Request): string | null {
   return match?.[1] ?? null;
 }
 
-/** A key the services reject can never succeed on retry: a configuration fault, not a storage one. */
+/**
+ * A key the services reject can never succeed on retry: a configuration fault, not a storage one.
+ * The exception is PGRST303 "JWT issued at future", a transient PostgREST clock fault: the RPC result
+ * handling sends it to storage_failed before the key-rejection check.
+ */
 function configurationFault(error: unknown): Response {
   reportHandledError("mo_delivery.config", error);
   return json({ error: "not_configured" }, 503);
@@ -106,7 +111,8 @@ export async function handleMoDelivery(
     p_raw: body,
     p_options: toOptionRows(delivery),
   };
-  const ingest = () => supabase.rpc("ingest_weekly_plan", ingestArgs);
+  // Each call retries PGRST303 "JWT issued at future" with a new RPC (see postgrest-retry.ts).
+  const ingest = () => withPgrst303Retry("ingest_weekly_plan", () => supabase.rpc("ingest_weekly_plan", ingestArgs));
 
   let result = await ingest();
   let accountCreated = false;
@@ -149,7 +155,18 @@ export async function handleMoDelivery(
     result = await ingest();
   }
 
+  if (result.error && isJwtIssuedAtFuture(result.error)) {
+    // Still "issued at future" after the retries: a transient PostgREST clock fault, not a rejected key,
+    // so MO's retry can succeed. Handled before the auth check, which would take its 401 for a key fault.
+    reportHandledError(
+      "mo_delivery.ingest",
+      new Error(`ingest_weekly_plan failed: ${result.error.code} ${result.error.message}`, { cause: result.error }),
+      { level: "warning" },
+    );
+    return json({ error: "storage_failed" }, 500);
+  }
   // PostgrestError carries no HTTP status; a rejected key arrives as a 401 (with code 42501, or none).
+  // PGRST303 "issued at future" is the transient exception, handled just above.
   if (result.error && isAuthRejection({ code: result.error.code, status: result.status })) {
     // The status on the wrapper keeps a code-less body grouped as http_<status>.
     return configurationFault(
