@@ -1,7 +1,7 @@
 ---
 change_id: sentry-jwt-future
 title: Retry PGRST303 "JWT issued at future" on MO delivery instead of reporting a key fault
-status: implementing
+status: impl_reviewed
 created: 2026-11-09
 updated: 2026-11-09
 archived_at: null

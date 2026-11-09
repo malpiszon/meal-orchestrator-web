@@ -226,7 +226,8 @@ describe("handleMoDelivery storage", () => {
 
     /**
      * Fires each retry's timer once it is scheduled. The token check and body read settle outside the
-     * microtask queue, so the clock can only move after the retry warning (logged just before the wait).
+     * microtask queue, so each retry's wait starts only after its warning is logged. `vi.waitFor` also
+     * nudges the fake clock while it polls; harmless, since no retry timer is pending before the warning.
      */
     async function runRetries(retries: number) {
       for (let retry = 1; retry <= retries; retry++) {
@@ -266,6 +267,26 @@ describe("handleMoDelivery storage", () => {
       expect(options).toEqual({ level: "warning" });
       expect((reported as Error).cause).toBe(future.error);
       expect((reported as Error).message).not.toContain(sample.user.email);
+    });
+
+    it("retries the post-provisioning RPC too and answers 500 when every retry fails", async () => {
+      vi.useFakeTimers();
+      const { rpc } = stubClient([{ data: null, error: { code: "P0002", message: "unknown_user" } }, future]);
+      const inviteUserByEmail = vi.fn(() => Promise.resolve({ data: { user: { id: "invited-user" } }, error: null }));
+      const updateUserById = vi.fn(() => Promise.resolve({ error: null }));
+      const supabase = { rpc, auth: { admin: { inviteUserByEmail, updateUserById } } } as unknown as SupabaseClient;
+      const delivering = handleMoDelivery(deliveryRequest(validJson()), { token: TOKEN, supabase });
+      await runRetries(2);
+      const response = await delivering;
+
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ error: "storage_failed" });
+      expect(inviteUserByEmail).toHaveBeenCalledTimes(1);
+      expect(rpc).toHaveBeenCalledTimes(4);
+      expect(reportHandledError).toHaveBeenCalledTimes(1);
+      const [step, , options] = vi.mocked(reportHandledError).mock.calls[0] ?? [];
+      expect(step).toBe("mo_delivery.ingest");
+      expect(options).toEqual({ level: "warning" });
     });
   });
 

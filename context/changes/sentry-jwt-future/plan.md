@@ -177,13 +177,13 @@ None. No schema or secret changes; deploys with the normal merge-to-master pipel
 
 #### Automated
 
-- [x] 1.1 Unit tests pass, including the three new PGRST303 cases: `npm test`
-- [x] 1.2 Lint and type-checked rules pass: `npm run lint`
-- [x] 1.3 Production build succeeds: `npm run build`
+- [x] 1.1 Unit tests pass, including the three new PGRST303 cases: `npm test` — 9694f72
+- [x] 1.2 Lint and type-checked rules pass: `npm run lint` — 9694f72
+- [x] 1.3 Production build succeeds: `npm run build` — 9694f72
 
 #### Manual
 
-- [x] 1.4 Reading the diff confirms the "issued at future" branch sits before the `isAuthRejection` check and both `ingest()` calls go through the wrapped closure
+- [x] 1.4 Reading the diff confirms the "issued at future" branch sits before the `isAuthRejection` check and both `ingest()` calls go through the wrapped closure — 9694f72
 
 ### Phase 2: Docs and rollout check
 
