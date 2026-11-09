@@ -14,7 +14,7 @@ Accounts exist only by invitation: MO's first delivery for an email creates the 
 
 ## Getting started
 
-Requires Node.js v22.23.3 (`.nvmrc`), and [Docker](https://www.docker.com/) with about 7 GB RAM for local Supabase.
+Requires Node.js v22.23.4 (`.nvmrc`), and [Docker](https://www.docker.com/) with about 7 GB RAM for local Supabase.
 
 ```bash
 npm install
