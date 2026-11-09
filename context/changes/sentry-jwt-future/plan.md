@@ -189,7 +189,7 @@ None. No schema or secret changes; deploys with the normal merge-to-master pipel
 
 #### Automated
 
-- [ ] 2.1 Prettier leaves the docs unchanged: `npx prettier --check docs/mo-delivery-contract.md docs/api.md docs/deployment.md`
+- [x] 2.1 Prettier leaves the docs unchanged: `npx prettier --check docs/mo-delivery-contract.md docs/api.md docs/deployment.md`
 - [ ] 2.2 CI on the PR is green (lint, unit tests, smoke, build)
 
 #### Manual
