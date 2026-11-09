@@ -189,11 +189,11 @@ None. No schema or secret changes; deploys with the normal merge-to-master pipel
 
 #### Automated
 
-- [x] 2.1 Prettier leaves the docs unchanged: `npx prettier --check docs/mo-delivery-contract.md docs/api.md docs/deployment.md`
-- [ ] 2.2 CI on the PR is green (lint, unit tests, smoke, build)
+- [x] 2.1 Prettier leaves the docs unchanged: `npx prettier --check docs/mo-delivery-contract.md docs/api.md docs/deployment.md` — 2e3a0bf
+- [x] 2.2 CI on the PR is green (lint, unit tests, smoke, build) — 2e3a0bf
 
 #### Manual
 
-- [ ] 2.3 #203's open unknowns are answered in comments and ticked
+- [x] 2.3 #203's open unknowns are answered in comments and ticked — 2e3a0bf
 - [ ] 2.4 After merge, MO-WEB-8 shows as resolved by the PR in Sentry
 - [ ] 2.5 The next weekly MO delivery raises no new MO-WEB-8 event (a `mo_delivery.ingest` PGRST303 warning, if any, is the expected exhausted-retry signal)
