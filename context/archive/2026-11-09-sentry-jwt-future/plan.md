@@ -195,5 +195,5 @@ None. No schema or secret changes; deploys with the normal merge-to-master pipel
 #### Manual
 
 - [x] 2.3 #203's open unknowns are answered in comments and ticked — 2e3a0bf
-- [ ] 2.4 After merge, MO-WEB-8 shows as resolved by the PR in Sentry
-- [ ] 2.5 The next weekly MO delivery raises no new MO-WEB-8 event (a `mo_delivery.ingest` PGRST303 warning, if any, is the expected exhausted-retry signal)
+- [x] 2.4 After merge, MO-WEB-8 shows as resolved by the PR in Sentry
+- [x] 2.5 The next weekly MO delivery raises no new MO-WEB-8 event (a `mo_delivery.ingest` PGRST303 warning, if any, is the expected exhausted-retry signal)
