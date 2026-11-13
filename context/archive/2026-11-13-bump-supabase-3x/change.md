@@ -1,10 +1,10 @@
 ---
 change_id: bump-supabase-3x
 title: Bump supabase CLI from 2.x to 3.x
-status: impl_reviewed
+status: archived
 created: 2026-11-13
 updated: 2026-11-13
-archived_at: null
+archived_at: 2026-11-13T21:23:20Z
 ---
 
 ## Notes
