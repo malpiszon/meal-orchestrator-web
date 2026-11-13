@@ -369,6 +369,7 @@ describe("end-of-turn.sh (Stop)", () => {
     expect(r.status).toBe(2);
     expect(r.stderr).toContain("pgTAP fails");
     const calls = stubCalls(repo).split("\n");
+    expect(calls).toContain("supabase migration list --output-format json");
     expect(calls).toContain("supabase migration up");
     expect(calls.findIndex((c) => c.startsWith("supabase test db"))).toBeGreaterThan(
       calls.indexOf("supabase migration up"),
