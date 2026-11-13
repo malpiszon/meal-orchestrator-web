@@ -217,16 +217,16 @@ No schema change. The only production-facing change is the documented command: t
 
 #### Automated
 
-- [x] 2.1 `npx supabase start` succeeds with no config errors or deprecation warnings
-- [x] 2.2 pgTAP passes on the v3 stack, full output saved to a log
-- [x] 2.3 The hook's listing pipeline works on v3
-- [x] 2.4 `node_modules/.bin/supabase migration up` exits 0 with nothing to apply
-- [x] 2.5 Smoke passes against a preview on :4322
-- [x] 2.6 PR CI is green: `ci`, `smoke` and `e2e`
+- [x] 2.1 `npx supabase start` succeeds with no config errors or deprecation warnings — 1f5f151
+- [x] 2.2 pgTAP passes on the v3 stack, full output saved to a log — 1f5f151
+- [x] 2.3 The hook's listing pipeline works on v3 — 1f5f151
+- [x] 2.4 `node_modules/.bin/supabase migration up` exits 0 with nothing to apply — 1f5f151
+- [x] 2.5 Smoke passes against a preview on :4322 — 1f5f151
+- [x] 2.6 PR CI is green: `ci`, `smoke` and `e2e` — 1f5f151
 
 #### Manual
 
-- [x] 2.7 Your local data survived the switch
-- [x] 2.8 Mailpit shows the smoke's password-reset email
-- [x] 2.9 README:46 checked against the running service versions
+- [x] 2.7 Your local data survived the switch — 1f5f151
+- [x] 2.8 Mailpit shows the smoke's password-reset email — 1f5f151
+- [x] 2.9 README:46 checked against the running service versions — 1f5f151
 - [ ] 2.10 After merge, #211 is closed

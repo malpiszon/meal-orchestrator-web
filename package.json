@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
+    "preview": "ASTRO_PREVIEW_BACKGROUND=1 astro preview",
     "astro": "astro",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
