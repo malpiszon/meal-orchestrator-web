@@ -57,7 +57,7 @@ echo "==> Replaying over seeded rows, from base $base:"
 printf '%s\n' "$replayed" | sed 's/^/    /'
 
 echo "==> 1/5 Reset the local database to $base"
-npx supabase db reset --version "$base" --local
+npx supabase db reset --version "$base"
 
 echo "==> 2/5 Seed through the RPCs and snapshot (supabase/replay/seed.sql)"
 if command -v psql > /dev/null; then
@@ -78,7 +78,7 @@ else
 fi
 
 echo "==> 3/5 Apply the migrations after $base"
-npx supabase migration up --local
+npx supabase migration up
 
 echo "==> 4/5 Snapshot checks (supabase/replay/checks.test.sql)"
 # The file, not the directory: pg_prove would also run seed.sql as a test.

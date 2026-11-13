@@ -368,9 +368,11 @@ describe("end-of-turn.sh (Stop)", () => {
     const r = stop(repo, {}, env);
     expect(r.status).toBe(2);
     expect(r.stderr).toContain("pgTAP fails");
-    const calls = stubCalls(repo);
-    expect(calls.indexOf("supabase migration up --local")).toBeGreaterThan(-1);
-    expect(calls.indexOf("supabase test db")).toBeGreaterThan(calls.indexOf("supabase migration up"));
+    const calls = stubCalls(repo).split("\n");
+    expect(calls).toContain("supabase migration up");
+    expect(calls.findIndex((c) => c.startsWith("supabase test db"))).toBeGreaterThan(
+      calls.indexOf("supabase migration up"),
+    );
 
     const broken = makeRepo("up");
     write(broken.root, "supabase/migrations/20260202000000_new.sql", "-- MIGRATION_ERROR\n");

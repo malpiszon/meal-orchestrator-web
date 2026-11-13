@@ -139,7 +139,7 @@ $OUT
       APPLY_OK=1
       # Without the list, pgTAP could run against a database missing this turn's migrations
       # and pass. The listing is the tooling's problem, not the agent's: skip, visibly.
-      if ! PENDING=$(node_modules/.bin/supabase migration list --local --output-format json 2>"$TMP/list-err" </dev/null |
+      if ! PENDING=$(node_modules/.bin/supabase migration list --output-format json 2>"$TMP/list-err" </dev/null |
         jq -er '[.migrations[] | select((.remote // "") == "") | .local] | join(" ")' 2>>"$TMP/list-err"); then
         APPLY_OK=0
         PENDING=""
@@ -148,7 +148,7 @@ $OUT
       # The agent has stopped editing for this turn: apply its new migrations so pgTAP sees
       # them. `migration up` only adds; it never resets the local database.
       if [ -n "$PENDING" ]; then
-        if OUT=$(node_modules/.bin/supabase migration up --local 2>&1 </dev/null); then
+        if OUT=$(node_modules/.bin/supabase migration up 2>&1 </dev/null); then
           # Remember what was applied, to notice a later edit of a still-uncommitted migration.
           for v in $PENDING; do
             for f in supabase/migrations/"$v"_*.sql; do

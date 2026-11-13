@@ -12,8 +12,10 @@ Anything the new code depends on outside the Worker must therefore be in place b
 
   ```bash
   npx supabase link --project-ref <project-ref>   # once per machine
-  npx supabase db push
+  npx supabase db push --remote
   ```
+
+  `db push` asks for confirmation (answer yes); without `--remote` it pushes to the local stack instead.
 
   Between the push and the deploy the old Worker runs against the new schema, so a migration must keep the old code working.
 
