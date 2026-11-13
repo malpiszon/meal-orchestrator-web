@@ -203,30 +203,30 @@ No schema change. The only production-facing change is the documented command: t
 
 #### Automated
 
-- [x] 1.1 `npx supabase --version` prints 3.1.0
-- [x] 1.2 `npx supabase status -o env` prints no `[inbucket]` error and no `enable_signup` deprecation warning
-- [x] 1.3 No `--local` or `INBUCKET` left in scripts, hooks, CI or docs
-- [x] 1.4 Unit tests pass, including the agent-hooks test: `npm test`
-- [x] 1.5 Lint passes: `npm run lint`
+- [x] 1.1 `npx supabase --version` prints 3.1.0 — 2f9c9b8
+- [x] 1.2 `npx supabase status -o env` prints no `[inbucket]` error and no `enable_signup` deprecation warning — 2f9c9b8
+- [x] 1.3 No `--local` or `INBUCKET` left in scripts, hooks, CI or docs — 2f9c9b8
+- [x] 1.4 Unit tests pass, including the agent-hooks test: `npm test` — 2f9c9b8
+- [x] 1.5 Lint passes: `npm run lint` — 2f9c9b8
 
 #### Manual
 
-- [x] 1.6 `docs/deployment.md` and `infrastructure.md` read `db push --remote` for production
+- [x] 1.6 `docs/deployment.md` and `infrastructure.md` read `db push --remote` for production — 2f9c9b8
 
 ### Phase 2: Switch the local stack to v3, verify, ship
 
 #### Automated
 
-- [ ] 2.1 `npx supabase start` succeeds with no config errors or deprecation warnings
-- [ ] 2.2 pgTAP passes on the v3 stack, full output saved to a log
-- [ ] 2.3 The hook's listing pipeline works on v3
-- [ ] 2.4 `node_modules/.bin/supabase migration up` exits 0 with nothing to apply
-- [ ] 2.5 Smoke passes against a preview on :4322
-- [ ] 2.6 PR CI is green: `ci`, `smoke` and `e2e`
+- [x] 2.1 `npx supabase start` succeeds with no config errors or deprecation warnings
+- [x] 2.2 pgTAP passes on the v3 stack, full output saved to a log
+- [x] 2.3 The hook's listing pipeline works on v3
+- [x] 2.4 `node_modules/.bin/supabase migration up` exits 0 with nothing to apply
+- [x] 2.5 Smoke passes against a preview on :4322
+- [x] 2.6 PR CI is green: `ci`, `smoke` and `e2e`
 
 #### Manual
 
-- [ ] 2.7 Your local data survived the switch
-- [ ] 2.8 Mailpit shows the smoke's password-reset email
-- [ ] 2.9 README:46 checked against the running service versions
+- [x] 2.7 Your local data survived the switch
+- [x] 2.8 Mailpit shows the smoke's password-reset email
+- [x] 2.9 README:46 checked against the running service versions
 - [ ] 2.10 After merge, #211 is closed
