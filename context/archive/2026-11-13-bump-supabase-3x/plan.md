@@ -229,4 +229,4 @@ No schema change. The only production-facing change is the documented command: t
 - [x] 2.7 Your local data survived the switch — 1f5f151
 - [x] 2.8 Mailpit shows the smoke's password-reset email — 1f5f151
 - [x] 2.9 README:46 checked against the running service versions — 1f5f151
-- [ ] 2.10 After merge, #211 is closed
+- [x] 2.10 After merge, #211 is closed
